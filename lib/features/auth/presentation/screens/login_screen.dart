@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
+import 'package:jobspot_app/core/theme/app_theme.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -25,16 +26,11 @@ class _LoginScreenState extends State<LoginScreen> {
     final size = MediaQuery.of(context).size;
     final theme = Theme.of(context);
 
-    // Color Palette extracted from the image
-    const Color primaryPurple = Color(0xFF6A1B9A);
-    const Color primaryOrange = Color(0xFFFF8F00);
-    const Color greyButtonColor = Color(0xFFF0F0F0);
-    const Color gridColor = Color(0xFFEFEFEF);
-
     return Scaffold(
       backgroundColor: Colors.white,
       body: Stack(
         children: [
+          Image.asset('assets/images/auth_bg.png', width: 110, height: 110),
 
           // 3. Main Content Scroll View
           Center(
@@ -54,7 +50,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   Text(
                     'WELCOME',
                     style: theme.textTheme.headlineMedium?.copyWith(
-                      color: primaryPurple,
+                      color: AppColors.primaryPurple,
                       fontWeight: FontWeight.bold,
                       letterSpacing: 1.5,
                     ),
@@ -100,14 +96,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         // Handle Login
                         debugPrint("Login Pressed: ${_emailController.text}");
                       },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: primaryOrange,
-                        foregroundColor: Colors.white,
-                        elevation: 2,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(25),
-                        ),
-                      ),
+                      style: Theme.of(context).elevatedButtonTheme.style,
                       child: const Text(
                         'Login',
                         style: TextStyle(
@@ -129,8 +118,8 @@ class _LoginScreenState extends State<LoginScreen> {
                         // Handle Sign In / Sign Up navigation
                       },
                       style: TextButton.styleFrom(
-                        backgroundColor: greyButtonColor,
-                        foregroundColor: primaryOrange, // Text color matches theme
+                        backgroundColor: AppColors.greyButtonColor,
+                        foregroundColor: AppColors.primaryOrange, // Text color matches theme
                         elevation: 0,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(25),
@@ -226,13 +215,13 @@ class _CustomTextField extends StatelessWidget {
         ],
       ),
       child: TextField(
-        controller: controller,
-        obscureText: obscureText,
-        keyboardType: keyboardType,
-        decoration: InputDecoration(
-          hintText: hintText,
+      controller: controller,
+      obscureText: obscureText,
+      keyboardType: keyboardType,
+      decoration: InputDecoration(
+        hintText: hintText,
           hintStyle: const TextStyle(color: Colors.black38),
-          suffixIcon: suffixIcon,
+        suffixIcon: suffixIcon,
           contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(8),
@@ -348,73 +337,4 @@ class JobSpotLogo extends StatelessWidget {
       ],
     );
   }
-}
-
-// --- Background Painter (Generates the topographic lines) ---
-
-class TopographicBackgroundPainter extends CustomPainter {
-  final Color gridColor;
-  final Color accentColor1;
-  final Color accentColor2;
-
-  TopographicBackgroundPainter({
-    required this.gridColor,
-    required this.accentColor1,
-    required this.accentColor2,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.0;
-
-    // 1. Draw Faint Grid
-    paint.color = gridColor;
-    double step = 40.0;
-    for (double x = 0; x < size.width; x += step) {
-      canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
-    }
-    for (double y = 0; y < size.height; y += step) {
-      canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
-    }
-
-    // 2. Draw Top Left Contours (Orange)
-    paint.color = accentColor1.withOpacity(0.3);
-    paint.strokeWidth = 1.5;
-    _drawContour(canvas, paint, Offset(0, 0), size.width * 0.4, 4);
-
-    // 3. Draw Bottom Right Contours (Purple)
-    paint.color = accentColor2.withOpacity(0.2);
-    _drawContour(canvas, paint, Offset(size.width, size.height), size.width * 0.5, 5, invert: true);
-
-    // 4. Draw Bottom Left Lines (Purple Accent)
-    final path = Path();
-    path.moveTo(0, size.height * 0.7);
-    path.quadraticBezierTo(size.width * 0.2, size.height * 0.8, size.width * 0.3, size.height);
-    paint.color = accentColor2;
-    paint.strokeWidth = 2;
-    canvas.drawPath(path, paint);
-
-    // Draw dots on the line
-    paint.style = PaintingStyle.fill;
-    canvas.drawCircle(Offset(0, size.height * 0.7), 4, paint);
-    canvas.drawCircle(Offset(size.width * 0.3, size.height), 4, paint);
-  }
-
-  void _drawContour(Canvas canvas, Paint paint, Offset center, double radius, int count, {bool invert = false}) {
-    for (int i = 0; i < count; i++) {
-      double currentRadius = radius + (i * 20);
-      Rect rect = Rect.fromCircle(center: center, radius: currentRadius);
-      // We only draw part of the circle to simulate corner contours
-      if (!invert) {
-        canvas.drawArc(rect, 0, math.pi / 2, false, paint);
-      } else {
-        canvas.drawArc(rect, math.pi, math.pi / 2, false, paint);
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
