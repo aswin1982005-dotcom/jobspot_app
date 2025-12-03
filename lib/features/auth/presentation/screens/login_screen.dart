@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'dart:math' as math;
 import 'package:jobspot_app/core/theme/app_theme.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -50,7 +49,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   Text(
                     'WELCOME',
                     style: theme.textTheme.headlineMedium?.copyWith(
-                      color: AppColors.primaryPurple,
+                      color: AppColors.purple,
                       fontWeight: FontWeight.bold,
                       letterSpacing: 1.5,
                     ),
@@ -118,8 +117,8 @@ class _LoginScreenState extends State<LoginScreen> {
                         // Handle Sign In / Sign Up navigation
                       },
                       style: TextButton.styleFrom(
-                        backgroundColor: AppColors.greyButtonColor,
-                        foregroundColor: AppColors.primaryOrange, // Text color matches theme
+                        backgroundColor: AppColors.grey,
+                        foregroundColor: AppColors.orange, // Text color matches theme
                         elevation: 0,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(25),
@@ -207,7 +206,7 @@ class _CustomTextField extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
+            color: Colors.grey.withValues(alpha: 0.1),
             spreadRadius: 1,
             blurRadius: 3,
             offset: const Offset(0, 1),
@@ -267,7 +266,7 @@ class _SocialButton extends StatelessWidget {
           shape: BoxShape.circle,
           boxShadow: [
             BoxShadow(
-              color: color.withOpacity(0.3),
+              color: color.withValues(alpha: 0.3),
               offset: const Offset(0, 4),
               blurRadius: 8,
             )
@@ -279,24 +278,6 @@ class _SocialButton extends StatelessWidget {
     );
   }
 }
-
-class _MapMarker extends StatelessWidget {
-  final Color color;
-  final double size;
-
-  const _MapMarker({required this.color, required this.size});
-
-  @override
-  Widget build(BuildContext context) {
-    return Icon(
-      Icons.location_on,
-      color: color,
-      size: size,
-    );
-  }
-}
-
-// --- Logo Widget (Code-drawn to avoid asset dependency) ---
 
 class JobSpotLogo extends StatelessWidget {
   const JobSpotLogo({super.key});
@@ -313,7 +294,7 @@ class JobSpotLogo extends StatelessWidget {
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
-                color: Colors.grey.withOpacity(0.2),
+                color: Colors.grey.withValues(alpha: 0.2),
                 blurRadius: 10,
                 spreadRadius: 2,
               )
