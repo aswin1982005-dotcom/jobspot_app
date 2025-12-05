@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:jobspot_app/features/dashboard/presentation/tabs/home_tab.dart';
 import 'package:jobspot_app/features/dashboard/presentation/tabs/search_tab.dart';
-import 'package:jobspot_app/features/dashboard/presentation/tabs/saved_tab.dart';
+import 'package:jobspot_app/features/dashboard/presentation/tabs/map_tab.dart';
 import 'package:jobspot_app/features/dashboard/presentation/tabs/profile_tab.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -17,7 +17,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   final List<Widget> _screens = [
     const HomeTab(),
     const SearchTab(),
-    const SavedTab(),
+    const MapTab(),
     const ProfileTab(),
   ];
 
@@ -47,9 +47,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
             label: 'Search',
           ),
           NavigationDestination(
-            icon: Icon(Icons.bookmark_outline),
-            selectedIcon: Icon(Icons.bookmark),
-            label: 'Saved',
+            icon: Icon(Icons.pin_drop_outlined),
+            selectedIcon: Icon(Icons.pin_drop_rounded),
+            label: 'Job Map',
           ),
           NavigationDestination(
             icon: Icon(Icons.person_outline),
