@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:jobspot_app/features/admin_dashboard/presentation/screens/admin_dashboard_screen.dart';
 import 'package:jobspot_app/features/auth/presentation/screens/signup_screen.dart';
 import 'package:jobspot_app/features/auth/presentation/widgets/social_button.dart';
-import 'package:jobspot_app/features/employer_dashboard/presentation/screens/employer_dashboard_screen.dart';
+import 'package:jobspot_app/features/employer_dashboard/presentation/employer_dashboard_screen.dart';
 
 import 'package:jobspot_app/features/seeker_dashboard/presentation/seeker_dashboard_screen.dart';
 import 'package:jobspot_app/features/splash/presentation/screen/splash_screen.dart';
@@ -75,10 +75,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 8),
                 Text(
                   'Sign in to continue',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.grey[600],
-                  ),
+                  style: TextStyle(fontSize: 16, color: Colors.grey[600]),
                 ),
                 const SizedBox(height: 40),
                 // Email Field
@@ -175,7 +172,9 @@ class _LoginScreenState extends State<LoginScreen> {
                           Navigator.pushReplacement(
                             context,
                             MaterialPageRoute(
-                                builder: (context) => const SeekerDashboardScreen()),
+                              builder: (context) =>
+                                  const SeekerDashboardScreen(),
+                            ),
                           );
                         },
                       ),
@@ -189,7 +188,9 @@ class _LoginScreenState extends State<LoginScreen> {
                           Navigator.pushReplacement(
                             context,
                             MaterialPageRoute(
-                                builder: (context) => const EmployerDashboardScreen()),
+                              builder: (context) =>
+                                  const EmployerDashboardScreen(),
+                            ),
                           );
                         },
                       ),
@@ -203,7 +204,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     Navigator.pushReplacement(
                       context,
                       MaterialPageRoute(
-                          builder: (context) => const AdminDashboardScreen()),
+                        builder: (context) => const AdminDashboardScreen(),
+                      ),
                     );
                   },
                   icon: const Icon(Icons.phone_outlined),
@@ -230,7 +232,8 @@ class _LoginScreenState extends State<LoginScreen> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                              builder: (context) => const SignupScreen()),
+                            builder: (context) => const SignupScreen(),
+                          ),
                         );
                       },
                       child: const Text(

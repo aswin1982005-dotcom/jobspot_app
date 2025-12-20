@@ -1,28 +1,31 @@
 import 'package:flutter/material.dart';
+import 'package:jobspot_app/features/employer_dashboard/presentation/tabs/employer_home_tab.dart';
+import 'package:jobspot_app/features/employer_dashboard/presentation/tabs/job_posting_tab.dart';
+import 'package:jobspot_app/features/employer_dashboard/presentation/tabs/applicants_tab.dart';
+import 'package:jobspot_app/features/employer_dashboard/presentation/tabs/profile_tab.dart';
 
 class EmployerDashboardScreen extends StatefulWidget {
   const EmployerDashboardScreen({super.key});
 
   @override
-  State<EmployerDashboardScreen> createState() => _EmployerDashboardScreenState();
+  State<EmployerDashboardScreen> createState() =>
+      _EmployerDashboardScreenState();
 }
 
 class _EmployerDashboardScreenState extends State<EmployerDashboardScreen> {
   int _selectedIndex = 0;
 
   final List<Widget> _screens = [
-    const Center(child: Text('Job Postings')),
-    const Center(child: Text('Applicants')),
-    const Center(child: Text('Profile')),
+    const EmployerHomeTab(),
+    const JobPostingTab(),
+    const ApplicantsTab(),
+    const ProfileTab(),
   ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(
-        index: _selectedIndex,
-        children: _screens,
-      ),
+      body: IndexedStack(index: _selectedIndex, children: _screens),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
         onDestinationSelected: (index) {
@@ -31,6 +34,11 @@ class _EmployerDashboardScreenState extends State<EmployerDashboardScreen> {
           });
         },
         destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.home_outlined),
+            selectedIcon: Icon(Icons.home),
+            label: 'Home',
+          ),
           NavigationDestination(
             icon: Icon(Icons.article_outlined),
             selectedIcon: Icon(Icons.article),
