@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:jobspot_app/features/admin_dashboard/presentation/screens/admin_dashboard_screen.dart';
-import 'package:jobspot_app/features/auth/presentation/screens/signup_screen.dart';
+import 'package:jobspot_app/core/theme/app_theme.dart';
+import 'package:jobspot_app/features/auth/presentation/screens/role_selection_screen.dart';
 import 'package:jobspot_app/features/auth/presentation/widgets/social_button.dart';
-import 'package:jobspot_app/features/employer_dashboard/presentation/employer_dashboard_screen.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
-import 'package:jobspot_app/features/seeker_dashboard/presentation/seeker_dashboard_screen.dart';
-import 'package:jobspot_app/features/splash/presentation/screen/splash_screen.dart';
+import '../../../admin_dashboard/presentation/screens/admin_dashboard_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -19,6 +18,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -27,13 +27,41 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  void _handleLogin() {
+  Future<void> _handleLogin() async {
     if (_formKey.currentState!.validate()) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const SplashScreen()),
-      );
+      setState(() => _isLoading = true);
+      try {
+        await Supabase.instance.client.auth.signInWithPassword(
+          email: _emailController.text.trim(),
+          password: _passwordController.text,
+        );
+        // Navigation is handled by RootPage's auth listener in main.dart
+      } on AuthException catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(e.message), backgroundColor: Colors.red),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('An error occurred during login $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      } finally {
+        if (mounted) setState(() => _isLoading = false);
+      }
     }
+  }
+
+  Future<void> _handleSocialLogin(String provider) async {
+    // Placeholder for social login. RootPage will handle redirection.
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('Connecting to $provider...')));
   }
 
   @override
@@ -64,12 +92,11 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 24),
                 // Welcome Text
-                const Text(
+                Text(
                   'Welcome Back!',
-                  style: TextStyle(
-                    fontSize: 32,
+                  style: Theme.of(context).textTheme.displaySmall?.copyWith(
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF2D2D2D),
+                    color: AppColors.black,
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -139,11 +166,31 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 24),
                 // Login Button
                 ElevatedButton(
-                  onPressed: _handleLogin,
-                  child: const Text(
-                    'Login',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  onPressed: _isLoading ? null : _handleLogin,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.orange,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
+                  child: _isLoading
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : const Text(
+                          'Login',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
                 ),
                 const SizedBox(height: 24),
                 // Divider
@@ -168,15 +215,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       child: SocialButton(
                         icon: Icons.g_mobiledata,
                         label: 'Google',
-                        onPressed: () {
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  const SeekerDashboardScreen(),
-                            ),
-                          );
-                        },
+                        onPressed: () => _handleSocialLogin('Google'),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -184,15 +223,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       child: SocialButton(
                         icon: Icons.apple,
                         label: 'Apple',
-                        onPressed: () {
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  const EmployerDashboardScreen(),
-                            ),
-                          );
-                        },
+                        onPressed: () => _handleSocialLogin('Apple'),
                       ),
                     ),
                   ],
@@ -232,13 +263,16 @@ class _LoginScreenState extends State<LoginScreen> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => const SignupScreen(),
+                            builder: (context) => const RoleSelectionScreen(),
                           ),
                         );
                       },
                       child: const Text(
                         'Sign Up',
-                        style: TextStyle(fontWeight: FontWeight.w600),
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.purple,
+                        ),
                       ),
                     ),
                   ],

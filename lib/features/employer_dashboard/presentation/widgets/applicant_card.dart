@@ -48,7 +48,7 @@ class ApplicantCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -58,8 +58,10 @@ class ApplicantCard extends StatelessWidget {
           children: [
             CircleAvatar(
               radius: 28,
-              backgroundColor: AppColors.purple.withOpacity(0.1),
-              backgroundImage: profileImageUrl != null ? NetworkImage(profileImageUrl!) : null,
+              backgroundColor: AppColors.purple.withValues(alpha: 0.1),
+              backgroundImage: profileImageUrl != null
+                  ? NetworkImage(profileImageUrl!)
+                  : null,
               child: profileImageUrl == null
                   ? Text(
                       name.substring(0, 1).toUpperCase(),
@@ -78,20 +80,27 @@ class ApplicantCard extends StatelessWidget {
                 children: [
                   Text(
                     name,
-                    style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                    style: textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     jobTitle,
-                    style: textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
+                    style: textTheme.bodyMedium?.copyWith(
+                      color: Colors.grey[600],
+                    ),
                   ),
                   const SizedBox(height: 8),
                   Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
-                          color: _getStatusColor().withOpacity(0.1),
+                          color: _getStatusColor().withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
@@ -106,7 +115,9 @@ class ApplicantCard extends StatelessWidget {
                       const SizedBox(width: 12),
                       Text(
                         'Applied $appliedDate',
-                        style: textTheme.bodySmall?.copyWith(color: Colors.grey[500]),
+                        style: textTheme.bodySmall?.copyWith(
+                          color: Colors.grey[500],
+                        ),
                       ),
                     ],
                   ),

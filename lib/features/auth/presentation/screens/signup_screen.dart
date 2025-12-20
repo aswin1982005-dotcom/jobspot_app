@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:jobspot_app/features/dashboard/presentation/screens/dashboard_screen.dart';
+import 'package:jobspot_app/core/theme/app_theme.dart';
 import 'package:jobspot_app/features/auth/presentation/widgets/social_button.dart';
-import 'package:jobspot_app/features/auth/presentation/widgets/user_type_card.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class SignupScreen extends StatefulWidget {
-  const SignupScreen({super.key});
+  final String role;
+
+  const SignupScreen({super.key, required this.role});
 
   @override
   State<SignupScreen> createState() => _SignupScreenState();
@@ -16,7 +18,6 @@ class _SignupScreenState extends State<SignupScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
-  String _userType = 'jobseeker';
 
   @override
   void dispose() {
@@ -26,12 +27,24 @@ class _SignupScreenState extends State<SignupScreen> {
     super.dispose();
   }
 
-  void _handleSignup() {
-    if (_formKey.currentState!.validate()) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const DashboardScreen()),
+  void _handleSignup() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    try {
+      final res = await Supabase.instance.client.auth.signUp(
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
       );
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Signing up...')));
+      }
+      if (!mounted) return;
+    } catch (e) {
+      if (!mounted) return;
+      final msg = e is AuthException ? e.message : 'registration_failed';
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
     }
   }
 
@@ -57,9 +70,9 @@ class _SignupScreenState extends State<SignupScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 // Header
-                const Text(
-                  'Create Account',
-                  style: TextStyle(
+                Text(
+                  'Create ${widget.role == 'employer' ? 'Employer' : 'Seeker'} Account',
+                  style: const TextStyle(
                     fontSize: 32,
                     fontWeight: FontWeight.bold,
                     color: Color(0xFF2D2D2D),
@@ -68,52 +81,10 @@ class _SignupScreenState extends State<SignupScreen> {
                 const SizedBox(height: 8),
                 Text(
                   'Sign up to get started',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.grey[600],
-                  ),
+                  style: TextStyle(fontSize: 16, color: Colors.grey[600]),
                 ),
                 const SizedBox(height: 32),
-                // User Type Selection
-                const Text(
-                  'I am a',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF2D2D2D),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: UserTypeCard(
-                        title: 'Job Seeker',
-                        icon: Icons.person_search,
-                        isSelected: _userType == 'jobseeker',
-                        onTap: () {
-                          setState(() {
-                            _userType = 'jobseeker';
-                          });
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: UserTypeCard(
-                        title: 'Business Owner',
-                        icon: Icons.business_center,
-                        isSelected: _userType == 'business',
-                        onTap: () {
-                          setState(() {
-                            _userType = 'business';
-                          });
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
+
                 // Full Name Field
                 TextFormField(
                   controller: _nameController,
@@ -182,9 +153,20 @@ class _SignupScreenState extends State<SignupScreen> {
                 // Sign Up Button
                 ElevatedButton(
                   onPressed: _handleSignup,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.darkPurple,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
                   child: const Text(
                     'Sign Up',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 24),
@@ -211,11 +193,7 @@ class _SignupScreenState extends State<SignupScreen> {
                         icon: Icons.g_mobiledata,
                         label: 'Google',
                         onPressed: () {
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(
-                                builder: (context) => const DashboardScreen()),
-                          );
+                          // Social login logic
                         },
                       ),
                     ),
@@ -225,11 +203,7 @@ class _SignupScreenState extends State<SignupScreen> {
                         icon: Icons.apple,
                         label: 'Apple',
                         onPressed: () {
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(
-                                builder: (context) => const DashboardScreen()),
-                          );
+                          // Social login logic
                         },
                       ),
                     ),

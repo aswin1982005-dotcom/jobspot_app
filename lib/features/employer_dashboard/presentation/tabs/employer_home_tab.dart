@@ -43,7 +43,7 @@ class EmployerHomeTab extends StatelessWidget {
                       borderRadius: BorderRadius.circular(12),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
+                          color: Colors.black.withValues(alpha: 0.05),
                           blurRadius: 10,
                         ),
                       ],
@@ -85,7 +85,7 @@ class EmployerHomeTab extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 32),
-              
+
               // Recent Applicants Section
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -103,7 +103,7 @@ class EmployerHomeTab extends StatelessWidget {
                 onTap: () {},
               ),
               const SizedBox(height: 12),
-              
+
               // Recent Postings Section
               const SizedBox(height: 24),
               Row(

@@ -29,7 +29,9 @@ class EmployerJobCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
+    final textTheme = Theme
+        .of(context)
+        .textTheme;
     final isOpen = status.toLowerCase() == 'open';
 
     return Container(
@@ -39,7 +41,7 @@ class EmployerJobCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -54,7 +56,7 @@ class EmployerJobCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: logoColor.withOpacity(0.1),
+                  color: logoColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(logo, color: logoColor, size: 32),
@@ -64,16 +66,21 @@ class EmployerJobCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(position, style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                    Text(position, style: textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold)),
                     const SizedBox(height: 4),
-                    Text('$company • $location', style: textTheme.bodyMedium?.copyWith(color: Colors.grey[600])),
+                    Text('$company • $location',
+                        style: textTheme.bodyMedium?.copyWith(
+                            color: Colors.grey[600])),
                   ],
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: isOpen ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1),
+                  color: isOpen ? Colors.green.withValues(alpha: 0.1) : Colors
+                      .red.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
@@ -91,9 +98,11 @@ class EmployerJobCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(salary, style: textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600)),
+              Text(salary, style: textTheme.bodyLarge?.copyWith(
+                  fontWeight: FontWeight.w600)),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
                   color: Colors.grey[100],
                   borderRadius: BorderRadius.circular(8),
@@ -122,12 +131,15 @@ class EmployerJobCard extends StatelessWidget {
                 child: ActionChip(
                   onPressed: isOpen ? onClose : null,
                   label: Center(child: Text(isOpen ? 'Close' : 'Closed')),
-                  avatar: Icon(isOpen ? Icons.lock_outline : Icons.lock, size: 16),
+                  avatar: Icon(
+                      isOpen ? Icons.lock_outline : Icons.lock, size: 16),
                   backgroundColor: isOpen ? AppColors.white : Colors.grey[100],
                   disabledColor: Colors.grey[100],
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
-                    side: BorderSide(color: isOpen ? Colors.grey.shade300 : Colors.transparent),
+                    side: BorderSide(
+                        color: isOpen ? Colors.grey.shade300 : Colors
+                            .transparent),
                   ),
                 ),
               ),
