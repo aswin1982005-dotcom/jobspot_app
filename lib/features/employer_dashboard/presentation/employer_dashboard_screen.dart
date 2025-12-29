@@ -18,7 +18,7 @@ class _EmployerDashboardScreenState extends State<EmployerDashboardScreen> {
 
   Future<void> _handleRefresh() async {
     // Simulate a network delay
-    await Future.delayed(const Duration(milliseconds: 1500));
+    await Future.delayed(const Duration(milliseconds: 1000));
     if (mounted) {
       setState(() {
         _refreshKey = UniqueKey();
@@ -28,31 +28,24 @@ class _EmployerDashboardScreenState extends State<EmployerDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    
     return Scaffold(
-      body: RefreshIndicator(
-        onRefresh: _handleRefresh,
-        displacement: 40,
-        color: Theme.of(context).colorScheme.primary,
-        child: CustomScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          slivers: [
-            SliverFillRemaining(
-              hasScrollBody: true, // Allow internal scrolling in tabs
-              child: KeyedSubtree(
-                key: _refreshKey,
-                child: IndexedStack(
-                  index: _selectedIndex,
-                  children: [
-                    const EmployerHomeTab(),
-                    const JobPostingTab(),
-                    const ApplicantsTab(),
-                    const ProfileTab(role: 'employer'),
-                  ],
-                ),
-              ),
+      body: SafeArea(
+        child: RefreshIndicator(
+          onRefresh: _handleRefresh,
+          displacement: 20,
+          color: Theme.of(context).colorScheme.primary,
+          child: KeyedSubtree(
+            key: _refreshKey,
+            child: IndexedStack(
+              index: _selectedIndex,
+              children: [
+                const EmployerHomeTab(),
+                const JobPostingTab(),
+                ApplicantsTab(onRefresh: _handleRefresh),
+                const ProfileTab(role: 'employer'),
+              ],
             ),
-          ],
+          ),
         ),
       ),
       bottomNavigationBar: NavigationBar(
