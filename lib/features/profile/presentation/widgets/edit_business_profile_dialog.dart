@@ -108,7 +108,6 @@ class _EditBusinessProfileDialogState extends State<EditBusinessProfileDialog> {
       }
     } catch (e) {
       if (mounted) {
-        print(e);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error updating profile: $e'),

@@ -1,16 +1,61 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:jobspot_app/core/theme/app_theme.dart';
-import 'package:jobspot_app/features/auth/presentation/screens/login_screen.dart';
-import 'package:jobspot_app/features/profile/presentation/widgets/profile_menu_item.dart';
+import 'package:jobspot_app/core/utils/supabase_service.dart';
+import 'package:jobspot_app/data/services/profile_service.dart';
+import 'package:jobspot_app/features/profile/presentation/widgets/edit_seeker_profile_dialog.dart';
+import 'package:jobspot_app/features/profile/presentation/widgets/profile_widgets.dart';
 import 'package:provider/provider.dart';
 
-class SeekerProfileView extends StatelessWidget {
+class SeekerProfileView extends StatefulWidget {
   const SeekerProfileView({super.key});
 
   @override
+  State<SeekerProfileView> createState() => _SeekerProfileViewState();
+}
+
+class _SeekerProfileViewState extends State<SeekerProfileView> {
+  Map<String, dynamic>? _profile;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchProfile();
+  }
+
+  Future<void> _fetchProfile() async {
+    try {
+      final user = SupabaseService.getCurrentUser();
+      if (user != null) {
+        final profile = await ProfileService.fetchSeekerProfile(user.id);
+        if (mounted) {
+          setState(() {
+            _profile = profile;
+            _isLoading = false;
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('error'.tr(args: [e.toString()]))),
+        );
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
+    final theme = Theme.of(context);
+    final textTheme = theme.textTheme;
+    final colorScheme = theme.colorScheme;
     final themeNotifier = Provider.of<ThemeNotifier>(context);
+
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
 
     return SingleChildScrollView(
       child: Column(
@@ -19,9 +64,9 @@ class SeekerProfileView extends StatelessWidget {
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(24),
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [AppColors.purple, AppColors.orange],
+                colors: [colorScheme.primary, colorScheme.secondary],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -38,23 +83,24 @@ class SeekerProfileView extends StatelessWidget {
                   child: CircleAvatar(
                     radius: 50,
                     backgroundColor: Colors.grey[200],
-                    child: const Icon(
+                    child: Icon(
                       Icons.person,
                       size: 50,
-                      color: AppColors.purple,
+                      color: colorScheme.primary,
                     ),
                   ),
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'John Doe',
+                  _profile?['full_name'] ?? 'User',
                   style: textTheme.headlineMedium?.copyWith(
                     color: Colors.white,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'john.doe@example.com',
+                  SupabaseService.getCurrentUser()?.email ?? '',
                   style: textTheme.bodyLarge?.copyWith(
                     color: Colors.white.withValues(alpha: 0.9),
                   ),
@@ -62,12 +108,20 @@ class SeekerProfileView extends StatelessWidget {
                 const SizedBox(height: 16),
                 // Edit Profile Button
                 ElevatedButton.icon(
-                  onPressed: () {},
+                  onPressed: () async {
+                    final result = await showDialog<bool>(
+                      context: context,
+                      builder: (context) => EditSeekerProfileDialog(profile: _profile),
+                    );
+                    if (result == true) {
+                      _fetchProfile();
+                    }
+                  },
                   icon: const Icon(Icons.edit, size: 18),
                   label: const Text('Edit Profile'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.white,
-                    foregroundColor: AppColors.purple,
+                    backgroundColor: Colors.white,
+                    foregroundColor: colorScheme.primary,
                     padding: const EdgeInsets.symmetric(
                       horizontal: 24,
                       vertical: 12,
@@ -81,106 +135,72 @@ class SeekerProfileView extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 20),
-          // Profile Menu Items
+          // Profile Details & Menu Items
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Column(
               children: [
-                // Theme Toggle
-                Container(
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).cardColor,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.05),
-                        blurRadius: 10,
-                      ),
-                    ],
-                  ),
-                  child: ListTile(
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
-                    leading: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: AppColors.purple.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Icon(
-                        themeNotifier.isDarkMode
-                            ? Icons.dark_mode
-                            : Icons.light_mode,
-                        color: AppColors.purple,
-                        size: 24,
-                      ),
-                    ),
-                    title: Text(
-                      'Dark Mode',
-                      style: textTheme.bodyLarge?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    trailing: Switch(
-                      value: themeNotifier.isDarkMode,
-                      activeThumbColor: AppColors.purple,
-                      onChanged: (value) {
-                        themeNotifier.setThemeMode(
-                          value ? ThemeMode.dark : ThemeMode.light,
-                        );
-                      },
-                    ),
-                  ),
-                ),
+                const ProfileSectionHeader(title: 'Personal Information'),
                 const SizedBox(height: 12),
-                ProfileMenuItem(
-                  icon: Icons.person_outline,
-                  title: 'Personal Information',
-                  subtitle: 'Update your details',
-                  onTap: () {},
+                ProfileInfoTile(
+                  icon: Icons.school_outlined,
+                  label: 'Education',
+                  value: _profile?['education_level'] ?? 'Not provided',
                 ),
-                const SizedBox(height: 12),
-                ProfileMenuItem(
+                ProfileInfoTile(
+                  icon: Icons.bolt_outlined,
+                  label: 'Skills',
+                  value: (_profile?['skills'] as List?)?.join(', ') ?? 'Not provided',
+                ),
+                ProfileInfoTile(
+                  icon: Icons.location_on_outlined,
+                  label: 'City',
+                  value: _profile?['city'] ?? 'Not provided',
+                ),
+                ProfileInfoTile(
                   icon: Icons.work_outline,
+                  label: 'Job Preference',
+                  value: _profile?['preferred_job_type'] ?? 'Not provided',
+                ),
+                const SizedBox(height: 24),
+
+                const ProfileSectionHeader(title: 'Settings'),
+                const SizedBox(height: 12),
+                // Theme Toggle
+                ProfileMenuTile(
+                  icon: themeNotifier.isDarkMode
+                      ? Icons.dark_mode
+                      : Icons.light_mode,
+                  title: 'Dark Mode',
+                  onTap: () {},
+                  trailing: Switch(
+                    value: themeNotifier.isDarkMode,
+                    activeThumbColor: colorScheme.primary,
+                    onChanged: (value) {
+                      themeNotifier.setThemeMode(
+                        value ? ThemeMode.dark : ThemeMode.light,
+                      );
+                    },
+                  ),
+                ),
+                ProfileMenuTile(
+                  icon: Icons.history,
                   title: 'My Applications',
-                  subtitle: 'Track your job applications',
                   onTap: () {},
                 ),
-                const SizedBox(height: 12),
-                ProfileMenuItem(
+                ProfileMenuTile(
                   icon: Icons.description_outlined,
                   title: 'Resume',
-                  subtitle: 'Upload and manage resume',
                   onTap: () {},
                 ),
-                const SizedBox(height: 12),
-                ProfileMenuItem(
+                ProfileMenuTile(
                   icon: Icons.notifications_outlined,
                   title: 'Notifications',
-                  subtitle: 'Manage notification settings',
                   onTap: () {},
                 ),
-                const SizedBox(height: 12),
-                ProfileMenuItem(
-                  icon: Icons.security_outlined,
-                  title: 'Privacy & Security',
-                  subtitle: 'Manage your privacy',
-                  onTap: () {},
-                ),
-                const SizedBox(height: 12),
-                ProfileMenuItem(
+                ProfileMenuTile(
                   icon: Icons.help_outline,
                   title: 'Help & Support',
-                  subtitle: 'Get help and support',
-                  onTap: () {},
-                ),
-                const SizedBox(height: 12),
-                ProfileMenuItem(
-                  icon: Icons.info_outline,
-                  title: 'About',
-                  subtitle: 'Learn more about JobSpot',
                   onTap: () {},
                 ),
                 const SizedBox(height: 20),
@@ -188,23 +208,24 @@ class SeekerProfileView extends StatelessWidget {
                 SizedBox(
                   width: double.infinity,
                   child: OutlinedButton.icon(
-                    onPressed: () {
-                      Navigator.pushAndRemoveUntil(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const LoginScreen(),
-                        ),
-                        (route) => false,
-                      );
+                    onPressed: () async {
+                      try {
+                        await SupabaseService.signOut();
+                      } catch (e) {
+                        if (!mounted) return;
+                        ScaffoldMessenger.of(
+                          context,
+                        ).showSnackBar(SnackBar(content: Text('Error: $e')));
+                      }
                     },
-                    icon: const Icon(Icons.logout, color: Colors.red),
-                    label: const Text(
+                    icon: Icon(Icons.logout, color: colorScheme.error),
+                    label: Text(
                       'Logout',
-                      style: TextStyle(color: Colors.red),
+                      style: TextStyle(color: colorScheme.error),
                     ),
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
-                      side: const BorderSide(color: Colors.red),
+                      side: BorderSide(color: colorScheme.error),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -212,11 +233,10 @@ class SeekerProfileView extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 20),
-                // App Version
                 Text(
                   'Version 1.0.0',
-                  style: textTheme.bodyMedium?.copyWith(
-                    color: Colors.grey[600],
+                  style: textTheme.bodySmall?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
                   ),
                 ),
                 const SizedBox(height: 20),

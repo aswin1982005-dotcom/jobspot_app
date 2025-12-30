@@ -1,9 +1,9 @@
-import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:jobspot_app/core/theme/app_theme.dart';
 import 'package:jobspot_app/core/utils/supabase_service.dart';
 import 'package:jobspot_app/data/services/profile_service.dart';
 import 'package:jobspot_app/features/profile/presentation/widgets/edit_business_profile_dialog.dart';
+import 'package:jobspot_app/features/profile/presentation/widgets/profile_widgets.dart';
 import 'package:provider/provider.dart';
 
 class EmployerProfileView extends StatefulWidget {
@@ -27,14 +27,13 @@ class _EmployerProfileViewState extends State<EmployerProfileView> {
       final user = SupabaseService.getCurrentUser();
       if (user != null) {
         _profile = await ProfileService.fetchEmployerProfile(user.id);
-        setState(() {});
+        if (mounted) setState(() {});
       }
     } catch (e) {
       if (mounted) {
-        print(e);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('error'.tr(args: [e.toString()]))),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('error1 $e')));
       }
     }
   }
@@ -59,14 +58,14 @@ class _EmployerProfileViewState extends State<EmployerProfileView> {
           ),
           const SizedBox(height: 16),
           Text(
-            _profile?['company_name'] ?? '',
+            _profile?['company_name'] ?? 'Loading...',
             style: textTheme.headlineMedium?.copyWith(
               fontWeight: FontWeight.bold,
               color: colorScheme.onSurface,
             ),
           ),
           Text(
-            '${_profile?['industry'] ?? ''} • + ${_profile?['city'] ?? ''}',
+            '${_profile?['industry'] ?? ''} • ${_profile?['city'] ?? ''}',
             style: textTheme.bodyMedium?.copyWith(
               color: colorScheme.onSurfaceVariant,
             ),
@@ -74,38 +73,38 @@ class _EmployerProfileViewState extends State<EmployerProfileView> {
           const SizedBox(height: 32),
 
           // Business Info Section
-          _buildSectionHeader(context, 'Business Information'),
+          const ProfileSectionHeader(title: 'Business Information'),
           const SizedBox(height: 12),
-          _buildInfoTile(context, Icons.language, 'Website', 'www.google.com'),
-          _buildInfoTile(
-            context,
-            Icons.email_outlined,
-            'Email',
-            _profile?['official_email'] ?? '',
+          const ProfileInfoTile(
+            icon: Icons.language,
+            label: 'Website',
+            value: 'www.google.com',
           ),
-          _buildInfoTile(
-            context,
-            Icons.phone_outlined,
-            'Phone',
-            _profile?['contact_mobile'] ?? '',
+          ProfileInfoTile(
+            icon: Icons.email_outlined,
+            label: 'Email',
+            value: _profile?['official_email'] ?? '',
           ),
-          _buildInfoTile(
-            context,
-            Icons.location_on_outlined,
-            'Address',
-            _profile?['address'] ?? '',
+          ProfileInfoTile(
+            icon: Icons.phone_outlined,
+            label: 'Phone',
+            value: _profile?['contact_mobile'] ?? '',
+          ),
+          ProfileInfoTile(
+            icon: Icons.location_on_outlined,
+            label: 'Address',
+            value: _profile?['city'] ?? '',
           ),
 
           const SizedBox(height: 32),
 
           // Settings Section
-          _buildSectionHeader(context, 'Settings'),
+          const ProfileSectionHeader(title: 'Settings'),
           const SizedBox(height: 12),
-          _buildMenuTile(
-            context,
-            Icons.settings_display,
-            'Dark Mode',
-            () {},
+          ProfileMenuTile(
+            icon: Icons.settings_display,
+            title: 'Dark Mode',
+            onTap: () {},
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -143,31 +142,35 @@ class _EmployerProfileViewState extends State<EmployerProfileView> {
             ),
           ),
 
-          _buildMenuTile(
-            context,
-            Icons.edit_outlined,
-            'Edit Business Profile',
-            () {
-              showDialog(
+          ProfileMenuTile(
+            icon: Icons.edit_outlined,
+            title: 'Edit Business Profile',
+            onTap: () async {
+              final result = await showDialog<bool>(
                 context: context,
                 builder: (context) =>
                     EditBusinessProfileDialog(profile: _profile),
               );
+              if (result == true) {
+                fetchUserProfile();
+              }
             },
           ),
-          _buildMenuTile(
-            context,
-            Icons.notifications_none,
-            'Notification Settings',
-            () {},
+          ProfileMenuTile(
+            icon: Icons.notifications_none,
+            title: 'Notification Settings',
+            onTap: () {},
           ),
-          _buildMenuTile(
-            context,
-            Icons.security_outlined,
-            'Security & Password',
-            () {},
+          ProfileMenuTile(
+            icon: Icons.security_outlined,
+            title: 'Security & Password',
+            onTap: () {},
           ),
-          _buildMenuTile(context, Icons.help_outline, 'Help & Support', () {}),
+          ProfileMenuTile(
+            icon: Icons.help_outline,
+            title: 'Help & Support',
+            onTap: () {},
+          ),
 
           const SizedBox(height: 32),
 
@@ -201,103 +204,6 @@ class _EmployerProfileViewState extends State<EmployerProfileView> {
           ),
           const SizedBox(height: 40),
         ],
-      ),
-    );
-  }
-
-  Widget _buildSectionHeader(BuildContext context, String title) {
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: Text(
-        title,
-        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-          fontWeight: FontWeight.bold,
-          color: Theme.of(context).colorScheme.primary,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInfoTile(
-    BuildContext context,
-    IconData icon,
-    String label,
-    String value,
-  ) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: colorScheme.primary.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(icon, color: colorScheme.primary, size: 20),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: colorScheme.onSurfaceVariant,
-                  ),
-                ),
-                Text(
-                  value,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: colorScheme.onSurface,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMenuTile(
-    BuildContext context,
-    IconData icon,
-    String title,
-    VoidCallback onTap, {
-    Widget? trailing,
-  }) {
-    final theme = Theme.of(context);
-    return Card(
-      elevation: 1,
-      color: theme.cardColor,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: Colors.grey.withValues(alpha: 0.3)),
-      ),
-      margin: const EdgeInsets.only(bottom: 12),
-      child: ListTile(
-        leading: Icon(icon, color: theme.colorScheme.primary),
-        title: Text(
-          title,
-          style: TextStyle(
-            fontWeight: FontWeight.w500,
-            color: theme.colorScheme.onSurface,
-          ),
-        ),
-        trailing:
-            trailing ??
-            Icon(
-              Icons.chevron_right,
-              size: 20,
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-        onTap: trailing == null ? onTap : null,
       ),
     );
   }
