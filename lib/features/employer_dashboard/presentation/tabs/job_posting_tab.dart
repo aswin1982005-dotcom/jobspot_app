@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:jobspot_app/features/employer_dashboard/presentation/widgets/employer_job_card.dart';
-import 'package:jobspot_app/features/employer_dashboard/presentation/widgets/create_job_dialog.dart';
+import 'package:jobspot_app/features/jobs/create_job_screen.dart';
 
 class JobPostingTab extends StatelessWidget {
   const JobPostingTab({super.key});
 
-  void _showCreateJobDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => const CreateJobDialog(),
+  void _navigateToCreateJob(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const CreateJobScreen()),
     );
   }
 
@@ -142,7 +141,7 @@ class JobPostingTab extends StatelessWidget {
           bottom: 20,
           right: 20,
           child: FloatingActionButton(
-            onPressed: () => _showCreateJobDialog(context),
+            onPressed: () => _navigateToCreateJob(context),
             backgroundColor: colorScheme.primary,
             child: const Icon(Icons.add, color: Colors.white),
           ),
