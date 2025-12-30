@@ -117,11 +117,11 @@ class EmployerHomeTab extends StatelessWidget {
           EmployerJobCard(
             job: const {
               'title': 'Senior UI/UX Designer',
-              'work_mode': 'On-site',
+              'work_mode': 'onsite',
               'location': 'California, USA',
               'pay_amount_min': 120000,
               'pay_amount_max': 150000,
-              'pay_type': 'yearly',
+              'pay_type': 'monthly',
               'is_active': true,
               'same_day_pay': true,
             },

@@ -2,8 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:jobspot_app/data/services/job_service.dart';
 import 'package:jobspot_app/core/utils/supabase_service.dart';
 
+/// A screen for creating or editing a job posting.
+///
+/// If [job] is provided, the screen operates in 'Edit' mode and populates
+/// the fields with existing job data. Otherwise, it's in 'Create' mode.
 class CreateJobScreen extends StatefulWidget {
-  const CreateJobScreen({super.key});
+  /// The optional job data to edit.
+  final Map<String, dynamic>? job;
+
+  const CreateJobScreen({super.key, this.job});
 
   @override
   State<CreateJobScreen> createState() => _CreateJobScreenState();
@@ -14,24 +21,24 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
   final _jobService = JobService();
 
   // Controllers
-  final _titleController = TextEditingController();
-  final _descriptionController = TextEditingController();
-  final _locationController = TextEditingController();
-  final _minPayController = TextEditingController();
-  final _maxPayController = TextEditingController();
-  final _vacanciesController = TextEditingController(text: '1');
-  final _skillsController = TextEditingController();
-  final _minAgeController = TextEditingController();
-  final _maxAgeController = TextEditingController();
+  late final TextEditingController _titleController;
+  late final TextEditingController _descriptionController;
+  late final TextEditingController _locationController;
+  late final TextEditingController _minPayController;
+  late final TextEditingController _maxPayController;
+  late final TextEditingController _vacanciesController;
+  late final TextEditingController _skillsController;
+  late final TextEditingController _minAgeController;
+  late final TextEditingController _maxAgeController;
 
   // Selections
-  String _workMode = 'onsite';
-  String _payType = 'monthly';
-  String _genderPreference = 'any';
-  final List<String> _selectedDays = [];
-  TimeOfDay _shiftStart = const TimeOfDay(hour: 9, minute: 0);
-  TimeOfDay _shiftEnd = const TimeOfDay(hour: 17, minute: 0);
-  bool _sameDayPay = false;
+  late String _workMode;
+  late String _payType;
+  late String _genderPreference;
+  late List<String> _selectedDays;
+  late TimeOfDay _shiftStart;
+  late TimeOfDay _shiftEnd;
+  late bool _sameDayPay;
   bool _isLoading = false;
 
   final List<String> _daysOfWeek = [
@@ -43,6 +50,60 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
     'Saturday',
     'Sunday',
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    final job = widget.job;
+
+    // Initialize controllers with existing data or defaults
+    _titleController = TextEditingController(text: job?['title']);
+    _descriptionController = TextEditingController(text: job?['description']);
+    _locationController = TextEditingController(text: job?['location']);
+    _minPayController = TextEditingController(
+      text: job?['pay_amount_min']?.toString(),
+    );
+    _maxPayController = TextEditingController(
+      text: job?['pay_amount_max']?.toString(),
+    );
+    _vacanciesController = TextEditingController(
+      text: (job?['vacancies'] ?? '1').toString(),
+    );
+    _skillsController = TextEditingController(
+      text: (job?['skills'] as List?)?.join(', '),
+    );
+    _minAgeController = TextEditingController(
+      text: job?['age_min']?.toString(),
+    );
+    _maxAgeController = TextEditingController(
+      text: job?['age_max']?.toString(),
+    );
+
+    // Initialize selections
+    _workMode = job?['work_mode'] ?? 'onsite';
+    _payType = job?['pay_type'] ?? 'monthly';
+    _genderPreference = job?['gender_preference'] ?? 'any';
+    _selectedDays = List<String>.from(job?['working_days'] ?? []);
+    _sameDayPay = job?['same_day_pay'] ?? false;
+
+    // Parse shift times
+    _shiftStart =
+        _parseTimeOfDay(job?['shift_start']) ??
+        const TimeOfDay(hour: 9, minute: 0);
+    _shiftEnd =
+        _parseTimeOfDay(job?['shift_end']) ??
+        const TimeOfDay(hour: 17, minute: 0);
+  }
+
+  TimeOfDay? _parseTimeOfDay(String? timeStr) {
+    if (timeStr == null) return null;
+    try {
+      final parts = timeStr.split(':');
+      return TimeOfDay(hour: int.parse(parts[0]), minute: int.parse(parts[1]));
+    } catch (_) {
+      return null;
+    }
+  }
 
   @override
   void dispose() {
@@ -62,21 +123,6 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
     final TimeOfDay? picked = await showTimePicker(
       context: context,
       initialTime: isStart ? _shiftStart : _shiftEnd,
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            timePickerTheme: TimePickerThemeData(
-              backgroundColor: Theme.of(context).cardColor,
-              dayPeriodColor: WidgetStateColor.resolveWith(
-                (states) => states.contains(WidgetState.selected)
-                    ? Theme.of(context).primaryColor.withValues(alpha: 0.2)
-                    : Colors.transparent,
-              ),
-            ),
-          ),
-          child: child!,
-        );
-      },
     );
     if (picked != null) {
       setState(() {
@@ -99,11 +145,7 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedDays.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Please select at least one working day'),
-          backgroundColor: Theme.of(context).colorScheme.error,
-          behavior: SnackBarBehavior.floating,
-        ),
+        const SnackBar(content: Text('Please select at least one working day')),
       );
       return;
     }
@@ -144,26 +186,26 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
         'same_day_pay': _sameDayPay,
       };
 
-      await _jobService.createJobPost(jobData);
+      if (widget.job != null) {
+        // Update existing job
+        await _jobService.updateJobPost(widget.job!['id'], jobData);
+      } else {
+        // Create new job
+        await _jobService.createJobPost(jobData);
+      }
 
       if (mounted) {
         Navigator.pop(context, true);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Job posted successfully!'),
-            behavior: SnackBarBehavior.floating,
+          SnackBar(
+            content: Text(widget.job != null ? 'Job updated!' : 'Job posted!'),
           ),
         );
       }
     } catch (e) {
       if (mounted) {
-        print(e);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-          ),
+          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
         );
       }
     } finally {
@@ -173,8 +215,10 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isEditing = widget.job != null;
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Post New Job')),
+      appBar: AppBar(title: Text(isEditing ? 'Edit Job' : 'Post New Job')),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
@@ -190,10 +234,8 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                       children: [
                         TextFormField(
                           controller: _titleController,
-                          textCapitalization: TextCapitalization.sentences,
                           decoration: const InputDecoration(
                             labelText: 'Job Title*',
-                            hintText: 'e.g. Delivery Partner',
                             prefixIcon: Icon(Icons.work_outline),
                           ),
                           validator: (v) => v!.isEmpty ? 'Required' : null,
@@ -202,17 +244,14 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                         TextFormField(
                           controller: _descriptionController,
                           maxLines: 4,
-                          textCapitalization: TextCapitalization.sentences,
                           decoration: const InputDecoration(
                             labelText: 'Job Description*',
-                            alignLabelWithHint: true,
                             prefixIcon: Icon(Icons.description_outlined),
                           ),
                           validator: (v) => v!.isEmpty ? 'Required' : null,
                         ),
                       ],
                     ),
-
                     _buildSectionCard(
                       title: 'Work Location & Mode',
                       icon: Icons.location_on_outlined,
@@ -245,7 +284,6 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                         ],
                       ],
                     ),
-
                     _buildSectionCard(
                       title: 'Pay & Vacancies',
                       icon: Icons.payments_outlined,
@@ -256,7 +294,6 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                               flex: 2,
                               child: DropdownButtonFormField<String>(
                                 initialValue: _payType,
-                                isExpanded: true,
                                 decoration: const InputDecoration(
                                   labelText: 'Pay Type',
                                   prefixIcon: Icon(Icons.calendar_month),
@@ -321,19 +358,13 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 8),
                         SwitchListTile(
-                          contentPadding: EdgeInsets.zero,
                           title: const Text('Same Day Payout?'),
-                          subtitle: const Text(
-                            'Enable if you pay workers immediately',
-                          ),
                           value: _sameDayPay,
                           onChanged: (v) => setState(() => _sameDayPay = v),
                         ),
                       ],
                     ),
-
                     _buildSectionCard(
                       title: 'Schedule & Shifts',
                       icon: Icons.access_time,
@@ -345,13 +376,11 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                         const SizedBox(height: 8),
                         Wrap(
                           spacing: 8,
-                          runSpacing: 8,
                           children: _daysOfWeek.map((day) {
                             final isSelected = _selectedDays.contains(day);
                             return FilterChip(
                               label: Text(day.substring(0, 3)),
                               selected: isSelected,
-                              showCheckmark: false,
                               onSelected: (selected) {
                                 setState(() {
                                   if (selected) {
@@ -364,7 +393,7 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                             );
                           }).toList(),
                         ),
-                        const SizedBox(height: 24),
+                        const SizedBox(height: 16),
                         Row(
                           children: [
                             Expanded(
@@ -386,7 +415,6 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                         ),
                       ],
                     ),
-
                     _buildSectionCard(
                       title: 'Requirements',
                       icon: Icons.rule,
@@ -394,8 +422,7 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                         TextFormField(
                           controller: _skillsController,
                           decoration: const InputDecoration(
-                            labelText: 'Skills Required',
-                            hintText: 'e.g. Driving, Cooking, Java',
+                            labelText: 'Skills Required (comma separated)',
                             prefixIcon: Icon(Icons.stars_outlined),
                           ),
                         ),
@@ -445,14 +472,17 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                         ),
                       ],
                     ),
-
-                    const SizedBox(height: 16),
-                    ElevatedButton.icon(
-                      onPressed: _submit,
-                      icon: const Icon(Icons.send_rounded),
-                      label: const Text('POST JOB NOW'),
-                    ),
                     const SizedBox(height: 32),
+                    ElevatedButton(
+                      onPressed: _submit,
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                      ),
+                      child: Text(
+                        isEditing ? 'Update Job Posting' : 'Post Job Now',
+                      ),
+                    ),
+                    const SizedBox(height: 24),
                   ],
                 ),
               ),
@@ -460,16 +490,14 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
     );
   }
 
-  // Helper widget to make sections look cleaner
   Widget _buildSectionCard({
     required String title,
     required IconData icon,
     required List<Widget> children,
   }) {
     return Card(
-      elevation: 0,
-      // Using flat style for modern look, increase if you prefer shadow
       margin: const EdgeInsets.only(bottom: 20),
+      elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(color: Colors.grey.withValues(alpha: 0.1)),
@@ -481,12 +509,18 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
           children: [
             Row(
               children: [
-                Icon(icon, color: Theme.of(context).primaryColor, size: 22),
-                const SizedBox(width: 10),
-                Text(title, style: Theme.of(context).textTheme.headlineMedium),
+                Icon(icon, size: 20, color: Theme.of(context).primaryColor),
+                const SizedBox(width: 12),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ],
             ),
-            const Divider(height: 24),
+            const Divider(height: 32),
             ...children,
           ],
         ),
@@ -494,21 +528,15 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
     );
   }
 
-  // Custom Time Picker widget that mimics an input field
   Widget _buildTimePickerField(String label, TimeOfDay time, bool isStart) {
     return InkWell(
       onTap: () => _selectTime(context, isStart),
-      borderRadius: BorderRadius.circular(12),
       child: InputDecorator(
         decoration: InputDecoration(
           labelText: label,
-          prefixIcon: const Icon(Icons.schedule),
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          prefixIcon: const Icon(Icons.access_time),
         ),
-        child: Text(
-          time.format(context),
-          style: Theme.of(context).textTheme.bodyLarge,
-        ),
+        child: Text(time.format(context)),
       ),
     );
   }

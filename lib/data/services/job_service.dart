@@ -56,4 +56,9 @@ class JobService {
   Future<void> createJobPost(Map<String, dynamic> jobData) async {
     await _client.from('job_posts').insert(jobData);
   }
+
+  /// Updates an existing job post with the provided [jobId] and [jobData].
+  Future<void> updateJobPost(String jobId, Map<String, dynamic> jobData) async {
+    await _client.from('job_posts').update(jobData).eq('id', jobId);
+  }
 }
