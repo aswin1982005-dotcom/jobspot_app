@@ -1,25 +1,55 @@
 import 'package:flutter/material.dart';
 import 'package:jobspot_app/features/jobs/presentation/employer_job_card.dart';
 import 'package:jobspot_app/features/jobs/create_job_screen.dart';
+import 'package:jobspot_app/data/services/job_service.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// A tab widget for the employer dashboard that allows employers to manage their job postings.
-///
-/// It displays a list of jobs with their current status (open/closed) and
-/// provides functionality to create new jobs, filter existing ones, and perform
-/// actions like editing or closing a posting.
-class JobPostingTab extends StatelessWidget {
-  /// Creates a [JobPostingTab].
+class JobPostingTab extends StatefulWidget {
   const JobPostingTab({super.key});
 
-  /// Navigates to the [CreateJobScreen] where the employer can fill out
-  /// details for a new job opening.
-  ///
-  /// The [context] is used to find the [Navigator].
-  void _navigateToCreateJob(BuildContext context) {
-    Navigator.push(
+  @override
+  State<JobPostingTab> createState() => _JobPostingTabState();
+}
+
+class _JobPostingTabState extends State<JobPostingTab> {
+  final JobService _jobService = JobService();
+  late Future<PostgrestList> _jobsFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _refreshJobs();
+  }
+
+  void _refreshJobs() {
+    setState(() {
+      _jobsFuture = _jobService.fetchEmployerJobs();
+    });
+  }
+
+  void _navigateToCreateJob(BuildContext context, {PostgrestMap? job}) async {
+    final result = await Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => const CreateJobScreen()),
+      MaterialPageRoute(builder: (context) => CreateJobScreen(job: job)),
     );
+    if (result == true) {
+      _refreshJobs();
+    }
+  }
+
+  Future<void> _toggleJobStatus(Map<String, dynamic> job) async {
+    final bool currentStatus = job['is_active'] ?? true;
+    try {
+      await _jobService.updateJobPost(job['id'], {'is_active': !currentStatus});
+      _refreshJobs();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error updating job status: $e')),
+        );
+      }
+    }
   }
 
   @override
@@ -34,8 +64,6 @@ class JobPostingTab extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: 10),
-
-            /// Fixed header containing the title and notifications icon.
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
               child: Row(
@@ -76,88 +104,89 @@ class JobPostingTab extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 24),
-
-            /// Scrollable content area containing the list of job postings.
             Expanded(
-              child: SingleChildScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              child: FutureBuilder<PostgrestList>(
+                future: _jobsFuture,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+
+                  if (snapshot.hasError) {
+                    return ListView(
+                      physics: const AlwaysScrollableScrollPhysics(),
                       children: [
-                        Text(
-                          'All Postings',
-                          style: textTheme.headlineMedium?.copyWith(
-                            color: colorScheme.onSurface,
+                        SizedBox(
+                          height: MediaQuery.of(context).size.height * 0.4,
+                          child: Center(
+                            child: Text(
+                              'Error: ${snapshot.error}',
+                              textAlign: TextAlign.center,
+                            ),
                           ),
                         ),
-                        TextButton.icon(
-                          onPressed: () {},
-                          icon: const Icon(Icons.filter_list, size: 20),
-                          label: const Text('Filter'),
+                      ],
+                    );
+                  }
+
+                  final jobs = snapshot.data ?? [];
+
+                  if (jobs.isEmpty) {
+                    return ListView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      children: [
+                        SizedBox(
+                          height: MediaQuery.of(context).size.height * 0.4,
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.work_outline,
+                                size: 64,
+                                color: theme.hintColor,
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                'No job postings yet',
+                                style: textTheme.titleMedium?.copyWith(
+                                  color: theme.hintColor,
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              ElevatedButton(
+                                onPressed: () => _navigateToCreateJob(context),
+                                child: const Text('Post a Job'),
+                              ),
+                            ],
+                          ),
                         ),
                       ],
-                    ),
-                    const SizedBox(height: 16),
+                    );
+                  }
 
-                    /// List of job cards. In a real application, these would be
-                    /// dynamically generated from a list of jobs.
-                    EmployerJobCard(
-                      job: const {
-                        'title': 'Senior UI/UX Designer',
-                        'work_mode': 'On-site',
-                        'location': 'California, USA',
-                        'pay_amount_min': 120000,
-                        'pay_amount_max': 150000,
-                        'pay_type': 'yearly',
-                        'is_active': true,
-                        'same_day_pay': true,
-                      },
-                      onEdit: () {},
-                      onClose: () {},
-                    ),
-                    const SizedBox(height: 12),
-                    EmployerJobCard(
-                      job: const {
-                        'title': 'Senior UI/UX Designer',
-                        'work_mode': 'On-site',
-                        'location': 'California, USA',
-                        'pay_amount_min': 120000,
-                        'pay_amount_max': 150000,
-                        'pay_type': 'yearly',
-                        'is_active': true,
-                        'same_day_pay': true,
-                      },
-                      onEdit: () {},
-                      onClose: () {},
-                    ),
-                    const SizedBox(height: 12),
-                    EmployerJobCard(
-                      job: const {
-                        'title': 'Senior UI/UX Designer',
-                        'work_mode': 'onsite',
-                        'location': 'California, USA',
-                        'pay_amount_min': 120000,
-                        'pay_amount_max': 150000,
-                        'pay_type': 'yearly',
-                        'is_active': true,
-                        'same_day_pay': true,
-                      },
-                      onEdit: () {},
-                      onClose: () {},
-                    ),
-                    const SizedBox(height: 100), // Space for FAB
-                  ],
-                ),
+                  return ListView.separated(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 100),
+                    itemCount: jobs.length,
+                    separatorBuilder: (context, index) =>
+                        const SizedBox(height: 12),
+                    itemBuilder: (context, index) {
+                      final job = jobs[index];
+                      return EmployerJobCard(
+                        job: job,
+                        onEdit: () {
+                          _navigateToCreateJob(context, job: job);
+                        },
+                        onClose: () => _toggleJobStatus(job),
+                      );
+                    },
+                  );
+                },
               ),
             ),
           ],
         ),
-
-        /// Floating action button to create a new job posting.
         Positioned(
           bottom: 20,
           right: 20,

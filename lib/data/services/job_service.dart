@@ -3,7 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 class JobService {
   final SupabaseClient _client = Supabase.instance.client;
 
-  Future<List<Map<String, dynamic>>> fetchJobs({
+  Future<PostgrestList> fetchJobs({
     String? location,
     bool? sameDayPay,
     bool? walkIn,
@@ -38,10 +38,10 @@ class JobService {
     }
 
     final response = await query.order('created_at', ascending: false);
-    return List<Map<String, dynamic>>.from(response);
+    return PostgrestList.from(response);
   }
 
-  Future<List<Map<String, dynamic>>> fetchEmployerJobs() async {
+  Future<PostgrestList> fetchEmployerJobs() async {
     final userId = _client.auth.currentUser!.id;
 
     final response = await _client
@@ -50,15 +50,15 @@ class JobService {
         .eq('employer_id', userId)
         .order('created_at', ascending: false);
 
-    return List<Map<String, dynamic>>.from(response);
+    return PostgrestList.from(response);
   }
 
-  Future<void> createJobPost(Map<String, dynamic> jobData) async {
+  Future<void> createJobPost(PostgrestMap jobData) async {
     await _client.from('job_posts').insert(jobData);
   }
 
   /// Updates an existing job post with the provided [jobId] and [jobData].
-  Future<void> updateJobPost(String jobId, Map<String, dynamic> jobData) async {
+  Future<void> updateJobPost(String jobId, PostgrestMap jobData) async {
     await _client.from('job_posts').update(jobData).eq('id', jobId);
   }
 }
