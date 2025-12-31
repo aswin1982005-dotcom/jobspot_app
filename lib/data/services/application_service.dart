@@ -30,7 +30,6 @@ class ApplicationService {
     required String message,
   }) async {
     final userId = _client.auth.currentUser!.id;
-
     await _client.from('job_applications').insert({
       'job_post_id': jobPostId,
       'applicant_id': userId,

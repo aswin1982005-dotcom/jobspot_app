@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:jobspot_app/features/jobs/presentation/job_details_screen.dart';
+import 'package:jobspot_app/features/jobs/create_job_screen.dart';
 
 /// A card widget used by employers to view a summary of their job posting.
 ///
@@ -10,15 +11,25 @@ class EmployerJobCard extends StatelessWidget {
   final Map<String, dynamic> job;
 
   /// Callback when the edit button is pressed.
-  final VoidCallback onEdit;
+  final VoidCallback afterEdit;
 
   /// Callback when the close/reopen button is pressed.
   final VoidCallback onClose;
 
+  void _navigateToCreateJob(BuildContext context) async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => CreateJobScreen(job: job)),
+    );
+    if (result == true) {
+      afterEdit();
+    }
+  }
+
   const EmployerJobCard({
     super.key,
     required this.job,
-    required this.onEdit,
+    required this.afterEdit,
     required this.onClose,
   });
 
@@ -154,7 +165,7 @@ class EmployerJobCard extends StatelessWidget {
               children: [
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed: onEdit,
+                    onPressed: () => _navigateToCreateJob(context),
                     icon: const Icon(Icons.edit, size: 18),
                     label: const Text('Edit'),
                     style: OutlinedButton.styleFrom(

@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:jobspot_app/data/services/application_service.dart';
 
 class JobCard extends StatefulWidget {
   final Map<String, dynamic> job;
-  final VoidCallback? onApply;
+  final bool canApply;
+  final VoidCallback? onApplied;
 
   const JobCard({
     super.key,
     required this.job,
-    this.onApply,
+    required this.canApply,
+    this.onApplied,
   });
 
   @override
@@ -16,6 +19,38 @@ class JobCard extends StatefulWidget {
 
 class _JobCardState extends State<JobCard> {
   bool _isBookmarked = false;
+  bool _isApplying = false;
+
+  Future<void> _applyJob() async {
+    setState(() {
+      _isApplying = true;
+    });
+    try {
+      final messenger = ScaffoldMessenger.of(context);
+      await ApplicationService().fastApply(
+        jobPostId: widget.job['id'],
+        message: "hello",
+      );
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Application sent successfully!')),
+      );
+      if (widget.onApplied != null) {
+        widget.onApplied!();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error applying for job: $e')));
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isApplying = false;
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -54,7 +89,11 @@ class _JobCardState extends State<JobCard> {
                   color: colorScheme.primary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(Icons.business, color: colorScheme.primary, size: 24),
+                child: Icon(
+                  Icons.business,
+                  color: colorScheme.primary,
+                  size: 24,
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -70,7 +109,9 @@ class _JobCardState extends State<JobCard> {
                     const SizedBox(height: 4),
                     Text(
                       '${job['work_mode']?.toString().toUpperCase() ?? ''} • ${job['location'] ?? 'Remote'}',
-                      style: textTheme.bodyMedium?.copyWith(color: theme.hintColor),
+                      style: textTheme.bodyMedium?.copyWith(
+                        color: theme.hintColor,
+                      ),
                     ),
                   ],
                 ),
@@ -91,7 +132,11 @@ class _JobCardState extends State<JobCard> {
           const SizedBox(height: 16),
           Row(
             children: [
-              Icon(Icons.calendar_today_outlined, size: 16, color: theme.hintColor),
+              Icon(
+                Icons.calendar_today_outlined,
+                size: 16,
+                color: theme.hintColor,
+              ),
               const SizedBox(width: 4),
               Expanded(
                 child: Text(
@@ -134,11 +179,23 @@ class _JobCardState extends State<JobCard> {
                 ],
               ),
               ElevatedButton(
-                onPressed: widget.onApply,
+                onPressed: (widget.canApply && !_isApplying) ? _applyJob : null,
                 style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 8,
+                  ),
                 ),
-                child: const Text("Apply"),
+                child: _isApplying
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : Text(widget.canApply ? "Apply" : "Applied"),
               ),
             ],
           ),

@@ -1,26 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:jobspot_app/core/theme/app_theme.dart';
+import 'package:jobspot_app/data/services/application_service.dart';
 import 'package:jobspot_app/features/jobs/presentation/job_card.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
-class Job {
-  final String company;
-  final String position;
-  final String location;
-  final String salary;
-  final String type;
-  final IconData logo;
-  final Color logoColor;
-
-  Job({
-    required this.company,
-    required this.position,
-    required this.location,
-    required this.salary,
-    required this.type,
-    required this.logo,
-    required this.logoColor,
-  });
-}
+import '../../../../data/services/job_service.dart';
 
 class SearchTab extends StatefulWidget {
   const SearchTab({super.key});
@@ -30,59 +14,49 @@ class SearchTab extends StatefulWidget {
 }
 
 class _SearchTabState extends State<SearchTab> {
-  // --- Master list of all available jobs (in a real app, this would come from an API) ---
-  final List<Job> _allJobs = [
-    Job(
-      company: 'Google Inc.',
-      position: 'Senior UI/UX Designer',
-      location: 'California, USA',
-      salary: '\$120k - \$150k',
-      type: 'Full Time',
-      logo: Icons.g_mobiledata,
-      logoColor: AppColors.purple,
-    ),
-    Job(
-      company: 'Apple Inc.',
-      position: 'Product Manager',
-      location: 'New York, USA',
-      salary: '\$140k - \$180k',
-      type: 'Full Time',
-      logo: Icons.apple,
-      logoColor: AppColors.orange,
-    ),
-    Job(
-      company: 'Microsoft',
-      position: 'Software Engineer',
-      location: 'Seattle, USA',
-      salary: '\$110k - \$145k',
-      type: 'Remote',
-      logo: Icons.business,
-      logoColor: AppColors.purple,
-    ),
-    Job(
-      company: 'Facebook',
-      position: 'Data Scientist',
-      location: 'Austin, USA',
-      salary: '\$135k - \$160k',
-      type: 'Contract',
-      logo: Icons.facebook,
-      logoColor: const Color(0xFF1877F2),
-    ),
-    Job(
-      company: 'Netflix',
-      position: 'Flutter Developer',
-      location: 'Los Gatos, USA',
-      salary: '\$115k - \$155k',
-      type: 'Part Time',
-      logo: Icons.movie_filter,
-      logoColor: const Color(0xFFE50914),
-    ),
-  ];
+  final JobService _jobService = JobService();
+  final ApplicationService _applicationService = ApplicationService();
+  PostgrestList _allJobs = [];
+  PostgrestList filteredJobs = [];
+  PostgrestList _allApplications = [];
+  bool _isLoading = true;
 
-  // --- List of jobs that will be displayed in the UI ---
-  late List<Job> _displayedJobs;
+  @override
+  void initState() {
+    super.initState();
+    _refresh();
+  }
 
-  // State for active filters
+  void _refresh() {
+    fetchData();
+  }
+
+  Future<void> fetchData() async {
+    setState(() {
+      _isLoading = true;
+    });
+    try {
+      final jobs = await _jobService.fetchJobs();
+      final applies = await _applicationService.fetchMyApplications();
+
+      setState(() {
+        _allJobs = jobs;
+        filteredJobs = List.from(_allJobs);
+        _allApplications = applies;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error fetching Data: $e')));
+      }
+    }
+  }
+
   String? _selectedJobType;
   final List<String> _jobTypes = [
     'Full Time',
@@ -91,29 +65,18 @@ class _SearchTabState extends State<SearchTab> {
     'Contract',
   ];
 
-  @override
-  void initState() {
-    super.initState();
-    // Initially, display all jobs
-    _displayedJobs = List.from(_allJobs);
-  }
-
-  // --- Main filtering logic ---
   void _filterJobs() {
     setState(() {
       if (_selectedJobType == null) {
-        // If no filter is selected, show all jobs
-        _displayedJobs = List.from(_allJobs);
+        filteredJobs = List.from(_allJobs);
       } else {
-        // Otherwise, filter the list
-        _displayedJobs = _allJobs
-            .where((job) => job.type == _selectedJobType)
+        filteredJobs = _allJobs
+            .where((job) => job['type'] == _selectedJobType)
             .toList();
       }
     });
   }
 
-  // --- Function to show the filter options in a modal bottom sheet ---
   void _openFilterOptions() {
     showModalBottomSheet(
       context: context,
@@ -121,7 +84,6 @@ class _SearchTabState extends State<SearchTab> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (context) {
-        // Use StatefulBuilder to update the modal's UI without rebuilding the whole screen
         return StatefulBuilder(
           builder: (BuildContext context, StateSetter setModalState) {
             return Padding(
@@ -145,10 +107,8 @@ class _SearchTabState extends State<SearchTab> {
                         selected: isSelected,
                         onSelected: (selected) {
                           setModalState(() {
-                            // Allow deselecting by tapping the same chip again
                             _selectedJobType = selected ? type : null;
                           });
-                          // Apply the filter and close the sheet
                           _filterJobs();
                           Navigator.pop(context);
                         },
@@ -181,6 +141,8 @@ class _SearchTabState extends State<SearchTab> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Find Your Dream Job'),
@@ -190,131 +152,140 @@ class _SearchTabState extends State<SearchTab> {
         foregroundColor: Colors.white,
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Search Bar
-              TextField(
-                decoration: InputDecoration(
-                  hintText: 'Search for position, company...',
-                  prefixIcon: const Icon(Icons.search, color: Colors.grey),
-                  filled: true,
-                  fillColor: Theme.of(context).cardColor,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(vertical: 16),
-                ),
-              ),
-              const SizedBox(height: 24),
-
-              // --- Sort & Filter Chips Section ---
-              SizedBox(
-                height: 36,
-                child: ListView(
-                  scrollDirection: Axis.horizontal,
-                  children: [
-                    // --- Filter Chip ---
-                    ActionChip(
-                      onPressed: _openFilterOptions,
-                      // This now opens the popup
-                      avatar: const Icon(Icons.filter_list, size: 18),
-                      label: const Text('Filter'),
-                      backgroundColor: Theme.of(context).cardColor,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        side: BorderSide(
-                          color: Colors.grey.withValues(alpha: 0.3),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-
-                    // --- Sort Chip ---
-                    ActionChip(
-                      onPressed: () {
-                        // TODO: Implement sort functionality
-                      },
-                      avatar: const Icon(Icons.sort, size: 18),
-                      label: const Text('Sort'),
-                      backgroundColor: Theme.of(context).cardColor,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        side: BorderSide(
-                          color: Colors.grey.withValues(alpha: 0.3),
-                        ),
-                      ),
-                    ),
-
-                    // --- Display Active Filter Chip ---
-                    if (_selectedJobType != null)
-                      Padding(
-                        padding: const EdgeInsets.only(left: 8.0),
-                        child: Chip(
-                          label: Text(_selectedJobType!),
-                          labelStyle: const TextStyle(color: Colors.white),
-                          backgroundColor: AppColors.purple,
-                          onDeleted: () {
-                            // Clear the filter and update the job list
-                            _selectedJobType = null;
-                            _filterJobs();
-                          },
-                          deleteIconColor: Colors.white70,
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 24),
-
-              // --- Results Section Header ---
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    '${_displayedJobs.length} Jobs Found',
-                    style: Theme.of(context).textTheme.bodyLarge,
-                  ),
-                  Text(
-                    'Sort by: Newest',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Theme.of(context).hintColor,
+                  TextField(
+                    decoration: InputDecoration(
+                      hintText: 'Search for position, company...',
+                      prefixIcon: const Icon(Icons.search, color: Colors.grey),
+                      filled: true,
+                      fillColor: theme.cardColor,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(vertical: 16),
                     ),
                   ),
+                  const SizedBox(height: 24),
+                  SizedBox(
+                    height: 36,
+                    child: ListView(
+                      scrollDirection: Axis.horizontal,
+                      children: [
+                        ActionChip(
+                          onPressed: _openFilterOptions,
+                          avatar: const Icon(Icons.filter_list, size: 18),
+                          label: const Text('Filter'),
+                          backgroundColor: theme.cardColor,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            side: BorderSide(
+                              color: Colors.grey.withValues(alpha: 0.3),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        ActionChip(
+                          onPressed: () {},
+                          avatar: const Icon(Icons.sort, size: 18),
+                          label: const Text('Sort'),
+                          backgroundColor: theme.cardColor,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            side: BorderSide(
+                              color: Colors.grey.withValues(alpha: 0.3),
+                            ),
+                          ),
+                        ),
+                        if (_selectedJobType != null)
+                          Padding(
+                            padding: const EdgeInsets.only(left: 8.0),
+                            child: Chip(
+                              label: Text(_selectedJobType!),
+                              labelStyle: const TextStyle(color: Colors.white),
+                              backgroundColor: AppColors.purple,
+                              onDeleted: () {
+                                _selectedJobType = null;
+                                _filterJobs();
+                              },
+                              deleteIconColor: Colors.white70,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        '${filteredJobs.length} Jobs Found',
+                        style: theme.textTheme.titleMedium,
+                      ),
+                      Text(
+                        'Sort by: Newest',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.hintColor,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
                 ],
               ),
-              const SizedBox(height: 16),
+            ),
+            Expanded(
+              child: _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : filteredJobs.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.search_off,
+                            size: 64,
+                            color: theme.hintColor,
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'No jobs found',
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              color: theme.hintColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : ListView.separated(
+                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                      itemCount: filteredJobs.length,
+                      separatorBuilder: (context, index) =>
+                          const SizedBox(height: 12),
+                      itemBuilder: (context, index) {
+                        final job = filteredJobs[index];
+                        final isApplied = _allApplications
+                            .where(
+                              (application) =>
+                                  application['job_post_id'] == job['id'],
+                            )
+                            .isNotEmpty;
 
-              // --- Job Cards List (now built from _displayedJobs) ---
-              ListView.separated(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: _displayedJobs.length,
-                separatorBuilder: (context, index) =>
-                    const SizedBox(height: 12),
-                itemBuilder: (context, index) {
-                  final job = _displayedJobs[index];
-                  return JobCard(
-                    job: const {
-                      'title': 'Product Manager',
-                      'work_mode': 'Remote',
-                      'location': 'Mumbai, India',
-                      'pay_amount_min': 45000,
-                      'pay_amount_max': 60000,
-                      'pay_type': 'monthly',
-                      'working_days': ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
-                      'shift_start': '09:00:00',
-                      'shift_end': '18:00:00',
-                    },
-                    onApply: () {},
-                  );
-                },
-              ),
-            ],
-          ),
+                        return JobCard(
+                          job: job,
+                          canApply: !isApplied,
+                          onApplied: _refresh,
+                        );
+                      },
+                    ),
+            ),
+          ],
         ),
       ),
     );

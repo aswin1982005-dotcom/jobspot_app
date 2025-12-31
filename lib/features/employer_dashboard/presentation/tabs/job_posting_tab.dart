@@ -175,9 +175,7 @@ class _JobPostingTabState extends State<JobPostingTab> {
                       final job = jobs[index];
                       return EmployerJobCard(
                         job: job,
-                        onEdit: () {
-                          _navigateToCreateJob(context, job: job);
-                        },
+                        afterEdit: _refreshJobs,
                         onClose: () => _toggleJobStatus(job),
                       );
                     },

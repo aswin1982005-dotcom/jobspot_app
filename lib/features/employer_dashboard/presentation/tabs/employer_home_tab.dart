@@ -1,11 +1,47 @@
 import 'package:flutter/material.dart';
 import 'package:jobspot_app/core/theme/app_theme.dart';
+import 'package:jobspot_app/data/services/job_service.dart';
 import 'package:jobspot_app/features/seeker_dashboard/presentation/widgets/stat_card.dart';
 import 'package:jobspot_app/features/jobs/presentation/employer_job_card.dart';
 import 'package:jobspot_app/features/employer_dashboard/presentation/widgets/applicant_card.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
-class EmployerHomeTab extends StatelessWidget {
+class EmployerHomeTab extends StatefulWidget {
   const EmployerHomeTab({super.key});
+
+  @override
+  State<EmployerHomeTab> createState() => _EmployerHomeTabState();
+}
+
+class _EmployerHomeTabState extends State<EmployerHomeTab> {
+  final JobService _jobService = JobService();
+  late Future<PostgrestList> _jobsFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _refreshJobs();
+  }
+
+  void _refreshJobs() {
+    setState(() {
+      _jobsFuture = _jobService.fetchEmployerJobs();
+    });
+  }
+
+  Future<void> _toggleJobStatus(Map<String, dynamic> job) async {
+    final bool currentStatus = job['is_active'] ?? true;
+    try {
+      await _jobService.updateJobPost(job['id'], {'is_active': !currentStatus});
+      _refreshJobs();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error updating job status: $e')),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -102,10 +138,9 @@ class EmployerHomeTab extends StatelessWidget {
             appliedDate: '2 days ago',
             onTap: () {},
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 32),
 
-          // Recent Postings Section
-          const SizedBox(height: 24),
+          // Active Postings Section
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -114,19 +149,71 @@ class EmployerHomeTab extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
-          EmployerJobCard(
-            job: const {
-              'title': 'Senior UI/UX Designer',
-              'work_mode': 'onsite',
-              'location': 'California, USA',
-              'pay_amount_min': 120000,
-              'pay_amount_max': 150000,
-              'pay_type': 'monthly',
-              'is_active': true,
-              'same_day_pay': true,
+          FutureBuilder<PostgrestList>(
+            future: _jobsFuture,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 20),
+                  child: Center(child: CircularProgressIndicator()),
+                );
+              }
+
+              if (snapshot.hasError) {
+                return Center(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 20),
+                    child: Text('Error: ${snapshot.error}'),
+                  ),
+                );
+              }
+
+              final allJobs = snapshot.data ?? [];
+              // Filter only active jobs
+              final activeJobs = allJobs
+                  .where((job) => job['is_active'] == true)
+                  .toList();
+
+              if (activeJobs.isEmpty) {
+                return Center(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 40),
+                    child: Column(
+                      children: [
+                        Icon(
+                          Icons.work_outline,
+                          size: 48,
+                          color: theme.hintColor,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'No active postings',
+                          style: textTheme.bodyMedium?.copyWith(
+                            color: theme.hintColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
+
+              return ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: activeJobs.length,
+                separatorBuilder: (context, index) =>
+                    const SizedBox(height: 12),
+                itemBuilder: (context, index) {
+                  final job = activeJobs[index];
+                  return EmployerJobCard(
+                    job: job,
+                    afterEdit: _refreshJobs,
+                    onClose: () => _toggleJobStatus(job),
+                  );
+                },
+              );
             },
-            onEdit: () {},
-            onClose: () {},
           ),
         ],
       ),

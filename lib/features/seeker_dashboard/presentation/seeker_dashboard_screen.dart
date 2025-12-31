@@ -13,6 +13,17 @@ class SeekerDashboardScreen extends StatefulWidget {
 
 class _SeekerDashboardScreenState extends State<SeekerDashboardScreen> {
   int _selectedIndex = 0;
+  Key _refreshKey = UniqueKey();
+
+  Future<void> _handleRefresh() async {
+    // Simulate a network delay
+    await Future.delayed(const Duration(milliseconds: 1000));
+    if (mounted) {
+      setState(() {
+        _refreshKey = UniqueKey();
+      });
+    }
+  }
 
   final List<Widget> _screens = [
     const HomeTab(),
@@ -24,7 +35,15 @@ class _SeekerDashboardScreenState extends State<SeekerDashboardScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(index: _selectedIndex, children: _screens),
+      body: RefreshIndicator(
+        onRefresh: _handleRefresh,
+        displacement: 20,
+        color: Theme.of(context).colorScheme.primary,
+        child: KeyedSubtree(
+          key: _refreshKey,
+          child: IndexedStack(index: _selectedIndex, children: _screens),
+        ),
+      ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
         onDestinationSelected: (index) {

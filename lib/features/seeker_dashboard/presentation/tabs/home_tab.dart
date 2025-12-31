@@ -93,6 +93,7 @@ class HomeTab extends StatelessWidget {
               const SizedBox(height: 16),
               // Job Cards
               JobCard(
+                canApply: false,
                 job: const {
                   'title': 'Product Manager',
                   'work_mode': 'Remote',
@@ -104,11 +105,12 @@ class HomeTab extends StatelessWidget {
                   'shift_start': '09:00:00',
                   'shift_end': '18:00:00',
                 },
-                onApply: () {},
               ),
 
               const SizedBox(height: 12),
               JobCard(
+                canApply: false,
+
                 job: const {
                   'title': 'Product Manager',
                   'work_mode': 'Remote',
@@ -120,11 +122,12 @@ class HomeTab extends StatelessWidget {
                   'shift_start': '09:00:00',
                   'shift_end': '18:00:00',
                 },
-                onApply: () {},
               ),
 
               const SizedBox(height: 12),
               JobCard(
+                canApply: false,
+
                 job: const {
                   'title': 'Product Manager',
                   'work_mode': 'Remote',
@@ -136,7 +139,6 @@ class HomeTab extends StatelessWidget {
                   'shift_start': '09:00:00',
                   'shift_end': '18:00:00',
                 },
-                onApply: () {},
               ),
 
               const SizedBox(height: 12),
@@ -156,6 +158,8 @@ class HomeTab extends StatelessWidget {
                     SizedBox(
                       width: 320, // Constrain the width of the JobCard
                       child: JobCard(
+                        canApply: false,
+
                         job: const {
                           'title': 'Product Manager',
                           'work_mode': 'Remote',
@@ -167,13 +171,14 @@ class HomeTab extends StatelessWidget {
                           'shift_start': '09:00:00',
                           'shift_end': '18:00:00',
                         },
-                        onApply: () {},
                       ),
                     ),
                     const SizedBox(width: 12),
                     SizedBox(
                       width: 320, // Constrain the width of the JobCard
                       child: JobCard(
+                        canApply: false,
+
                         job: const {
                           'title': 'Product Manager',
                           'work_mode': 'Remote',
@@ -185,13 +190,14 @@ class HomeTab extends StatelessWidget {
                           'shift_start': '09:00:00',
                           'shift_end': '18:00:00',
                         },
-                        onApply: () {},
                       ),
                     ),
                     const SizedBox(width: 12),
                     SizedBox(
                       width: 320, // Constrain the width of the JobCard
                       child: JobCard(
+                        canApply: false,
+
                         job: const {
                           'title': 'Product Manager',
                           'work_mode': 'Remote',
@@ -203,7 +209,6 @@ class HomeTab extends StatelessWidget {
                           'shift_start': '09:00:00',
                           'shift_end': '18:00:00',
                         },
-                        onApply: () {},
                       ),
                     ),
                   ],
