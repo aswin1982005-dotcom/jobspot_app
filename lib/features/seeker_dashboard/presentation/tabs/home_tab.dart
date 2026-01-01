@@ -2,9 +2,47 @@ import 'package:flutter/material.dart';
 import 'package:jobspot_app/core/theme/app_theme.dart';
 import 'package:jobspot_app/features/seeker_dashboard/presentation/widgets/stat_card.dart';
 import 'package:jobspot_app/features/jobs/presentation/job_card.dart';
+import 'package:jobspot_app/data/services/job_service.dart';
+import 'package:jobspot_app/data/services/application_service.dart';
 
-class HomeTab extends StatelessWidget {
+class HomeTab extends StatefulWidget {
   const HomeTab({super.key});
+
+  @override
+  State<HomeTab> createState() => _HomeTabState();
+}
+
+class _HomeTabState extends State<HomeTab> {
+  final JobService _jobService = JobService();
+  final ApplicationService _applicationService = ApplicationService();
+
+  late Future<Map<String, dynamic>> _homeDataFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _refreshData();
+  }
+
+  void _refreshData() {
+    setState(() {
+      _homeDataFuture = _fetchHomeData();
+    });
+  }
+
+  Future<Map<String, dynamic>> _fetchHomeData() async {
+    final results = await Future.wait([
+      _jobService.fetchSavedJobs(),
+      _jobService.fetchJobs(), // Recommended
+      _applicationService.fetchMyApplications(),
+    ]);
+
+    return {
+      'saved': results[0],
+      'recommended': results[1],
+      'applications': results[2],
+    };
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -12,210 +50,171 @@ class HomeTab extends StatelessWidget {
 
     return Scaffold(
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        child: FutureBuilder<Map<String, dynamic>>(
+          future: _homeDataFuture,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+
+            if (snapshot.hasError) {
+              return Center(child: Text('Error: ${snapshot.error}'));
+            }
+
+            final data = snapshot.data!;
+            final savedJobs = data['saved'] as List<Map<String, dynamic>>;
+            final recommendedJobs =
+                data['recommended'] as List<Map<String, dynamic>>;
+            final myApplications =
+                data['applications'] as List<Map<String, dynamic>>;
+
+            final appliedCount = myApplications.length;
+            final interviewCount = myApplications
+                .where((app) => app['status'] == 'interview')
+                .length;
+            final selectedCount = myApplications
+                .where((app) => app['status'] == 'hired')
+                .length;
+
+            return SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  // Header
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        'Welcome back!',
-                        style: textTheme.bodyMedium?.copyWith(
-                          color: Theme.of(context).hintColor,
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Welcome back!',
+                            style: textTheme.bodyMedium?.copyWith(
+                              color: Theme.of(context).hintColor,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text('Job Seeker', style: textTheme.headlineLarge),
+                        ],
+                      ),
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).cardColor,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.05),
+                              blurRadius: 10,
+                            ),
+                          ],
+                        ),
+                        child: const Icon(
+                          Icons.notifications_outlined,
+                          size: 24,
                         ),
                       ),
-                      const SizedBox(height: 4),
-                      Text('John Doe', style: textTheme.headlineLarge),
                     ],
                   ),
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).cardColor,
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.05),
-                          blurRadius: 10,
+                  const SizedBox(height: 24),
+                  // Stats Cards
+                  Row(
+                    children: [
+                      Expanded(
+                        child: StatCard(
+                          title: 'Applied',
+                          count: appliedCount.toString(),
+                          icon: Icons.send,
+                          color: AppColors.purple,
                         ),
-                      ],
-                    ),
-                    child: const Icon(Icons.notifications_outlined, size: 24),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
-              // Stats Cards
-              const Row(
-                children: [
-                  Expanded(
-                    child: StatCard(
-                      title: 'Applied',
-                      count: '24',
-                      icon: Icons.send,
-                      color: AppColors.purple,
-                    ),
-                  ),
-                  SizedBox(width: 12),
-                  Expanded(
-                    child: StatCard(
-                      title: 'Interviews',
-                      count: '8',
-                      icon: Icons.videocam,
-                      color: AppColors.orange,
-                    ),
-                  ),
-                  SizedBox(width: 12),
-                  Expanded(
-                    child: StatCard(
-                      title: 'Selected',
-                      count: '2',
-                      icon: Icons.check_box,
-                      color: Color(0xFF01B307),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text('Saved Jobs', style: textTheme.headlineMedium),
-                  TextButton(onPressed: () {}, child: const Text('See all')),
-                ],
-              ),
-              const SizedBox(height: 16),
-              // Job Cards
-              JobCard(
-                canApply: false,
-                job: const {
-                  'title': 'Product Manager',
-                  'work_mode': 'Remote',
-                  'location': 'Mumbai, India',
-                  'pay_amount_min': 45000,
-                  'pay_amount_max': 60000,
-                  'pay_type': 'monthly',
-                  'working_days': ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
-                  'shift_start': '09:00:00',
-                  'shift_end': '18:00:00',
-                },
-              ),
-
-              const SizedBox(height: 12),
-              JobCard(
-                canApply: false,
-
-                job: const {
-                  'title': 'Product Manager',
-                  'work_mode': 'Remote',
-                  'location': 'Mumbai, India',
-                  'pay_amount_min': 45000,
-                  'pay_amount_max': 60000,
-                  'pay_type': 'monthly',
-                  'working_days': ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
-                  'shift_start': '09:00:00',
-                  'shift_end': '18:00:00',
-                },
-              ),
-
-              const SizedBox(height: 12),
-              JobCard(
-                canApply: false,
-
-                job: const {
-                  'title': 'Product Manager',
-                  'work_mode': 'Remote',
-                  'location': 'Mumbai, India',
-                  'pay_amount_min': 45000,
-                  'pay_amount_max': 60000,
-                  'pay_type': 'monthly',
-                  'working_days': ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
-                  'shift_start': '09:00:00',
-                  'shift_end': '18:00:00',
-                },
-              ),
-
-              const SizedBox(height: 12),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text('Recommended Jobs', style: textTheme.headlineMedium),
-                  TextButton(onPressed: () {}, child: const Text('See all')),
-                ],
-              ),
-              const SizedBox(height: 16),
-              // Job Cards
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: [
-                    SizedBox(
-                      width: 320, // Constrain the width of the JobCard
-                      child: JobCard(
-                        canApply: false,
-
-                        job: const {
-                          'title': 'Product Manager',
-                          'work_mode': 'Remote',
-                          'location': 'Mumbai, India',
-                          'pay_amount_min': 45000,
-                          'pay_amount_max': 60000,
-                          'pay_type': 'monthly',
-                          'working_days': ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
-                          'shift_start': '09:00:00',
-                          'shift_end': '18:00:00',
-                        },
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    SizedBox(
-                      width: 320, // Constrain the width of the JobCard
-                      child: JobCard(
-                        canApply: false,
-
-                        job: const {
-                          'title': 'Product Manager',
-                          'work_mode': 'Remote',
-                          'location': 'Mumbai, India',
-                          'pay_amount_min': 45000,
-                          'pay_amount_max': 60000,
-                          'pay_type': 'monthly',
-                          'working_days': ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
-                          'shift_start': '09:00:00',
-                          'shift_end': '18:00:00',
-                        },
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: StatCard(
+                          title: 'Interviews',
+                          count: interviewCount.toString(),
+                          icon: Icons.videocam,
+                          color: AppColors.orange,
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    SizedBox(
-                      width: 320, // Constrain the width of the JobCard
-                      child: JobCard(
-                        canApply: false,
-
-                        job: const {
-                          'title': 'Product Manager',
-                          'work_mode': 'Remote',
-                          'location': 'Mumbai, India',
-                          'pay_amount_min': 45000,
-                          'pay_amount_max': 60000,
-                          'pay_type': 'monthly',
-                          'working_days': ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
-                          'shift_start': '09:00:00',
-                          'shift_end': '18:00:00',
-                        },
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: StatCard(
+                          title: 'Selected',
+                          count: selectedCount.toString(),
+                          icon: Icons.check_box,
+                          color: const Color(0xFF01B307),
+                        ),
                       ),
+                    ],
+                  ),
+                  const SizedBox(height: 32),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('Saved Jobs', style: textTheme.headlineMedium),
+                      TextButton(
+                        onPressed: () {},
+                        child: const Text('See all'),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  if (savedJobs.isEmpty)
+                    Center(
+                      child: Text(
+                        'No saved jobs yet',
+                        style: TextStyle(color: Theme.of(context).hintColor),
+                      ),
+                    )
+                  else
+                    ...savedJobs.take(3).map((saved) {
+                      final job = saved['job_posts'] as Map<String, dynamic>;
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: JobCard(
+                          job: job,
+                          canApply: true,
+                          onApplied: _refreshData,
+                        ),
+                      );
+                    }),
+                  const SizedBox(height: 20),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('Recommended Jobs', style: textTheme.headlineMedium),
+                      TextButton(
+                        onPressed: () {},
+                        child: const Text('See all'),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: recommendedJobs.take(5).map((job) {
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 12),
+                          child: SizedBox(
+                            width: 300,
+                            child: JobCard(
+                              job: job,
+                              canApply: true,
+                              onApplied: _refreshData,
+                            ),
+                          ),
+                        );
+                      }).toList(),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            ],
-          ),
+            );
+          },
         ),
       ),
     );

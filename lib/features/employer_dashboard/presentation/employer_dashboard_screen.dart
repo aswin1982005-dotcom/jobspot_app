@@ -17,7 +17,7 @@ class EmployerDashboardScreen extends StatefulWidget {
 
 class _EmployerDashboardScreenState extends State<EmployerDashboardScreen> {
   int _selectedIndex = 0;
-  
+
   final JobService _jobService = JobService();
   final ApplicationService _applicationService = ApplicationService();
 
@@ -47,8 +47,8 @@ class _EmployerDashboardScreenState extends State<EmployerDashboardScreen> {
 
       if (mounted) {
         setState(() {
-          _jobs = results[0] as PostgrestList;
-          _applications = results[1] as List<Map<String, dynamic>>;
+          _jobs = results[0];
+          _applications = results[1];
           _isLoading = false;
         });
       }
@@ -69,9 +69,7 @@ class _EmployerDashboardScreenState extends State<EmployerDashboardScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SafeArea(
-        child: _buildBody(),
-      ),
+      body: SafeArea(child: _buildBody()),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
         onDestinationSelected: (index) {
@@ -137,14 +135,8 @@ class _EmployerDashboardScreenState extends State<EmployerDashboardScreen> {
           applications: _applications,
           onRefresh: _handleRefresh,
         ),
-        JobPostingTab(
-          jobs: _jobs,
-          onRefresh: _handleRefresh,
-        ),
-        ApplicantsTab(
-          applications: _applications,
-          onRefresh: _handleRefresh,
-        ),
+        JobPostingTab(jobs: _jobs, onRefresh: _handleRefresh),
+        ApplicantsTab(applications: _applications, onRefresh: _handleRefresh),
         const ProfileTab(role: 'employer'),
       ],
     );

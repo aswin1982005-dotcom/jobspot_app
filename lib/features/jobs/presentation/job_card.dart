@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:jobspot_app/data/services/application_service.dart';
+import 'package:jobspot_app/data/services/job_service.dart';
 
 class JobCard extends StatefulWidget {
   final Map<String, dynamic> job;
@@ -20,6 +21,46 @@ class JobCard extends StatefulWidget {
 class _JobCardState extends State<JobCard> {
   bool _isBookmarked = false;
   bool _isApplying = false;
+  final JobService _jobService = JobService();
+
+  @override
+  void initState() {
+    super.initState();
+    _checkSavedStatus();
+  }
+
+  Future<void> _checkSavedStatus() async {
+    if (widget.job['id'] == null) return;
+    final isSaved = await _jobService.isJobSaved(widget.job['id']);
+    if (mounted) {
+      setState(() {
+        _isBookmarked = isSaved;
+      });
+    }
+  }
+
+  Future<void> _toggleSave() async {
+    final jobId = widget.job['id'];
+    if (jobId == null) return;
+
+    final previousStatus = _isBookmarked;
+    setState(() {
+      _isBookmarked = !previousStatus;
+    });
+
+    try {
+      await _jobService.toggleSaveJob(jobId, previousStatus);
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isBookmarked = previousStatus;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error saving job: $e')),
+        );
+      }
+    }
+  }
 
   Future<void> _applyJob() async {
     setState(() {
@@ -121,11 +162,7 @@ class _JobCardState extends State<JobCard> {
                   _isBookmarked ? Icons.bookmark : Icons.bookmark_outline,
                   color: _isBookmarked ? colorScheme.secondary : null,
                 ),
-                onPressed: () {
-                  setState(() {
-                    _isBookmarked = !_isBookmarked;
-                  });
-                },
+                onPressed: _toggleSave,
               ),
             ],
           ),

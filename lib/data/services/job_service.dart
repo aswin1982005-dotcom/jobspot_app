@@ -61,4 +61,44 @@ class JobService {
   Future<void> updateJobPost(String jobId, PostgrestMap jobData) async {
     await _client.from('job_posts').update(jobData).eq('id', jobId);
   }
+
+  // --- Saved Jobs Methods ---
+
+  Future<List<Map<String, dynamic>>> fetchSavedJobs() async {
+    final userId = _client.auth.currentUser!.id;
+    final response = await _client
+        .from('saved_jobs')
+        .select('*, job_posts(*)')
+        .eq('seeker_id', userId)
+        .order('saved_at', ascending: false);
+    return List<Map<String, dynamic>>.from(response);
+  }
+
+  Future<void> toggleSaveJob(String jobId, bool isCurrentlySaved) async {
+    final userId = _client.auth.currentUser!.id;
+    if (isCurrentlySaved) {
+      await _client
+          .from('saved_jobs')
+          .delete()
+          .eq('seeker_id', userId)
+          .eq('job_id', jobId);
+    } else {
+      await _client.from('saved_jobs').insert({
+        'seeker_id': userId,
+        'job_id': jobId,
+      });
+    }
+  }
+
+  Future<bool> isJobSaved(String jobId) async {
+    final userId = _client.auth.currentUser?.id;
+    if (userId == null) return false;
+    final response = await _client
+        .from('saved_jobs')
+        .select()
+        .eq('seeker_id', userId)
+        .eq('job_id', jobId)
+        .maybeSingle();
+    return response != null;
+  }
 }
