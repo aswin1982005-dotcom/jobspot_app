@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:jobspot_app/data/services/application_service.dart';
+import 'package:jobspot_app/data/services/job_service.dart';
 import 'package:jobspot_app/features/employer_dashboard/presentation/tabs/employer_home_tab.dart';
 import 'package:jobspot_app/features/employer_dashboard/presentation/tabs/job_posting_tab.dart';
 import 'package:jobspot_app/features/employer_dashboard/presentation/tabs/applicants_tab.dart';
 import 'package:jobspot_app/features/profile/presentation/profile_tab.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class EmployerDashboardScreen extends StatefulWidget {
   const EmployerDashboardScreen({super.key});
@@ -14,39 +17,60 @@ class EmployerDashboardScreen extends StatefulWidget {
 
 class _EmployerDashboardScreenState extends State<EmployerDashboardScreen> {
   int _selectedIndex = 0;
-  Key _refreshKey = UniqueKey();
+  
+  final JobService _jobService = JobService();
+  final ApplicationService _applicationService = ApplicationService();
+
+  PostgrestList _jobs = [];
+  List<Map<String, dynamic>> _applications = [];
+  bool _isLoading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDashboardData();
+  }
+
+  Future<void> _loadDashboardData() async {
+    if (!mounted) return;
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    try {
+      final results = await Future.wait([
+        _jobService.fetchEmployerJobs(),
+        _applicationService.fetchJobApplications(),
+      ]);
+
+      if (mounted) {
+        setState(() {
+          _jobs = results[0] as PostgrestList;
+          _applications = results[1] as List<Map<String, dynamic>>;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = e.toString();
+          _isLoading = false;
+        });
+      }
+    }
+  }
 
   Future<void> _handleRefresh() async {
-    // Simulate a network delay
-    await Future.delayed(const Duration(milliseconds: 1000));
-    if (mounted) {
-      setState(() {
-        _refreshKey = UniqueKey();
-      });
-    }
+    await _loadDashboardData();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: _handleRefresh,
-          displacement: 20,
-          color: Theme.of(context).colorScheme.primary,
-          child: KeyedSubtree(
-            key: _refreshKey,
-            child: IndexedStack(
-              index: _selectedIndex,
-              children: [
-                const EmployerHomeTab(),
-                const JobPostingTab(),
-                ApplicantsTab(onRefresh: _handleRefresh),
-                const ProfileTab(role: 'employer'),
-              ],
-            ),
-          ),
-        ),
+        child: _buildBody(),
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
@@ -81,6 +105,48 @@ class _EmployerDashboardScreenState extends State<EmployerDashboardScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildBody() {
+    if (_isLoading && _jobs.isEmpty && _applications.isEmpty) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_error != null && _jobs.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text('Error: $_error'),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: _loadDashboardData,
+              child: const Text('Retry'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return IndexedStack(
+      index: _selectedIndex,
+      children: [
+        EmployerHomeTab(
+          jobs: _jobs,
+          applications: _applications,
+          onRefresh: _handleRefresh,
+        ),
+        JobPostingTab(
+          jobs: _jobs,
+          onRefresh: _handleRefresh,
+        ),
+        ApplicantsTab(
+          applications: _applications,
+          onRefresh: _handleRefresh,
+        ),
+        const ProfileTab(role: 'employer'),
+      ],
     );
   }
 }

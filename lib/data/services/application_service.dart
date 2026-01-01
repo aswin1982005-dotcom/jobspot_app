@@ -25,6 +25,31 @@ class ApplicationService {
     return List<Map<String, dynamic>>.from(response);
   }
 
+  Future<List<Map<String, dynamic>>> fetchJobApplications({
+    String? jobPostId,
+  }) async {
+    final userId = _client.auth.currentUser!.id;
+
+    var query = _client.from('job_applications').select('''
+          *,
+          job_posts!inner(*),
+          applicant:applicant_id(
+            full_name,
+            profile_photo
+          )
+        ''');
+
+    query = query.eq('job_posts.employer_id', userId);
+
+    if (jobPostId != null && jobPostId.isNotEmpty) {
+      query = query.eq('job_post_id', jobPostId);
+    }
+
+    final response = await query.order('applied_at', ascending: false);
+
+    return List<Map<String, dynamic>>.from(response);
+  }
+
   Future<void> fastApply({
     required String jobPostId,
     required String message,

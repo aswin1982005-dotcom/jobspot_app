@@ -1,45 +1,40 @@
 import 'package:flutter/material.dart';
 import 'package:jobspot_app/core/theme/app_theme.dart';
-import 'package:jobspot_app/data/services/job_service.dart';
 import 'package:jobspot_app/features/seeker_dashboard/presentation/widgets/stat_card.dart';
 import 'package:jobspot_app/features/jobs/presentation/employer_job_card.dart';
 import 'package:jobspot_app/features/employer_dashboard/presentation/widgets/applicant_card.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-class EmployerHomeTab extends StatefulWidget {
-  const EmployerHomeTab({super.key});
+class EmployerHomeTab extends StatelessWidget {
+  final PostgrestList jobs;
+  final List<Map<String, dynamic>> applications;
+  final Future<void> Function() onRefresh;
 
-  @override
-  State<EmployerHomeTab> createState() => _EmployerHomeTabState();
-}
+  const EmployerHomeTab({
+    super.key,
+    required this.jobs,
+    required this.applications,
+    required this.onRefresh,
+  });
 
-class _EmployerHomeTabState extends State<EmployerHomeTab> {
-  final JobService _jobService = JobService();
-  late Future<PostgrestList> _jobsFuture;
-
-  @override
-  void initState() {
-    super.initState();
-    _refreshJobs();
-  }
-
-  void _refreshJobs() {
-    setState(() {
-      _jobsFuture = _jobService.fetchEmployerJobs();
-    });
-  }
-
-  Future<void> _toggleJobStatus(Map<String, dynamic> job) async {
-    final bool currentStatus = job['is_active'] ?? true;
+  String _formatDate(String? dateStr) {
+    if (dateStr == null) return '';
     try {
-      await _jobService.updateJobPost(job['id'], {'is_active': !currentStatus});
-      _refreshJobs();
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error updating job status: $e')),
-        );
+      final date = DateTime.parse(dateStr);
+      final now = DateTime.now();
+      final difference = now.difference(date);
+
+      if (difference.inDays == 0) {
+        return 'Today';
+      } else if (difference.inDays == 1) {
+        return 'Yesterday';
+      } else if (difference.inDays < 7) {
+        return '${difference.inDays} days ago';
+      } else {
+        return '${(difference.inDays / 7).floor()} weeks ago';
       }
+    } catch (_) {
+      return '';
     }
   }
 
@@ -48,81 +43,88 @@ class _EmployerHomeTabState extends State<EmployerHomeTab> {
     final theme = Theme.of(context);
     final textTheme = theme.textTheme;
 
-    return SingleChildScrollView(
+    final activeJobsCount = jobs.where((j) => j['is_active'] == true).length;
+    final closedJobsCount = jobs.where((j) => j['is_active'] == false).length;
+    final totalApplicants = applications.length;
+
+    final activePostings = jobs
+        .where((j) => j['is_active'] == true)
+        .take(3)
+        .toList();
+    final recentApplicants = applications.take(3).toList();
+
+    return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(height: 10), // Compensation for removed SafeArea
-          // Header
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Welcome back!',
-                    style: textTheme.bodyMedium?.copyWith(
-                      color: theme.hintColor,
-                    ),
+      children: [
+        const SizedBox(height: 10),
+        // Header
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Welcome back!',
+                  style: textTheme.bodyMedium?.copyWith(color: theme.hintColor),
+                ),
+                const SizedBox(height: 4),
+                Text('Employer Dashboard', style: textTheme.headlineLarge),
+              ],
+            ),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: theme.cardColor,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.05),
+                    blurRadius: 10,
                   ),
-                  const SizedBox(height: 4),
-                  Text('Google Inc.', style: textTheme.headlineLarge),
                 ],
               ),
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: theme.cardColor,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.05),
-                      blurRadius: 10,
-                    ),
-                  ],
-                ),
-                child: const Icon(Icons.notifications_outlined, size: 24),
+              child: const Icon(Icons.notifications_outlined, size: 24),
+            ),
+          ],
+        ),
+        const SizedBox(height: 24),
+        // Stats Cards
+        Row(
+          children: [
+            Expanded(
+              child: StatCard(
+                title: 'Active Jobs',
+                count: activeJobsCount.toString(),
+                icon: Icons.check_circle_outline,
+                color: const Color(0xFF01B307),
               ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          // Stats Cards
-          const Row(
-            children: [
-              Expanded(
-                child: StatCard(
-                  title: 'Active Jobs',
-                  count: '12',
-                  icon: Icons.check_circle_outline,
-                  color: Color(0xFF01B307),
-                ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: StatCard(
+                title: 'Applicants',
+                count: totalApplicants.toString(),
+                icon: Icons.people_outline,
+                color: AppColors.purple,
               ),
-              SizedBox(width: 12),
-              Expanded(
-                child: StatCard(
-                  title: 'Applicants',
-                  count: '145',
-                  icon: Icons.people_outline,
-                  color: AppColors.purple,
-                ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: StatCard(
+                title: 'Closed',
+                count: closedJobsCount.toString(),
+                icon: Icons.lock_outline,
+                color: AppColors.orange,
               ),
-              SizedBox(width: 12),
-              Expanded(
-                child: StatCard(
-                  title: 'Closed',
-                  count: '4',
-                  icon: Icons.lock_outline,
-                  color: AppColors.orange,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 32),
+            ),
+          ],
+        ),
+        const SizedBox(height: 32),
 
-          // Recent Applicants Section
+        // Recent Applicants Section
+        if (recentApplicants.isNotEmpty) ...[
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -131,92 +133,63 @@ class _EmployerHomeTabState extends State<EmployerHomeTab> {
             ],
           ),
           const SizedBox(height: 16),
-          ApplicantCard(
-            name: 'Alice Smith',
-            jobTitle: 'Senior UI/UX Designer',
-            status: 'Interview',
-            appliedDate: '2 days ago',
-            onTap: () {},
-          ),
-          const SizedBox(height: 32),
+          ...recentApplicants.map((app) {
+            final job = app['job_posts'] as Map<String, dynamic>?;
+            final applicant = app['applicant'] as Map<String, dynamic>?;
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: ApplicantCard(
+                name: applicant?['full_name'] ?? 'Anonymous',
+                jobTitle: job?['title'] ?? 'Position',
+                status: app['status'] ?? 'pending',
+                appliedDate: _formatDate(app['applied_at']),
+                profileImageUrl: applicant?['avatar_url'],
+                onTap: () {},
+              ),
+            );
+          }),
+          const SizedBox(height: 20),
+        ],
 
-          // Active Postings Section
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('Active Postings', style: textTheme.headlineMedium),
-              TextButton(onPressed: () {}, child: const Text('See all')),
-            ],
-          ),
-          const SizedBox(height: 16),
-          FutureBuilder<PostgrestList>(
-            future: _jobsFuture,
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 20),
-                  child: Center(child: CircularProgressIndicator()),
-                );
-              }
-
-              if (snapshot.hasError) {
-                return Center(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 20),
-                    child: Text('Error: ${snapshot.error}'),
-                  ),
-                );
-              }
-
-              final allJobs = snapshot.data ?? [];
-              // Filter only active jobs
-              final activeJobs = allJobs
-                  .where((job) => job['is_active'] == true)
-                  .toList();
-
-              if (activeJobs.isEmpty) {
-                return Center(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 40),
-                    child: Column(
-                      children: [
-                        Icon(
-                          Icons.work_outline,
-                          size: 48,
-                          color: theme.hintColor,
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'No active postings',
-                          style: textTheme.bodyMedium?.copyWith(
-                            color: theme.hintColor,
-                          ),
-                        ),
-                      ],
+        // Active Postings Section
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text('Active Postings', style: textTheme.headlineMedium),
+            TextButton(onPressed: () {}, child: const Text('See all')),
+          ],
+        ),
+        const SizedBox(height: 16),
+        if (activePostings.isEmpty)
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 40),
+              child: Column(
+                children: [
+                  Icon(Icons.work_outline, size: 48, color: theme.hintColor),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No active postings',
+                    style: textTheme.bodyMedium?.copyWith(
+                      color: theme.hintColor,
                     ),
                   ),
-                );
-              }
-
-              return ListView.separated(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: activeJobs.length,
-                separatorBuilder: (context, index) =>
-                    const SizedBox(height: 12),
-                itemBuilder: (context, index) {
-                  final job = activeJobs[index];
-                  return EmployerJobCard(
-                    job: job,
-                    afterEdit: _refreshJobs,
-                    onClose: () => _toggleJobStatus(job),
-                  );
-                },
-              );
-            },
+                ],
+              ),
+            ),
+          )
+        else
+          ...activePostings.map(
+            (job) => Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: EmployerJobCard(
+                job: job,
+                afterEdit: () {},
+                onClose: onRefresh,
+              ),
+            ),
           ),
-        ],
-      ),
+      ],
     );
   }
 }

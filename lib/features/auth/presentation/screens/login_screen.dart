@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:jobspot_app/features/admin_dashboard/presentation/screens/admin_dashboard_screen.dart';
+import 'package:jobspot_app/features/admin_dashboard/presentation/admin_dashboard_screen.dart';
 import 'package:jobspot_app/features/auth/presentation/screens/role_selection_screen.dart';
 import 'package:jobspot_app/features/auth/presentation/widgets/social_button.dart';
 import 'package:jobspot_app/features/seeker_dashboard/presentation/seeker_dashboard_screen.dart';

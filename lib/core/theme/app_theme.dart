@@ -104,6 +104,15 @@ class AppTheme {
           ),
         ),
       ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: AppColors.purple,
+          side: const BorderSide(color: AppColors.purple),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      ),
       inputDecorationTheme: _buildInputDecoration(
         Colors.white,
         AppColors.purple,

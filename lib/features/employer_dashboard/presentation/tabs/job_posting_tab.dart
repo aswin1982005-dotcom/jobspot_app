@@ -5,46 +5,34 @@ import 'package:jobspot_app/data/services/job_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// A tab widget for the employer dashboard that allows employers to manage their job postings.
-class JobPostingTab extends StatefulWidget {
-  const JobPostingTab({super.key});
+class JobPostingTab extends StatelessWidget {
+  final PostgrestList jobs;
+  final Future<void> Function() onRefresh;
 
-  @override
-  State<JobPostingTab> createState() => _JobPostingTabState();
-}
+  const JobPostingTab({super.key, required this.jobs, required this.onRefresh});
 
-class _JobPostingTabState extends State<JobPostingTab> {
-  final JobService _jobService = JobService();
-  late Future<PostgrestList> _jobsFuture;
-
-  @override
-  void initState() {
-    super.initState();
-    _refreshJobs();
-  }
-
-  void _refreshJobs() {
-    setState(() {
-      _jobsFuture = _jobService.fetchEmployerJobs();
-    });
-  }
-
-  void _navigateToCreateJob(BuildContext context, {PostgrestMap? job}) async {
+  void _navigateToCreateJob(BuildContext context) async {
     final result = await Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => CreateJobScreen(job: job)),
+      MaterialPageRoute(builder: (context) => const CreateJobScreen()),
     );
     if (result == true) {
-      _refreshJobs();
+      onRefresh();
     }
   }
 
-  Future<void> _toggleJobStatus(Map<String, dynamic> job) async {
+  Future<void> _toggleJobStatus(
+    BuildContext context,
+    Map<String, dynamic> job,
+  ) async {
     final bool currentStatus = job['is_active'] ?? true;
     try {
-      await _jobService.updateJobPost(job['id'], {'is_active': !currentStatus});
-      _refreshJobs();
+      await JobService().updateJobPost(job['id'], {
+        'is_active': !currentStatus,
+      });
+      onRefresh();
     } catch (e) {
-      if (mounted) {
+      if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error updating job status: $e')),
         );
@@ -105,34 +93,8 @@ class _JobPostingTabState extends State<JobPostingTab> {
             ),
             const SizedBox(height: 24),
             Expanded(
-              child: FutureBuilder<PostgrestList>(
-                future: _jobsFuture,
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-
-                  if (snapshot.hasError) {
-                    return ListView(
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      children: [
-                        SizedBox(
-                          height: MediaQuery.of(context).size.height * 0.4,
-                          child: Center(
-                            child: Text(
-                              'Error: ${snapshot.error}',
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
-                        ),
-                      ],
-                    );
-                  }
-
-                  final jobs = snapshot.data ?? [];
-
-                  if (jobs.isEmpty) {
-                    return ListView(
+              child: jobs.isEmpty
+                  ? ListView(
                       physics: const AlwaysScrollableScrollPhysics(),
                       padding: const EdgeInsets.symmetric(horizontal: 20),
                       children: [
@@ -162,26 +124,22 @@ class _JobPostingTabState extends State<JobPostingTab> {
                           ),
                         ),
                       ],
-                    );
-                  }
-
-                  return ListView.separated(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 100),
-                    itemCount: jobs.length,
-                    separatorBuilder: (context, index) =>
-                        const SizedBox(height: 12),
-                    itemBuilder: (context, index) {
-                      final job = jobs[index];
-                      return EmployerJobCard(
-                        job: job,
-                        afterEdit: _refreshJobs,
-                        onClose: () => _toggleJobStatus(job),
-                      );
-                    },
-                  );
-                },
-              ),
+                    )
+                  : ListView.separated(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 100),
+                      itemCount: jobs.length,
+                      separatorBuilder: (context, index) =>
+                          const SizedBox(height: 12),
+                      itemBuilder: (context, index) {
+                        final job = jobs[index];
+                        return EmployerJobCard(
+                          job: job,
+                          afterEdit: () {},
+                          onClose: () => _toggleJobStatus(context, job),
+                        );
+                      },
+                    ),
             ),
           ],
         ),
