@@ -36,6 +36,11 @@ dependencies:
   cupertino_icons: ^1.0.8
   supabase_flutter: ^2.5.4
   google_maps_flutter: ^2.6.1
+  geocoding: ^3.0.0
+  uuid: ^4.4.0
+  http: ^1.6.0
+  path: ^1.9.1
+  path_provider: ^2.1.5
   google_fonts: ^6.2.1
   flutter_dotenv: ^5.1.0
   onesignal_flutter: ^5.0.0

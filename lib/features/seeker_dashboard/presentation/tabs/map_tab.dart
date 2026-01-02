@@ -1,33 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; // Required for ByteData
+import 'package:flutter/services.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:jobspot_app/core/theme/app_theme.dart';
-import 'dart:ui' as ui; // Required for image resizing
-
-// A simple data class for a Job
-class Job {
-  final String company;
-  final String position;
-  final String location;
-  final String salary;
-  final String type;
-  final IconData logo;
-  final Color logoColor;
-  final double latitude;
-  final double longitude;
-
-  Job({
-    required this.company,
-    required this.position,
-    required this.location,
-    required this.salary,
-    required this.type,
-    required this.logo,
-    required this.logoColor,
-    required this.latitude,
-    required this.longitude,
-  });
-}
+import 'package:jobspot_app/data/services/job_service.dart';
+import 'dart:ui' as ui;
 
 class MapTab extends StatefulWidget {
   const MapTab({super.key});
@@ -38,57 +14,53 @@ class MapTab extends StatefulWidget {
 
 class _MapTabState extends State<MapTab> {
   late GoogleMapController mapController;
+  final JobService _jobService = JobService();
 
   static const CameraPosition _initialPosition = CameraPosition(
-    target: LatLng(39.8283, -98.5795),
-    zoom: 4,
+    target: LatLng(19.0760, 72.8777), // Default to Mumbai
+    zoom: 10,
   );
 
-  // --- Sample Job Data ---
-  final List<Job> _jobs = [
-    Job(
-      company: 'Google Inc.',
-      position: 'Senior UI/UX Designer',
-      location: 'California, USA',
-      salary: '\$120k - \$150k',
-      type: 'Full Time',
-      logo: Icons.g_mobiledata,
-      logoColor: AppColors.purple,
-      latitude: 37.4220,
-      longitude: -122.0841,
-    ),
-    Job(
-      company: 'Apple Inc.',
-      position: 'Product Manager',
-      location: 'New York, USA',
-      salary: '\$140k - \$180k',
-      type: 'Full Time',
-      logo: Icons.apple,
-      logoColor: AppColors.orange,
-      latitude: 37.3346,
-      longitude: -122.0090,
-    ),
-  ];
-
+  List<Map<String, dynamic>> _jobs = [];
   Set<Marker> _markers = {};
+  bool _isLoading = true;
 
-  // NEW: Icons for selected and unselected states
   BitmapDescriptor? _selectedMarkerIcon;
   BitmapDescriptor? _unselectedMarkerIcon;
-
-  // NEW: Keep track of the selected marker
-  String? _selectedJobCompany;
+  String? _selectedJobId;
 
   @override
   void initState() {
     super.initState();
-    // Load the custom marker icons before building markers
-    _loadMarkerIcons();
+    _initMap();
   }
 
-  // --- MODIFIED: Function to load both custom marker icons ---
+  Future<void> _initMap() async {
+    await _loadMarkerIcons();
+    await _fetchJobs();
+  }
+
+  Future<void> _fetchJobs() async {
+    try {
+      final jobs = await _jobService.fetchJobs();
+      if (mounted) {
+        setState(() {
+          _jobs = jobs.where((j) => j['latitude'] != null && j['longitude'] != null).toList();
+          _isLoading = false;
+        });
+        _buildMarkers();
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error fetching jobs for map: $e')),
+        );
+      }
+    }
+  }
+
   Future<void> _loadMarkerIcons() async {
-    // Selected icon is map_icon_1.png, unselected is map_icon_2.png
     final Uint8List selectedIconBytes = await getBytesFromAsset(
       'assets/icons/map_icon_1.png',
       72,
@@ -103,12 +75,9 @@ class _MapTabState extends State<MapTab> {
         _selectedMarkerIcon = BitmapDescriptor.bytes(selectedIconBytes);
         _unselectedMarkerIcon = BitmapDescriptor.bytes(unselectedIconBytes);
       });
-      // Initial build of markers
-      _buildMarkers();
     }
   }
 
-  // --- Helper function to get bytes and resize image (from your code) ---
   Future<Uint8List> getBytesFromAsset(String path, int width) async {
     ByteData data = await rootBundle.load(path);
     ui.Codec codec = await ui.instantiateImageCodec(
@@ -121,50 +90,35 @@ class _MapTabState extends State<MapTab> {
     ))!.buffer.asUint8List();
   }
 
-  // --- MODIFIED: Function to build markers based on selection state ---
   void _buildMarkers() {
-    // Don't build if icons aren't ready yet
     if (_unselectedMarkerIcon == null || _selectedMarkerIcon == null) return;
 
     final markers = _jobs.map((job) {
-      final isSelected = job.company == _selectedJobCompany;
+      final jobId = job['id'].toString();
+      final isSelected = jobId == _selectedJobId;
+      final lat = job['latitude'] as double;
+      final lng = job['longitude'] as double;
+
       return Marker(
-        markerId: MarkerId(job.company),
-        position: LatLng(job.latitude, job.longitude),
+        markerId: MarkerId(jobId),
+        position: LatLng(lat, lng),
         icon: isSelected ? _selectedMarkerIcon! : _unselectedMarkerIcon!,
         zIndexInt: isSelected ? 1 : 0,
-        infoWindow: InfoWindow(
-          title: job.position,
-          snippet: job.company,
-          onTap: () {
-            _showJobDetails(job).whenComplete(() {
-              if (mounted) {
-                setState(() {
-                  _selectedJobCompany = null;
-                  _buildMarkers(); // Re-build to reset the marker icon
-                });
-              }
-            });
-          },
-        ),
         onTap: () {
-          // Animate camera to the selected marker's position
           mapController.animateCamera(
-            CameraUpdate.newLatLngZoom(
-              LatLng(job.latitude, job.longitude),
-              14, // A reasonable zoom level
-            ),
+            CameraUpdate.newLatLngZoom(LatLng(lat, lng), 14),
           );
 
           setState(() {
-            _selectedJobCompany = job.company;
-            _buildMarkers(); // Re-build markers to update icons immediately
+            _selectedJobId = jobId;
+            _buildMarkers();
           });
+          
+          _showJobDetails(job);
         },
       );
     }).toSet();
 
-    // Update the state with the newly built markers
     if (mounted) {
       setState(() {
         _markers = markers;
@@ -174,20 +128,20 @@ class _MapTabState extends State<MapTab> {
 
   void _onMapCreated(GoogleMapController controller) {
     mapController = controller;
-    // Build markers after the map is created
-    _buildMarkers();
+    if (_jobs.isNotEmpty) {
+      _buildMarkers();
+    }
   }
 
-  // --- Show Job Details in a Bottom Sheet ---
-  Future<void> _showJobDetails(Job job) async {
-    return showModalBottomSheet(
+  void _showJobDetails(Map<String, dynamic> job) {
+    showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) {
         return DraggableScrollableSheet(
-          initialChildSize: 0.3,
-          minChildSize: 0.15,
+          initialChildSize: 0.35,
+          minChildSize: 0.2,
           maxChildSize: 0.6,
           expand: false,
           builder: (_, controller) {
@@ -195,7 +149,14 @@ class _MapTabState extends State<MapTab> {
           },
         );
       },
-    );
+    ).then((_) {
+      if (mounted) {
+        setState(() {
+          _selectedJobId = null;
+          _buildMarkers();
+        });
+      }
+    });
   }
 
   @override
@@ -203,7 +164,6 @@ class _MapTabState extends State<MapTab> {
     return Scaffold(
       body: Stack(
         children: [
-          // --- Google Map ---
           GoogleMap(
             onMapCreated: _onMapCreated,
             initialCameraPosition: _initialPosition,
@@ -212,25 +172,24 @@ class _MapTabState extends State<MapTab> {
             myLocationEnabled: true,
             mapToolbarEnabled: false,
             zoomControlsEnabled: false,
-            // When tapping on the map, clear selection
-            onTap: (argument) {
-              if (_selectedJobCompany != null) {
+            onTap: (_) {
+              if (_selectedJobId != null) {
                 setState(() {
-                  _selectedJobCompany = null;
+                  _selectedJobId = null;
                   _buildMarkers();
                 });
               }
             },
           ),
-
-          // --- Search Bar ---
+          if (_isLoading)
+            const Center(child: CircularProgressIndicator()),
+          
+          // Search/Filter UI
           Padding(
             padding: const EdgeInsets.only(top: 32, right: 16, left: 16),
             child: Column(
-              spacing: 8,
               children: [
                 Container(
-                  clipBehavior: Clip.hardEdge,
                   decoration: BoxDecoration(
                     color: AppColors.white,
                     borderRadius: BorderRadius.circular(32),
@@ -244,18 +203,16 @@ class _MapTabState extends State<MapTab> {
                   ),
                   child: const TextField(
                     decoration: InputDecoration(
+                      border: InputBorder.none,
                       enabledBorder: InputBorder.none,
                       focusedBorder: InputBorder.none,
                       hintText: 'Search for position, company...',
                       prefixIcon: Icon(Icons.search, color: Colors.grey),
-                      contentPadding: EdgeInsets.symmetric(
-                        vertical: 16,
-                        horizontal: 20,
-                      ),
+                      contentPadding: EdgeInsets.symmetric(vertical: 16, horizontal: 20),
                     ),
                   ),
                 ),
-
+                const SizedBox(height: 8),
                 SizedBox(
                   height: 36,
                   child: ListView(
@@ -263,32 +220,18 @@ class _MapTabState extends State<MapTab> {
                     children: [
                       ActionChip(
                         onPressed: () {},
-                        avatar: const Icon(
-                          Icons.filter_list,
-                          size: 18,
-                          color: AppColors.black,
-                        ),
+                        avatar: const Icon(Icons.filter_list, size: 18),
                         label: const Text('Filter'),
                         backgroundColor: AppColors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                          side: BorderSide(color: Colors.grey.shade300),
-                        ),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                       ),
                       const SizedBox(width: 8),
                       ActionChip(
                         onPressed: () {},
-                        avatar: const Icon(
-                          Icons.sort,
-                          size: 18,
-                          color: AppColors.black,
-                        ),
+                        avatar: const Icon(Icons.sort, size: 18),
                         label: const Text('Sort'),
                         backgroundColor: AppColors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                          side: BorderSide(color: Colors.grey.shade300),
-                        ),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                       ),
                     ],
                   ),
@@ -303,7 +246,7 @@ class _MapTabState extends State<MapTab> {
 }
 
 class JobDetailsSheet extends StatelessWidget {
-  final Job job;
+  final Map<String, dynamic> job;
   final ScrollController scrollController;
 
   const JobDetailsSheet({
@@ -314,24 +257,44 @@ class JobDetailsSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final textTheme = theme.textTheme;
+
+    final minPay = job['pay_amount_min'] ?? 0;
+    final maxPay = job['pay_amount_max'];
+    final salaryStr = maxPay != null ? '₹$minPay - ₹$maxPay' : '₹$minPay';
+
     return Container(
       decoration: const BoxDecoration(
         color: AppColors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       child: SingleChildScrollView(
         controller: scrollController,
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // --- Header with Company Logo and Info ---
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
             Row(
               children: [
-                CircleAvatar(
-                  radius: 30,
-                  backgroundColor: job.logoColor.withValues(alpha: 0.1),
-                  child: Icon(job.logo, size: 30, color: job.logoColor),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppColors.purple.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.business, size: 32, color: AppColors.purple),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
@@ -339,17 +302,13 @@ class JobDetailsSheet extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        job.position,
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
+                        job['title'] ?? 'Job Position',
+                        style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        '${job.company} • ${job.location}',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Colors.grey.shade600,
-                        ),
+                        job['location'] ?? 'Remote',
+                        style: textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
                       ),
                     ],
                   ),
@@ -357,26 +316,24 @@ class JobDetailsSheet extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 20),
-
-            // --- Job Tags ---
             Wrap(
               spacing: 8.0,
               children: [
                 Chip(
-                  label: Text(job.type),
+                  label: Text(job['work_mode']?.toString().toUpperCase() ?? ''),
                   backgroundColor: AppColors.purple.withValues(alpha: 0.1),
-                  labelStyle: const TextStyle(color: AppColors.purple),
+                  labelStyle: const TextStyle(color: AppColors.purple, fontSize: 12),
+                  side: BorderSide.none,
                 ),
                 Chip(
-                  label: Text(job.salary),
+                  label: Text(salaryStr),
                   backgroundColor: Colors.green.withValues(alpha: 0.1),
-                  labelStyle: const TextStyle(color: Colors.green),
+                  labelStyle: const TextStyle(color: Colors.green, fontSize: 12),
+                  side: BorderSide.none,
                 ),
               ],
             ),
             const SizedBox(height: 24),
-
-            // --- Apply Button ---
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
@@ -384,14 +341,9 @@ class JobDetailsSheet extends StatelessWidget {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.darkPurple,
                   padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
-                child: const Text(
-                  'Apply Now',
-                  style: TextStyle(fontSize: 16, color: AppColors.white),
-                ),
+                child: const Text('View Details & Apply', style: TextStyle(color: Colors.white)),
               ),
             ),
             const SizedBox(height: 16),
