@@ -158,7 +158,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
                 const SizedBox(height: 24),
-                // Login Button
                 ElevatedButton(
                   onPressed: _handleLogin,
                   child: _isLoading
@@ -194,7 +193,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   ],
                 ),
                 const SizedBox(height: 24),
-                // Social Login Buttons
                 Row(
                   children: [
                     Expanded(

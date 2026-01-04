@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:jobspot_app/core/theme/app_theme.dart';
 import 'package:jobspot_app/features/seeker_dashboard/presentation/widgets/stat_card.dart';
-import 'package:jobspot_app/features/jobs/presentation/job_card.dart';
+import 'package:jobspot_app/features/jobs/presentation/unified_job_card.dart';
 import 'package:jobspot_app/data/services/job_service.dart';
 import 'package:jobspot_app/data/services/application_service.dart';
 
@@ -174,8 +174,9 @@ class _HomeTabState extends State<HomeTab> {
                       final job = saved['job_posts'] as Map<String, dynamic>;
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 12),
-                        child: JobCard(
+                        child: UnifiedJobCard(
                           job: job,
+                          role: JobCardRole.seeker,
                           canApply: true,
                           onApplied: _refreshData,
                         ),
@@ -201,8 +202,9 @@ class _HomeTabState extends State<HomeTab> {
                           padding: const EdgeInsets.only(right: 12),
                           child: SizedBox(
                             width: 300,
-                            child: JobCard(
+                            child: UnifiedJobCard(
                               job: job,
+                              role: JobCardRole.seeker,
                               canApply: true,
                               onApplied: _refreshData,
                             ),

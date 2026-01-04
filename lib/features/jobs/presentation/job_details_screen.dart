@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../create_job_screen.dart';
+import 'package:jobspot_app/features/jobs/presentation//create_job_screen.dart';
 
 /// A screen that displays detailed information about a job posting.
 ///

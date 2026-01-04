@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:jobspot_app/features/jobs/presentation/employer_job_card.dart';
-import 'package:jobspot_app/features/jobs/create_job_screen.dart';
+import 'package:jobspot_app/features/jobs/presentation/unified_job_card.dart';
+import 'package:jobspot_app/features/jobs/presentation//create_job_screen.dart';
 import 'package:jobspot_app/data/services/job_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-/// A tab widget for the employer dashboard that allows employers to manage their job postings.
 class JobPostingTab extends StatelessWidget {
   final PostgrestList jobs;
   final Future<void> Function() onRefresh;
@@ -133,8 +132,9 @@ class JobPostingTab extends StatelessWidget {
                           const SizedBox(height: 12),
                       itemBuilder: (context, index) {
                         final job = jobs[index];
-                        return EmployerJobCard(
+                        return UnifiedJobCard(
                           job: job,
+                          role: JobCardRole.employer,
                           afterEdit: () {},
                           onClose: () => _toggleJobStatus(context, job),
                         );

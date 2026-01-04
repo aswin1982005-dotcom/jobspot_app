@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:jobspot_app/core/theme/app_theme.dart';
 import 'package:jobspot_app/features/seeker_dashboard/presentation/widgets/stat_card.dart';
-import 'package:jobspot_app/features/jobs/presentation/employer_job_card.dart';
-import 'package:jobspot_app/features/employer_dashboard/presentation/widgets/applicant_card.dart';
+import 'package:jobspot_app/features/jobs/presentation/unified_job_card.dart';
+import 'package:jobspot_app/features/applications/applicant_card.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class EmployerHomeTab extends StatelessWidget {
@@ -182,8 +182,9 @@ class EmployerHomeTab extends StatelessWidget {
           ...activePostings.map(
             (job) => Padding(
               padding: const EdgeInsets.only(bottom: 12),
-              child: EmployerJobCard(
+              child: UnifiedJobCard(
                 job: job,
+                role: JobCardRole.employer,
                 afterEdit: () {},
                 onClose: onRefresh,
               ),

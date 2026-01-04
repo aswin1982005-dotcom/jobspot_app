@@ -109,7 +109,7 @@ class _SignupScreenState extends State<SignupScreen> {
                 TextFormField(
                   controller: _nameController,
                   decoration: const InputDecoration(
-                    labelText: 'Full Name',
+                    labelText: 'Username',
                     prefixIcon: Icon(Icons.person_outline),
                   ),
                   validator: (value) {
@@ -199,7 +199,6 @@ class _SignupScreenState extends State<SignupScreen> {
                         ),
                 ),
                 const SizedBox(height: 24),
-                // Divider
                 Row(
                   children: [
                     Expanded(child: Divider(color: Colors.grey[300])),
@@ -214,7 +213,6 @@ class _SignupScreenState extends State<SignupScreen> {
                   ],
                 ),
                 const SizedBox(height: 24),
-                // Social Signup Buttons
                 Row(
                   children: [
                     Expanded(
@@ -231,15 +229,12 @@ class _SignupScreenState extends State<SignupScreen> {
                       child: SocialButton(
                         icon: Icons.apple,
                         label: 'Apple',
-                        onPressed: () {
-                          // Social login logic
-                        },
+                        onPressed: () {},
                       ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 24),
-                // Login Link
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [

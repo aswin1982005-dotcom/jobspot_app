@@ -53,7 +53,7 @@ class _SeekerDashboardScreenState extends State<SeekerDashboardScreen> {
         },
         backgroundColor: Theme.of(context).colorScheme.surface,
         indicatorColor: Theme.of(context).colorScheme.primary,
-        labelBehavior: NavigationDestinationLabelBehavior.onlyShowSelected,
+        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
         height: 70,
         destinations: const [
           NavigationDestination(

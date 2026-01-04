@@ -25,7 +25,6 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.black),
           onPressed: () async {
-            // Check if there's an active session (e.g. user just registered via social)
             if (Supabase.instance.client.auth.currentUser != null) {
               await Supabase.instance.client.auth.signOut();
             } else {

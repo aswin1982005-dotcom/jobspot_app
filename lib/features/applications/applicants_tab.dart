@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:jobspot_app/core/theme/app_theme.dart';
-import 'package:jobspot_app/features/employer_dashboard/presentation/widgets/applicant_card.dart';
+import 'package:jobspot_app/features/applications/applicant_card.dart';
 
 class ApplicantsTab extends StatefulWidget {
   final List<Map<String, dynamic>> applications;
@@ -55,8 +55,8 @@ class _ApplicantsTabState extends State<ApplicantsTab> {
     final filteredApplications = _selectedFilter == 'All'
         ? widget.applications
         : widget.applications
-            .where((app) => app['status'] == _selectedFilter)
-            .toList();
+              .where((app) => app['status'] == _selectedFilter)
+              .toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -122,13 +122,17 @@ class _ApplicantsTabState extends State<ApplicantsTab> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.people_outline,
-                              size: 64, color: theme.hintColor),
+                          Icon(
+                            Icons.people_outline,
+                            size: 64,
+                            color: theme.hintColor,
+                          ),
                           const SizedBox(height: 16),
                           Text(
                             'No applicants found',
-                            style: textTheme.titleMedium
-                                ?.copyWith(color: theme.hintColor),
+                            style: textTheme.titleMedium?.copyWith(
+                              color: theme.hintColor,
+                            ),
                           ),
                         ],
                       ),

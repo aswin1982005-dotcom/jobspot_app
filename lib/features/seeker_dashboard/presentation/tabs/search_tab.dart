@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:jobspot_app/core/theme/app_theme.dart';
 import 'package:jobspot_app/data/services/application_service.dart';
-import 'package:jobspot_app/features/jobs/presentation/job_card.dart';
+import 'package:jobspot_app/features/jobs/presentation/unified_job_card.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../data/services/job_service.dart';
@@ -277,8 +277,9 @@ class _SearchTabState extends State<SearchTab> {
                             )
                             .isNotEmpty;
 
-                        return JobCard(
+                        return UnifiedJobCard(
                           job: job,
+                          role: JobCardRole.seeker,
                           canApply: !isApplied,
                           onApplied: _refresh,
                         );
