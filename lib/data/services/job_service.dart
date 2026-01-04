@@ -101,4 +101,11 @@ class JobService {
         .maybeSingle();
     return response != null;
   }
+
+  Future<void> updateJobStatus(String jobId, bool newStatus) async {
+    await _client
+        .from('job_posts')
+        .update({'is_active': newStatus})
+        .eq('id', jobId);
+  }
 }

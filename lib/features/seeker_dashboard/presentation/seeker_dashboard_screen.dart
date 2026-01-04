@@ -13,44 +13,33 @@ class SeekerDashboardScreen extends StatefulWidget {
 
 class _SeekerDashboardScreenState extends State<SeekerDashboardScreen> {
   int _selectedIndex = 0;
-  Key _refreshKey = UniqueKey();
 
-  Future<void> _handleRefresh() async {
-    // Simulate a network delay
-    await Future.delayed(const Duration(milliseconds: 1000));
-    if (mounted) {
-      setState(() {
-        _refreshKey = UniqueKey();
-      });
-    }
+  void _onDestinationSelected(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
   }
-
-  final List<Widget> _screens = [
-    const HomeTab(),
-    const SearchTab(),
-    const MapTab(),
-    const ProfileTab(role: 'seeker'),
-  ];
 
   @override
   Widget build(BuildContext context) {
+    // We recreate the screens list inside build so that when _selectedIndex changes, 
+    // the specific screen is reconstructed, triggering its initState/data fetching.
+    // Using a Key for each tab also ensures they are treated as fresh widgets.
+    final List<Widget> screens = [
+      HomeTab(key: _selectedIndex == 0 ? UniqueKey() : null),
+      SearchTab(key: _selectedIndex == 1 ? UniqueKey() : null),
+      MapTab(key: _selectedIndex == 2 ? UniqueKey() : null),
+      ProfileTab(key: _selectedIndex == 3 ? UniqueKey() : null, role: 'seeker'),
+    ];
+
     return Scaffold(
-      body: RefreshIndicator(
-        onRefresh: _handleRefresh,
-        displacement: 20,
-        color: Theme.of(context).colorScheme.primary,
-        child: KeyedSubtree(
-          key: _refreshKey,
-          child: IndexedStack(index: _selectedIndex, children: _screens),
-        ),
+      body: IndexedStack(
+        index: _selectedIndex,
+        children: screens,
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
-        onDestinationSelected: (index) {
-          setState(() {
-            _selectedIndex = index;
-          });
-        },
+        onDestinationSelected: _onDestinationSelected,
         backgroundColor: Theme.of(context).colorScheme.surface,
         indicatorColor: Theme.of(context).colorScheme.primary,
         labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
