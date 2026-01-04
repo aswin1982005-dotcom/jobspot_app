@@ -8,7 +8,7 @@ class MapPickerPage extends StatefulWidget {
 
   const MapPickerPage({
     super.key,
-    this.initialPosition = const LatLng(19.0760, 72.8777), // Default Mumbai
+    this.initialPosition = const LatLng(19.0760, 72.8777),
   });
 
   @override
@@ -21,7 +21,6 @@ class _MapPickerPageState extends State<MapPickerPage> {
     dotenv.env['GOOGLE_MAPS_API_KEY'] ?? '',
   );
   bool _isReversing = false;
-  String? _currentAddress;
 
   @override
   void initState() {

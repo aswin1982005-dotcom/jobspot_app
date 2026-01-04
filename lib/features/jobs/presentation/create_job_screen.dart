@@ -86,12 +86,12 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
     if (job?['latitude'] != null && job?['longitude'] != null) {
       _selectedAddress = LocationAddress(
         addressLine: job?['location'] ?? '',
+        latitude: job?['latitude'],
+        longitude: job?['longitude'],
         city: '',
         state: '',
         country: '',
         postalCode: '',
-        latitude: job?['latitude'],
-        longitude: job?['longitude'],
       );
     }
 
@@ -115,15 +115,19 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
 
   @override
   void dispose() {
-    _titleController.dispose();
-    _descriptionController.dispose();
-    _locationController.dispose();
-    _minPayController.dispose();
-    _maxPayController.dispose();
-    _vacanciesController.dispose();
-    _skillsController.dispose();
-    _minAgeController.dispose();
-    _maxAgeController.dispose();
+    for (final controller in [
+      _titleController,
+      _descriptionController,
+      _locationController,
+      _minPayController,
+      _maxPayController,
+      _vacanciesController,
+      _skillsController,
+      _minAgeController,
+      _maxAgeController,
+    ]) {
+      controller.dispose();
+    }
     super.dispose();
   }
 
@@ -132,35 +136,31 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
       context,
       MaterialPageRoute(builder: (context) => const AddressSearchPage()),
     );
-
-    if (result != null) {
-      setState(() {
-        _selectedAddress = result;
-        _locationController.text = result.addressLine.isNotEmpty 
-            ? '${result.addressLine}, ${result.city}' 
-            : result.city;
-      });
-    }
+    if (result != null) _updateAddress(result);
   }
 
   Future<void> _pickLocationFromMap() async {
-    final initialPos = _selectedAddress != null 
+    final initialPos = _selectedAddress != null
         ? LatLng(_selectedAddress!.latitude, _selectedAddress!.longitude)
         : const LatLng(19.0760, 72.8777);
 
     final result = await Navigator.push<LocationAddress>(
       context,
-      MaterialPageRoute(builder: (context) => MapPickerPage(initialPosition: initialPos)),
+      MaterialPageRoute(
+        builder: (context) => MapPickerPage(initialPosition: initialPos),
+      ),
     );
+    if (result != null) _updateAddress(result);
+  }
 
-    if (result != null) {
-      setState(() {
-        _selectedAddress = result;
-        _locationController.text = result.addressLine.isNotEmpty 
-            ? '${result.addressLine}, ${result.city}' 
-            : result.city;
-      });
-    }
+  void _updateAddress(LocationAddress result) {
+    print(result);
+    setState(() {
+      _selectedAddress = result;
+      _locationController.text = result.addressLine.isNotEmpty
+          ? '${result.addressLine}, ${result.city}'
+          : result.city;
+    });
   }
 
   Future<void> _selectTime(BuildContext context, bool isStart) async {
@@ -169,40 +169,26 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
       initialTime: isStart ? _shiftStart : _shiftEnd,
     );
     if (picked != null) {
-      setState(() {
-        if (isStart) {
-          _shiftStart = picked;
-        } else {
-          _shiftEnd = picked;
-        }
-      });
+      setState(() => isStart ? _shiftStart = picked : _shiftEnd = picked);
     }
   }
 
   String _formatTimeOfDay(TimeOfDay tod) {
-    final hour = tod.hour.toString().padLeft(2, '0');
-    final minute = tod.minute.toString().padLeft(2, '0');
-    return '$hour:$minute:00';
+    return '${tod.hour.toString().padLeft(2, '0')}:${tod.minute.toString().padLeft(2, '0')}:00';
   }
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedDays.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select at least one working day')),
-      );
+      _showError('Please select at least one working day');
       return;
     }
-
     if (_workMode != 'remote' && _selectedAddress == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please pick a location on the map or search')),
-      );
+      _showError('Please pick a location on the map or search');
       return;
     }
 
     setState(() => _isLoading = true);
-
     try {
       final userId = SupabaseService.getCurrentUser()?.id;
       if (userId == null) throw Exception('User not authenticated');
@@ -254,14 +240,16 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
         );
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
-        );
-      }
+      if (mounted) _showError('Error: $e');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: Colors.red),
+    );
   }
 
   @override
@@ -283,22 +271,18 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                       title: 'Basic Details',
                       icon: Icons.article_outlined,
                       children: [
-                        TextFormField(
+                        _buildTextField(
                           controller: _titleController,
-                          decoration: const InputDecoration(
-                            labelText: 'Job Title*',
-                            prefixIcon: Icon(Icons.work_outline),
-                          ),
+                          label: 'Job Title*',
+                          icon: Icons.work_outline,
                           validator: (v) => v!.isEmpty ? 'Required' : null,
                         ),
                         const SizedBox(height: 16),
-                        TextFormField(
+                        _buildTextField(
                           controller: _descriptionController,
+                          label: 'Job Description*',
+                          icon: Icons.description_outlined,
                           maxLines: 4,
-                          decoration: const InputDecoration(
-                            labelText: 'Job Description*',
-                            prefixIcon: Icon(Icons.description_outlined),
-                          ),
                           validator: (v) => v!.isEmpty ? 'Required' : null,
                         ),
                       ],
@@ -307,20 +291,11 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                       title: 'Work Location & Mode',
                       icon: Icons.location_on_outlined,
                       children: [
-                        DropdownButtonFormField<String>(
+                        _buildDropdown(
                           value: _workMode,
-                          decoration: const InputDecoration(
-                            labelText: 'Work Mode',
-                            prefixIcon: Icon(Icons.laptop_chromebook),
-                          ),
-                          items: ['onsite', 'remote', 'hybrid']
-                              .map(
-                                (m) => DropdownMenuItem(
-                                  value: m,
-                                  child: Text(m.toUpperCase()),
-                                ),
-                              )
-                              .toList(),
+                          label: 'Work Mode',
+                          icon: Icons.laptop_chromebook,
+                          items: ['onsite', 'remote', 'hybrid'],
                           onChanged: (v) => setState(() => _workMode = v!),
                         ),
                         if (_workMode != 'remote') ...[
@@ -328,13 +303,14 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                           InkWell(
                             onTap: _pickLocationFromSearch,
                             child: IgnorePointer(
-                              child: TextFormField(
+                              child: _buildTextField(
                                 controller: _locationController,
-                                decoration: const InputDecoration(
-                                  labelText: 'Search Address',
-                                  prefixIcon: Icon(Icons.search),
-                                ),
-                                validator: (v) => (_workMode != 'remote' && v!.isEmpty) ? 'Required' : null,
+                                label: 'Search Address',
+                                icon: Icons.search,
+                                validator: (v) =>
+                                    (_workMode != 'remote' && v!.isEmpty)
+                                    ? 'Required'
+                                    : null,
                               ),
                             ),
                           ),
@@ -358,40 +334,28 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                           children: [
                             Expanded(
                               flex: 2,
-                              child: DropdownButtonFormField<String>(
+                              child: _buildDropdown(
                                 value: _payType,
-                                decoration: const InputDecoration(
-                                  labelText: 'Pay Type',
-                                  prefixIcon: Icon(Icons.calendar_month),
-                                ),
-                                items:
-                                    [
-                                          'hourly',
-                                          'daily',
-                                          'weekly',
-                                          'monthly',
-                                          'task_based',
-                                        ]
-                                        .map(
-                                          (t) => DropdownMenuItem(
-                                            value: t,
-                                            child: Text(t.toUpperCase()),
-                                          ),
-                                        )
-                                        .toList(),
+                                label: 'Pay Type',
+                                icon: Icons.calendar_month,
+                                items: [
+                                  'hourly',
+                                  'daily',
+                                  'weekly',
+                                  'monthly',
+                                  'task_based',
+                                ],
                                 onChanged: (v) => setState(() => _payType = v!),
                               ),
                             ),
                             const SizedBox(width: 12),
                             Expanded(
                               flex: 1,
-                              child: TextFormField(
+                              child: _buildTextField(
                                 controller: _vacanciesController,
+                                label: 'Openings',
+                                icon: Icons.people_alt_outlined,
                                 keyboardType: TextInputType.number,
-                                decoration: const InputDecoration(
-                                  labelText: 'Openings',
-                                  prefixIcon: Icon(Icons.people_alt_outlined),
-                                ),
                               ),
                             ),
                           ],
@@ -400,26 +364,22 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                         Row(
                           children: [
                             Expanded(
-                              child: TextFormField(
+                              child: _buildTextField(
                                 controller: _minPayController,
+                                label: 'Min (₹)*',
+                                icon: Icons.currency_rupee,
                                 keyboardType: TextInputType.number,
-                                decoration: const InputDecoration(
-                                  labelText: 'Min (₹)*',
-                                  prefixIcon: Icon(Icons.currency_rupee),
-                                ),
                                 validator: (v) =>
                                     v!.isEmpty ? 'Required' : null,
                               ),
                             ),
                             const SizedBox(width: 12),
                             Expanded(
-                              child: TextFormField(
+                              child: _buildTextField(
                                 controller: _maxPayController,
+                                label: 'Max (₹)',
+                                icon: Icons.currency_rupee,
                                 keyboardType: TextInputType.number,
-                                decoration: const InputDecoration(
-                                  labelText: 'Max (₹)',
-                                  prefixIcon: Icon(Icons.currency_rupee),
-                                ),
                               ),
                             ),
                           ],
@@ -448,13 +408,11 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                               label: Text(day.substring(0, 3)),
                               selected: isSelected,
                               onSelected: (selected) {
-                                setState(() {
-                                  if (selected) {
-                                    _selectedDays.add(day);
-                                  } else {
-                                    _selectedDays.remove(day);
-                                  }
-                                });
+                                setState(
+                                  () => selected
+                                      ? _selectedDays.add(day)
+                                      : _selectedDays.remove(day),
+                                );
                               },
                             );
                           }).toList(),
@@ -485,28 +443,17 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                       title: 'Requirements',
                       icon: Icons.rule,
                       children: [
-                        TextFormField(
+                        _buildTextField(
                           controller: _skillsController,
-                          decoration: const InputDecoration(
-                            labelText: 'Skills Required (comma separated)',
-                            prefixIcon: Icon(Icons.stars_outlined),
-                          ),
+                          label: 'Skills Required (comma separated)',
+                          icon: Icons.stars_outlined,
                         ),
                         const SizedBox(height: 16),
-                        DropdownButtonFormField<String>(
+                        _buildDropdown(
                           value: _genderPreference,
-                          decoration: const InputDecoration(
-                            labelText: 'Gender Preference',
-                            prefixIcon: Icon(Icons.person_outline),
-                          ),
-                          items: ['any', 'male', 'female']
-                              .map(
-                                (g) => DropdownMenuItem(
-                                  value: g,
-                                  child: Text(g.toUpperCase()),
-                                ),
-                              )
-                              .toList(),
+                          label: 'Gender Preference',
+                          icon: Icons.person_outline,
+                          items: ['any', 'male', 'female'],
                           onChanged: (v) =>
                               setState(() => _genderPreference = v!),
                         ),
@@ -514,24 +461,20 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                         Row(
                           children: [
                             Expanded(
-                              child: TextFormField(
+                              child: _buildTextField(
                                 controller: _minAgeController,
+                                label: 'Min Age',
+                                icon: Icons.remove_circle_outline,
                                 keyboardType: TextInputType.number,
-                                decoration: const InputDecoration(
-                                  labelText: 'Min Age',
-                                  prefixIcon: Icon(Icons.remove_circle_outline),
-                                ),
                               ),
                             ),
                             const SizedBox(width: 12),
                             Expanded(
-                              child: TextFormField(
+                              child: _buildTextField(
                                 controller: _maxAgeController,
+                                label: 'Max Age',
+                                icon: Icons.add_circle_outline,
                                 keyboardType: TextInputType.number,
-                                decoration: const InputDecoration(
-                                  labelText: 'Max Age',
-                                  prefixIcon: Icon(Icons.add_circle_outline),
-                                ),
                               ),
                             ),
                           ],
@@ -553,6 +496,40 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                 ),
               ),
             ),
+    );
+  }
+
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    TextInputType keyboardType = TextInputType.text,
+    int maxLines = 1,
+    String? Function(String?)? validator,
+  }) {
+    return TextFormField(
+      controller: controller,
+      keyboardType: keyboardType,
+      maxLines: maxLines,
+      decoration: InputDecoration(labelText: label, prefixIcon: Icon(icon)),
+      validator: validator,
+    );
+  }
+
+  Widget _buildDropdown({
+    required String value,
+    required String label,
+    required IconData icon,
+    required List<String> items,
+    required ValueChanged<String?> onChanged,
+  }) {
+    return DropdownButtonFormField<String>(
+      initialValue: value,
+      decoration: InputDecoration(labelText: label, prefixIcon: Icon(icon)),
+      items: items
+          .map((m) => DropdownMenuItem(value: m, child: Text(m.toUpperCase())))
+          .toList(),
+      onChanged: onChanged,
     );
   }
 

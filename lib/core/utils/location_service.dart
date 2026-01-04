@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:geocoding/geocoding.dart'; // Import the native package
+import 'package:geocoding/geocoding.dart';
 import '../models/location_address.dart';
 
 class LocationService {
@@ -10,8 +10,6 @@ class LocationService {
 
   static const _basePlaces = 'https://maps.googleapis.com/maps/api/place';
 
-  // ---------- SEARCH (Autocomplete) ----------
-  // We still use HTTP for search as the native package doesn't support Autocomplete
   Future<List<Map<String, String>>> searchPlaces(
     String query, {
     String? sessionToken,
@@ -23,10 +21,14 @@ class LocationService {
       '&sessiontoken=$sessionToken',
     );
 
-    final res = await http.get(uri);
+    final res = await http.get(uri, headers: await _getHeaders());
+
     final data = json.decode(res.body);
 
-    if (data['status'] != 'OK') return [];
+    if (data['status'] != 'OK') {
+      print('Search Error: ${data['error_message']}');
+      return [];
+    }
 
     return (data['predictions'] as List)
         .map(
@@ -38,8 +40,6 @@ class LocationService {
         .toList();
   }
 
-  // ---------- PLACE DETAILS ----------
-  // Fetches details for a selected search result
   Future<LocationAddress> getPlaceDetails(
     String placeId, {
     String? sessionToken,
@@ -51,7 +51,8 @@ class LocationService {
       '&sessiontoken=$sessionToken',
     );
 
-    final res = await http.get(uri);
+    final res = await http.get(uri, headers: await _getHeaders());
+
     final result = json.decode(res.body)['result'];
 
     return _parseGoogleMapAddress(
@@ -62,31 +63,28 @@ class LocationService {
     );
   }
 
-  // ---------- REVERSE GEOCODING (THE FIX) ----------
-  // Uses the native device geocoder (Free & Secure)
+  Future<Map<String, String>> _getHeaders() async {
+    return {
+      'X-Android-Package': 'com.example.jobspot_app',
+      'X-Android-Cert':
+          '3B:F9:1D:94:63:FF:78:61:5A:4F:60:02:CC:15:E8:27:AE:5F:26:77',
+    };
+  }
+
   Future<LocationAddress> reverseGeocode(double lat, double lng) async {
     try {
-      // This calls the native Android/iOS system geocoder
-      // It does NOT use your API Key and allows "Android App" restrictions on other calls.
       List<Placemark> placemarks = await placemarkFromCoordinates(lat, lng);
-
       if (placemarks.isEmpty) {
         throw Exception('No address found');
       }
-
       Placemark place = placemarks[0];
-
-      // Format the address manually since Native objects are different from Google JSON
       return _parseNativeAddress(place, lat, lng);
     } catch (e) {
       throw Exception('Failed to get address: $e');
     }
   }
 
-  // ---------- HELPER: Parse Native Placemark ----------
   LocationAddress _parseNativeAddress(Placemark place, double lat, double lng) {
-    // Construct a readable address string
-    // e.g., "123 Main St, New York, NY, 10001, USA"
     final components = [
       place.street,
       place.subLocality,
@@ -105,12 +103,10 @@ class LocationService {
       postalCode: place.postalCode ?? '',
       latitude: lat,
       longitude: lng,
-      placeId: null, // Native geocoder doesn't return Google Place IDs
+      placeId: null,
     );
   }
 
-  // ---------- HELPER: Parse Google HTTP Response ----------
-  // Kept for the 'getPlaceDetails' method which still uses HTTP
   LocationAddress _parseGoogleMapAddress(
     List components,
     double lat,

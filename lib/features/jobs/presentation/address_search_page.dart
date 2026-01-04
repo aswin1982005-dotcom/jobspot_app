@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:jobspot_app/core/models/location_address.dart';
 import 'package:jobspot_app/core/utils/location_service.dart';
 import 'package:uuid/uuid.dart';
 
@@ -14,9 +13,11 @@ class AddressSearchPage extends StatefulWidget {
 
 class _AddressSearchPageState extends State<AddressSearchPage> {
   final _searchController = TextEditingController();
-  final _locationService = LocationService(dotenv.env['GOOGLE_MAPS_API_KEY'] ?? '');
+  final _locationService = LocationService(
+    dotenv.env['GOOGLE_MAPS_API_KEY'] ?? '',
+  );
   final _sessionToken = const Uuid().v4();
-  
+
   List<Map<String, String>> _suggestions = [];
   Timer? _debounce;
   bool _isLoading = false;
@@ -25,6 +26,7 @@ class _AddressSearchPageState extends State<AddressSearchPage> {
     if (_debounce?.isActive ?? false) _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 500), () {
       if (query.isNotEmpty) {
+        print('k');
         _fetchSuggestions(query);
       } else {
         setState(() => _suggestions = []);
@@ -40,10 +42,12 @@ class _AddressSearchPageState extends State<AddressSearchPage> {
         sessionToken: _sessionToken,
       );
       setState(() {
+        print(results);
         _suggestions = results;
         _isLoading = false;
       });
     } catch (e) {
+      print(e);
       setState(() => _isLoading = false);
     }
   }
@@ -78,10 +82,7 @@ class _AddressSearchPageState extends State<AddressSearchPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Search Location'),
-        elevation: 0,
-      ),
+      appBar: AppBar(title: const Text('Search Location'), elevation: 0),
       body: Column(
         children: [
           Padding(

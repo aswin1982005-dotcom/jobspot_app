@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:jobspot_app/data/services/application_service.dart';
 import 'package:jobspot_app/data/services/job_service.dart';
 import 'package:jobspot_app/features/employer_dashboard/presentation/tabs/employer_home_tab.dart';
-import 'package:jobspot_app/features/employer_dashboard/presentation/tabs/job_posting_tab.dart';
-import 'package:jobspot_app/features/employer_dashboard/presentation/tabs/applicants_tab.dart';
+import 'package:jobspot_app/features/jobs/job_posting_tab.dart';
+import 'package:jobspot_app/features/applications/applicants_tab.dart';
 import 'package:jobspot_app/features/profile/presentation/profile_tab.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -79,7 +79,7 @@ class _EmployerDashboardScreenState extends State<EmployerDashboardScreen> {
         },
         backgroundColor: Theme.of(context).colorScheme.surface,
         indicatorColor: Theme.of(context).colorScheme.primary,
-        labelBehavior: NavigationDestinationLabelBehavior.onlyShowSelected,
+        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.home_outlined),
