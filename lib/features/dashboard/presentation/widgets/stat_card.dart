@@ -42,14 +42,13 @@ class StatCard extends StatelessWidget {
             child: Icon(icon, color: color, size: 20),
           ),
           const SizedBox(height: 12),
-          Text(
-            count,
-            style: textTheme.headlineMedium,
-          ),
+          Text(count, style: textTheme.headlineMedium),
           const SizedBox(height: 4),
           Text(
             title,
-            style: textTheme.bodyMedium?.copyWith(color: Theme.of(context).hintColor),
+            style: textTheme.bodyMedium?.copyWith(
+              color: Theme.of(context).hintColor,
+            ),
           ),
         ],
       ),

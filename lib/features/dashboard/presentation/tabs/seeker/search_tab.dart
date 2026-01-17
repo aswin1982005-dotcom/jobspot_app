@@ -4,7 +4,7 @@ import 'package:jobspot_app/data/services/application_service.dart';
 import 'package:jobspot_app/features/jobs/presentation/unified_job_card.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../../../../data/services/job_service.dart';
+import 'package:jobspot_app/data/services/job_service.dart';
 
 class SearchTab extends StatefulWidget {
   const SearchTab({super.key});
@@ -58,6 +58,9 @@ class _SearchTabState extends State<SearchTab> {
   }
 
   String? _selectedJobType;
+  String _searchQuery = '';
+  String _sortOption = 'Newest'; // Newest, Salary High-Low, Salary Low-High
+
   final List<String> _jobTypes = [
     'Full Time',
     'Part Time',
@@ -65,16 +68,88 @@ class _SearchTabState extends State<SearchTab> {
     'Contract',
   ];
 
-  void _filterJobs() {
+  void _filterJobs({String? query}) {
+    if (query != null) {
+      _searchQuery = query;
+    }
+
     setState(() {
-      if (_selectedJobType == null) {
-        filteredJobs = List.from(_allJobs);
-      } else {
-        filteredJobs = _allJobs
-            .where((job) => job['type'] == _selectedJobType)
-            .toList();
+      // 1. Filter by Job Type
+      List<dynamic> temp = _allJobs;
+      if (_selectedJobType != null) {
+        temp = temp.where((job) => job['type'] == _selectedJobType).toList();
       }
+
+      // 2. Filter by Search Query
+      if (_searchQuery.isNotEmpty) {
+        final q = _searchQuery.toLowerCase();
+        temp = temp.where((job) {
+          final title = (job['title'] as String?)?.toLowerCase() ?? '';
+          final company = (job['company'] as String?)?.toLowerCase() ?? '';
+          // Assuming company is a string name, but if it's a relation/map, we need to handle that.
+          // Often companies are relations. Checking basic fields first.
+          return title.contains(q) || company.contains(q);
+        }).toList();
+      }
+
+      // 3. Sort
+      if (_sortOption == 'Newest') {
+        temp.sort((a, b) {
+          final da = DateTime.tryParse(a['created_at'] ?? '') ?? DateTime(0);
+          final db = DateTime.tryParse(b['created_at'] ?? '') ?? DateTime(0);
+          return db.compareTo(da);
+        });
+      } else if (_sortOption == 'Salary High-Low') {
+        // Assuming logic for salary exists
+      }
+
+      filteredJobs = temp.cast<Map<String, dynamic>>();
     });
+  }
+
+  void _openSortOptions() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Sort Jobs', style: Theme.of(context).textTheme.titleLarge),
+              const SizedBox(height: 16),
+              ListTile(
+                title: const Text('Newest'),
+                trailing: _sortOption == 'Newest'
+                    ? const Icon(Icons.check, color: AppColors.purple)
+                    : null,
+                onTap: () {
+                  setState(() => _sortOption = 'Newest');
+                  _filterJobs();
+                  Navigator.pop(context);
+                },
+              ),
+              ListTile(
+                title: const Text('Oldest'),
+                trailing: _sortOption == 'Oldest'
+                    ? const Icon(Icons.check, color: AppColors.purple)
+                    : null,
+                onTap: () {
+                  setState(() => _sortOption = 'Oldest');
+                  _filterJobs();
+                  Navigator.pop(context);
+                },
+              ),
+              // Add salary sort if data supports it
+            ],
+          ),
+        );
+      },
+    );
   }
 
   void _openFilterOptions() {
@@ -160,6 +235,9 @@ class _SearchTabState extends State<SearchTab> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   TextField(
+                    onChanged: (value) {
+                      _filterJobs(query: value);
+                    },
                     decoration: InputDecoration(
                       hintText: 'Search for position, company...',
                       prefixIcon: const Icon(Icons.search, color: Colors.grey),
@@ -192,7 +270,7 @@ class _SearchTabState extends State<SearchTab> {
                         ),
                         const SizedBox(width: 8),
                         ActionChip(
-                          onPressed: () {},
+                          onPressed: _openSortOptions,
                           avatar: const Icon(Icons.sort, size: 18),
                           label: const Text('Sort'),
                           backgroundColor: theme.cardColor,
@@ -229,7 +307,7 @@ class _SearchTabState extends State<SearchTab> {
                         style: theme.textTheme.titleMedium,
                       ),
                       Text(
-                        'Sort by: Newest',
+                        'Sort by: $_sortOption',
                         style: theme.textTheme.bodyMedium?.copyWith(
                           color: theme.hintColor,
                         ),

@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:jobspot_app/features/admin_dashboard/presentation/admin_dashboard_screen.dart';
+import 'package:jobspot_app/features/dashboard/presentation/screens/admin_dashboard.dart';
 import 'package:jobspot_app/features/auth/presentation/screens/role_selection_screen.dart';
 import 'package:jobspot_app/features/auth/presentation/widgets/social_button.dart';
-import 'package:jobspot_app/features/seeker_dashboard/presentation/seeker_dashboard_screen.dart';
+import 'package:jobspot_app/features/dashboard/presentation/screens/seeker_dashboard.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:jobspot_app/features/employer_dashboard/presentation/employer_dashboard_screen.dart';
+import 'package:jobspot_app/features/dashboard/presentation/screens/employer_dashboard.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -203,8 +203,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           Navigator.pushReplacement(
                             context,
                             MaterialPageRoute(
-                              builder: (context) =>
-                                  const SeekerDashboardScreen(),
+                              builder: (context) => const SeekerDashboard(),
                             ),
                           );
                         },
@@ -219,8 +218,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           Navigator.pushReplacement(
                             context,
                             MaterialPageRoute(
-                              builder: (context) =>
-                                  const EmployerDashboardScreen(),
+                              builder: (context) => const EmployerDashboard(),
                             ),
                           );
                         },
@@ -235,7 +233,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     Navigator.pushReplacement(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => const AdminDashboardScreen(),
+                        builder: (context) => const AdminDashboard(),
                       ),
                     );
                   },

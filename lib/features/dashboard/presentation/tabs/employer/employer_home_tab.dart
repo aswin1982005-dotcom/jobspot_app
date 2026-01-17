@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:jobspot_app/core/theme/app_theme.dart';
-import 'package:jobspot_app/features/seeker_dashboard/presentation/widgets/stat_card.dart';
+import 'package:jobspot_app/features/dashboard/presentation/widgets/stat_card.dart';
 import 'package:jobspot_app/features/jobs/presentation/unified_job_card.dart';
 import 'package:jobspot_app/features/applications/applicant_card.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';

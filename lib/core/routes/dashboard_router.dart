@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:jobspot_app/core/constants/user_role.dart';
-import 'package:jobspot_app/features/employer_dashboard/presentation/employer_dashboard_screen.dart';
-import 'package:jobspot_app/features/admin_dashboard/presentation/admin_dashboard_screen.dart';
-
-import '../../features/seeker_dashboard/presentation/seeker_dashboard_screen.dart';
+import 'package:jobspot_app/features/dashboard/presentation/screens/admin_dashboard.dart';
+import 'package:jobspot_app/features/dashboard/presentation/screens/employer_dashboard.dart';
+import 'package:jobspot_app/features/dashboard/presentation/screens/seeker_dashboard.dart';
 
 class DashboardRouter extends StatelessWidget {
   final UserRole? role;
@@ -14,14 +13,14 @@ class DashboardRouter extends StatelessWidget {
   Widget build(BuildContext context) {
     switch (role) {
       case UserRole.seeker:
-        return const SeekerDashboardScreen();
+        return const SeekerDashboard();
       case UserRole.employer:
-        return const EmployerDashboardScreen();
+        return const EmployerDashboard();
       case UserRole.admin:
-        return const AdminDashboardScreen();
+        return const AdminDashboard();
       case null:
-        // TODO: Handle this case.
-        throw UnimplementedError();
+        // TODO: Handle this case better, maybe redirect to login or role selection
+        return const Center(child: Text("Error: Role is null"));
     }
   }
 }

@@ -4,6 +4,9 @@ import 'package:jobspot_app/core/utils/supabase_service.dart';
 import 'package:jobspot_app/data/services/profile_service.dart';
 import 'package:jobspot_app/features/profile/presentation/widgets/edit_seeker_profile_dialog.dart';
 import 'package:jobspot_app/features/profile/presentation/widgets/profile_widgets.dart';
+import 'package:jobspot_app/features/applications/presentation/my_applications_screen.dart';
+import 'package:jobspot_app/features/profile/presentation/screens/settings_screen.dart';
+import 'package:jobspot_app/features/profile/presentation/screens/help_support_screen.dart';
 
 class SeekerProfileView extends StatefulWidget {
   const SeekerProfileView({super.key});
@@ -119,25 +122,65 @@ class _SeekerProfileViewState extends State<SeekerProfileView> {
                 const ProfileSectionHeader(title: 'Settings'),
                 const SizedBox(height: 12),
                 const ThemeModeTile(),
+
+                // Account Settings
+                ProfileMenuTile(
+                  icon: Icons.settings_outlined,
+                  title: 'Settings',
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const SettingsScreen(),
+                      ),
+                    );
+                  },
+                ),
+
+                // My Applications
                 ProfileMenuTile(
                   icon: Icons.history,
                   title: 'My Applications',
-                  onTap: () {},
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const MyApplicationsScreen(),
+                      ),
+                    );
+                  },
                 ),
+
+                // Resume
                 ProfileMenuTile(
                   icon: Icons.description_outlined,
                   title: 'Resume',
-                  onTap: () {},
+                  onTap: () {
+                    // Todo: Implement Resume Upload
+                  },
                 ),
+
+                // Notifications (Can link to settings or specific page)
                 ProfileMenuTile(
                   icon: Icons.notifications_outlined,
                   title: 'Notifications',
-                  onTap: () {},
+                  onTap: () {
+                    // For now link to settings or show snackbar
+                  },
                 ),
+
+                // Help & Support
                 ProfileMenuTile(
                   icon: Icons.help_outline,
                   title: 'Help & Support',
-                  onTap: () {},
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const HelpSupportScreen(),
+                      ),
+                    );
+                  },
                 ),
                 const SizedBox(height: 24),
                 LogoutButton(

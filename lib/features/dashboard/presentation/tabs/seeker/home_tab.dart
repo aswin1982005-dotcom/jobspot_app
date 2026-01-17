@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:jobspot_app/core/theme/app_theme.dart';
-import 'package:jobspot_app/features/seeker_dashboard/presentation/widgets/stat_card.dart';
+import 'package:jobspot_app/features/dashboard/presentation/widgets/stat_card.dart';
 import 'package:jobspot_app/features/jobs/presentation/unified_job_card.dart';
 import 'package:jobspot_app/data/services/job_service.dart';
 import 'package:jobspot_app/data/services/application_service.dart';
+import 'package:jobspot_app/features/jobs/presentation/job_list_screen.dart';
 
 class HomeTab extends StatefulWidget {
   const HomeTab({super.key});
@@ -156,7 +157,24 @@ class _HomeTabState extends State<HomeTab> {
                     children: [
                       Text('Saved Jobs', style: textTheme.headlineMedium),
                       TextButton(
-                        onPressed: () {},
+                        onPressed: () {
+                          // Extract the job object from the saved entry
+                          final jobsList = savedJobs
+                              .map(
+                                (s) => s['job_posts'] as Map<String, dynamic>,
+                              )
+                              .toList();
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => JobListScreen(
+                                title: 'Saved Jobs',
+                                jobs: jobsList,
+                                onRefresh: () async => _refreshData(),
+                              ),
+                            ),
+                          );
+                        },
                         child: const Text('See all'),
                       ),
                     ],
@@ -188,7 +206,18 @@ class _HomeTabState extends State<HomeTab> {
                     children: [
                       Text('Recommended Jobs', style: textTheme.headlineMedium),
                       TextButton(
-                        onPressed: () {},
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => JobListScreen(
+                                title: 'Recommended Jobs',
+                                jobs: recommendedJobs,
+                                onRefresh: () async => _refreshData(),
+                              ),
+                            ),
+                          );
+                        },
                         child: const Text('See all'),
                       ),
                     ],

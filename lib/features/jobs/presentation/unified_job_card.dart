@@ -4,7 +4,7 @@ import 'package:jobspot_app/data/services/job_service.dart';
 import 'package:jobspot_app/features/jobs/presentation/job_details_screen.dart';
 import 'package:jobspot_app/features/jobs/presentation/create_job_screen.dart';
 import 'package:jobspot_app/features/jobs/presentation/widgets/job_card_header.dart';
-import 'package:jobspot_app/features/jobs/presentation/widgets/job_card_schedule_info.dart';
+
 import 'package:jobspot_app/features/jobs/presentation/widgets/job_card_salary_info.dart';
 
 enum JobCardRole { seeker, employer }
@@ -12,7 +12,7 @@ enum JobCardRole { seeker, employer }
 class UnifiedJobCard extends StatefulWidget {
   final Map<String, dynamic> job;
   final JobCardRole role;
-  
+
   // Seeker specific
   final bool canApply;
   final VoidCallback? onApplied;
@@ -68,9 +68,9 @@ class _UnifiedJobCardState extends State<UnifiedJobCard> {
     } catch (e) {
       if (mounted) {
         setState(() => _isBookmarked = previousStatus);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error saving job: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error saving job: $e')));
       }
     }
   }
@@ -90,9 +90,9 @@ class _UnifiedJobCardState extends State<UnifiedJobCard> {
       widget.onApplied?.call();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error applying for job: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error applying for job: $e')));
       }
     } finally {
       if (mounted) setState(() => _isApplying = false);
@@ -144,10 +144,11 @@ class _UnifiedJobCardState extends State<UnifiedJobCard> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Header with Icon, Title, Company
             JobCardHeader(
               job: widget.job,
               iconSize: isEmployer ? 32 : 24,
-              trailing: isEmployer 
+              trailing: isEmployer
                   ? _buildStatusBadge(isActive)
                   : IconButton(
                       icon: Icon(
@@ -157,19 +158,45 @@ class _UnifiedJobCardState extends State<UnifiedJobCard> {
                       onPressed: _toggleSave,
                     ),
             ),
+            const SizedBox(height: 12),
+
+            // Chips Row: Type, Mode, Shift (if available)
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _buildInfoChip(
+                  context,
+                  widget.job['type'] ?? 'Full Time',
+                  Icons.work_outline,
+                ),
+                _buildInfoChip(
+                  context,
+                  widget.job['work_mode'] ?? 'Remote',
+                  Icons.location_on_outlined,
+                ),
+                if (widget.job['shift_start'] != null &&
+                    widget.job['shift_end'] != null)
+                  _buildInfoChip(
+                    context,
+                    _formatShift(
+                      widget.job['shift_start'],
+                      widget.job['shift_end'],
+                    ),
+                    Icons.access_time,
+                  ),
+              ],
+            ),
             const SizedBox(height: 16),
-            if (!isEmployer) ...[
-              JobCardScheduleInfo(job: widget.job),
-              const SizedBox(height: 12),
-            ],
+
+            // Footer: Pay and Action
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                JobCardSalaryInfo(job: widget.job),
-                if (isEmployer && widget.job['same_day_pay'] == true) 
-                   _buildSameDayPayBadge(colorScheme),
-                if (!isEmployer)
-                  _buildSeekerAction(colorScheme),
+                Expanded(child: JobCardSalaryInfo(job: widget.job)),
+                if (isEmployer && widget.job['same_day_pay'] == true)
+                  _buildSameDayPayBadge(colorScheme),
+                if (!isEmployer) _buildSeekerAction(colorScheme),
               ],
             ),
             if (isEmployer) ...[
@@ -186,7 +213,9 @@ class _UnifiedJobCardState extends State<UnifiedJobCard> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: isActive ? Colors.green.withValues(alpha: 0.1) : Colors.red.withValues(alpha: 0.1),
+        color: isActive
+            ? Colors.green.withValues(alpha: 0.1)
+            : Colors.red.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(
@@ -214,7 +243,9 @@ class _UnifiedJobCardState extends State<UnifiedJobCard> {
           const Text(
             'SAME DAY PAY',
             style: TextStyle(
-              color: Color(0xFFE67E22), // colorScheme.secondary but more visible
+              color: Color(
+                0xFFE67E22,
+              ), // colorScheme.secondary but more visible
               fontSize: 10,
               fontWeight: FontWeight.bold,
             ),
@@ -234,7 +265,10 @@ class _UnifiedJobCardState extends State<UnifiedJobCard> {
           ? const SizedBox(
               height: 20,
               width: 20,
-              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Colors.white,
+              ),
             )
           : Text(widget.canApply ? "Apply" : "Applied"),
     );
@@ -261,7 +295,9 @@ class _UnifiedJobCardState extends State<UnifiedJobCard> {
             icon: Icon(isActive ? Icons.lock_outline : Icons.lock, size: 18),
             label: Text(isActive ? 'Close' : 'Reopen'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: isActive ? colorScheme.error : colorScheme.primary,
+              backgroundColor: isActive
+                  ? colorScheme.error
+                  : colorScheme.primary,
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 12),
             ),
@@ -269,5 +305,42 @@ class _UnifiedJobCardState extends State<UnifiedJobCard> {
         ),
       ],
     );
+  }
+
+  Widget _buildInfoChip(BuildContext context, String label, IconData icon) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: theme.dividerColor),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: theme.hintColor),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.hintColor,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatShift(dynamic start, dynamic end) {
+    if (start == null || end == null) return 'Shift';
+    try {
+      final s = start.toString().substring(0, 5);
+      final e = end.toString().substring(0, 5);
+      return '$s - $e';
+    } catch (_) {
+      return 'Shift';
+    }
   }
 }
