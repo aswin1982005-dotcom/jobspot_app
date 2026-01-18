@@ -27,8 +27,18 @@ class _MapTabState extends State<MapTab> {
 
   List<Map<String, dynamic>> _jobs = [];
   Set<Marker> _markers = {};
-  bool _isLoading = true;
 
+  final TextEditingController _searchController = TextEditingController();
+  final List<String> _selectedJobTypes = [];
+  final List<String> _jobTypes = [
+    'Full-Time',
+    'Part-Time',
+    'Contract',
+    'Internship',
+    'Freelance',
+  ];
+
+  bool _isLoading = true;
   BitmapDescriptor? _selectedMarkerIcon;
   BitmapDescriptor? _unselectedMarkerIcon;
   String? _selectedJobId;
@@ -37,6 +47,12 @@ class _MapTabState extends State<MapTab> {
   void initState() {
     super.initState();
     _initMap();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   Future<void> _initMap() async {
@@ -176,6 +192,54 @@ class _MapTabState extends State<MapTab> {
     ))!.buffer.asUint8List();
   }
 
+  void _showFilterOptions() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setModalState) {
+            return Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Filter by Job Type',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                  const SizedBox(height: 16),
+                  ..._jobTypes.map((type) {
+                    return CheckboxListTile(
+                      title: Text(type),
+                      value: _selectedJobTypes.contains(type),
+                      onChanged: (bool? value) {
+                        setModalState(() {
+                          if (value == true) {
+                            _selectedJobTypes.add(type);
+                          } else {
+                            _selectedJobTypes.remove(type);
+                          }
+                        });
+                        // Update main state as well so map updates when closed (or live)
+                        setState(() {
+                          _buildMarkers();
+                        });
+                      },
+                    );
+                  }),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   void _buildMarkers() {
     final Set<Marker> markers = {};
 
@@ -195,6 +259,42 @@ class _MapTabState extends State<MapTab> {
 
     if (_unselectedMarkerIcon != null && _selectedMarkerIcon != null) {
       for (var job in _jobs) {
+        // --- FILTER LOGIC ---
+        final title = (job['title'] as String?)?.toLowerCase() ?? '';
+        final company =
+            (job['company_name'] as String?)?.toLowerCase() ??
+            ''; // Assuming field
+        final searchQuery = _searchController.text.toLowerCase();
+
+        // 1. Search
+        if (searchQuery.isNotEmpty) {
+          if (!title.contains(searchQuery) && !company.contains(searchQuery)) {
+            continue;
+          }
+        }
+
+        // 2. Filter (Job Type)
+        if (_selectedJobTypes.isNotEmpty) {
+          // Note: 'work_mode' might be 'Remote/Onsite' vs 'FullTime'.
+          // Usually 'job_type' is the field for FullTime.
+          // Let's assume 'job_type' exists or 'work_mode' carries this info.
+          // If schema is unknown, we check commonly used names.
+          final type =
+              (job['job_type'] as String?) ??
+              (job['work_mode'] as String?) ??
+              '';
+
+          // Simple case-insensitive match against selected types
+          bool match = false;
+          for (var selected in _selectedJobTypes) {
+            if (type.toLowerCase().contains(selected.toLowerCase())) {
+              match = true;
+              break;
+            }
+          }
+          if (!match) continue;
+        }
+
         final jobId = job['id'].toString();
         final isSelected = jobId == _selectedJobId;
         final lat = job['latitude'] as double;
@@ -294,13 +394,17 @@ class _MapTabState extends State<MapTab> {
             child: Column(
               children: [
                 TextField(
+                  controller: _searchController,
+                  onChanged: (value) => setState(() {
+                    _buildMarkers();
+                  }),
                   decoration: InputDecoration(
                     fillColor: Theme.of(context).colorScheme.surface,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide.none,
                     ),
-                    hintText: 'Search for position, company...',
+                    hintText: 'Search position, company...',
                     prefixIcon: const Icon(Icons.search, color: Colors.grey),
                     contentPadding: const EdgeInsets.symmetric(
                       vertical: 16,
@@ -315,22 +419,9 @@ class _MapTabState extends State<MapTab> {
                     scrollDirection: Axis.horizontal,
                     children: [
                       ActionChip(
-                        onPressed: () {},
+                        onPressed: _showFilterOptions,
                         avatar: const Icon(Icons.filter_list, size: 18),
-                        label: const Text('Filter'),
-                        backgroundColor: Theme.of(context).cardColor,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          side: BorderSide(
-                            color: Colors.grey.withValues(alpha: 0.3),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      ActionChip(
-                        onPressed: () {},
-                        avatar: const Icon(Icons.sort, size: 18),
-                        label: const Text('Sort'),
+                        label: const Text('Filter Type'),
                         backgroundColor: Theme.of(context).cardColor,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:jobspot_app/core/utils/supabase_service.dart';
 import 'package:jobspot_app/data/services/profile_service.dart';
-import 'package:jobspot_app/features/profile/presentation/widgets/edit_business_profile_dialog.dart';
+import 'package:jobspot_app/features/profile/presentation/screens/edit_employer_profile_screen.dart';
 import 'package:jobspot_app/features/profile/presentation/widgets/profile_widgets.dart';
+import 'package:jobspot_app/features/profile/presentation/screens/settings_screen.dart';
+import 'package:jobspot_app/features/profile/presentation/screens/help_support_screen.dart';
 
 class EmployerProfileView extends StatefulWidget {
   const EmployerProfileView({super.key});
@@ -58,10 +60,12 @@ class _EmployerProfileViewState extends State<EmployerProfileView> {
                 '${_profile?['industry'] ?? 'Not Provided'} • ${_profile?['city'] ?? 'Not Provided'}',
             fallbackIcon: Icons.business,
             onEdit: () async {
-              final result = await showDialog<bool>(
-                context: context,
-                builder: (context) =>
-                    EditBusinessProfileDialog(profile: _profile),
+              final result = await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) =>
+                      EditEmployerProfileScreen(profile: _profile),
+                ),
               );
               if (result == true) {
                 fetchUserProfile();
@@ -108,17 +112,38 @@ class _EmployerProfileViewState extends State<EmployerProfileView> {
                 ProfileMenuTile(
                   icon: Icons.notifications_none,
                   title: 'Notification Settings',
-                  onTap: () {},
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const SettingsScreen(),
+                      ),
+                    );
+                  },
                 ),
                 ProfileMenuTile(
                   icon: Icons.security_outlined,
                   title: 'Security & Password',
-                  onTap: () {},
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const SettingsScreen(),
+                      ),
+                    );
+                  },
                 ),
                 ProfileMenuTile(
                   icon: Icons.help_outline,
                   title: 'Help & Support',
-                  onTap: () {},
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const HelpSupportScreen(),
+                      ),
+                    );
+                  },
                 ),
 
                 const SizedBox(height: 32),
