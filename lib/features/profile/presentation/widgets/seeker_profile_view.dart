@@ -2,7 +2,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:jobspot_app/core/utils/supabase_service.dart';
 import 'package:jobspot_app/data/services/profile_service.dart';
-import 'package:jobspot_app/features/profile/presentation/widgets/edit_seeker_profile_dialog.dart';
+import 'package:jobspot_app/features/profile/presentation/screens/edit_seeker_profile_screen.dart';
 import 'package:jobspot_app/features/profile/presentation/widgets/profile_widgets.dart';
 import 'package:jobspot_app/features/applications/presentation/my_applications_screen.dart';
 import 'package:jobspot_app/features/profile/presentation/screens/settings_screen.dart';
@@ -60,10 +60,12 @@ class _SeekerProfileViewState extends State<SeekerProfileView> {
             title: _profile?['full_name'] ?? 'User',
             subtitle: SupabaseService.getCurrentUser()?.email ?? '',
             onEdit: () async {
-              final result = await showDialog<bool>(
-                context: context,
-                builder: (context) =>
-                    EditSeekerProfileDialog(profile: _profile),
+              final result = await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) =>
+                      EditSeekerProfileScreen(profile: _profile),
+                ),
               );
               if (result == true) {
                 _fetchProfile();

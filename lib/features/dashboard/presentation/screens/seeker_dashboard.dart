@@ -4,6 +4,8 @@ import 'package:jobspot_app/features/profile/presentation/profile_tab.dart';
 import 'package:jobspot_app/features/dashboard/presentation/tabs/seeker/home_tab.dart';
 import 'package:jobspot_app/features/dashboard/presentation/tabs/seeker/map_tab.dart';
 import 'package:jobspot_app/features/dashboard/presentation/tabs/seeker/search_tab.dart';
+import 'package:provider/provider.dart';
+import 'package:jobspot_app/features/dashboard/presentation/providers/seeker_home_provider.dart';
 
 class SeekerDashboard extends StatefulWidget {
   const SeekerDashboard({super.key});
@@ -20,11 +22,14 @@ class _SeekerDashboardState extends State<SeekerDashboard> {
   @override
   Widget build(BuildContext context) {
     return DashboardShell(
-      screens: const [
-        HomeTab(),
-        SearchTab(),
-        MapTab(),
-        ProfileTab(role: 'seeker'),
+      screens: [
+        ChangeNotifierProvider(
+          create: (_) => SeekerHomeProvider()..loadData(),
+          child: const HomeTab(),
+        ),
+        const SearchTab(),
+        const MapTab(),
+        const ProfileTab(role: 'seeker'),
       ],
       destinations: const [
         NavigationDestination(

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:jobspot_app/core/theme/app_theme.dart';
 import 'package:jobspot_app/features/applications/applicant_card.dart';
+import 'package:jobspot_app/features/applications/presentation/applicant_profile_screen.dart';
 
 class ApplicantsTab extends StatefulWidget {
   final List<Map<String, dynamic>> applications;
@@ -156,7 +157,17 @@ class _ApplicantsTabState extends State<ApplicantsTab> {
                       status: app['status'] ?? 'pending',
                       appliedDate: _formatDate(app['applied_at']),
                       profileImageUrl: applicant?['avatar_url'],
-                      onTap: () {},
+                      onTap: () async {
+                        await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                ApplicantProfileScreen(application: app),
+                          ),
+                        );
+                        // Refresh to show potentially updated status
+                        widget.onRefresh();
+                      },
                     );
                   },
                 ),

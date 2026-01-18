@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ProfileService {
@@ -39,5 +40,24 @@ class ProfileService {
         .from('job_seeker_profiles')
         .upsert(updateData)
         .eq('id', userId);
+  }
+
+  static Future<String?> uploadResume(
+    String userId,
+    File file,
+    String extension,
+  ) async {
+    final fileName =
+        '$userId/resume_${DateTime.now().millisecondsSinceEpoch}.$extension';
+    try {
+      await _supabase.storage
+          .from('resumes')
+          .upload(fileName, file, fileOptions: const FileOptions(upsert: true));
+      return _supabase.storage.from('resumes').getPublicUrl(fileName);
+    } catch (e) {
+      // If bucket doesn't exist or permission denied
+      print('Error uploading resume: $e');
+      rethrow;
+    }
   }
 }

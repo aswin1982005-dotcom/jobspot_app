@@ -1,0 +1,266 @@
+import 'package:flutter/material.dart';
+import 'package:jobspot_app/core/theme/app_theme.dart';
+import 'package:jobspot_app/data/services/application_service.dart';
+import 'package:url_launcher/url_launcher.dart';
+
+class ApplicantProfileScreen extends StatefulWidget {
+  final Map<String, dynamic> application;
+
+  const ApplicantProfileScreen({super.key, required this.application});
+
+  @override
+  State<ApplicantProfileScreen> createState() => _ApplicantProfileScreenState();
+}
+
+class _ApplicantProfileScreenState extends State<ApplicantProfileScreen> {
+  late String _currentStatus;
+  bool _isUpdating = false;
+  final ApplicationService _applicationService = ApplicationService();
+
+  @override
+  void initState() {
+    super.initState();
+    _currentStatus = widget.application['status'] ?? 'pending';
+  }
+
+  Future<void> _updateStatus(String newStatus) async {
+    setState(() => _isUpdating = true);
+    try {
+      await _applicationService.updateApplicationStatus(
+        applicationId: widget.application['id'],
+        status: newStatus,
+      );
+      if (mounted) {
+        setState(() => _currentStatus = newStatus);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Status updated to ${newStatus.toUpperCase()}'),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error updating status: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _isUpdating = false);
+    }
+  }
+
+  Color _getStatusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'pending':
+        return AppColors.orange;
+      case 'interview':
+        return AppColors.purple;
+      case 'hired':
+        return Colors.green;
+      case 'rejected':
+        return Colors.red;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final applicant = widget.application['applicant'] as Map<String, dynamic>;
+    final job = widget.application['job_posts'] as Map<String, dynamic>;
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('Applicant Profile'), elevation: 0),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header
+            Center(
+              child: Column(
+                children: [
+                  CircleAvatar(
+                    radius: 50,
+                    backgroundImage: applicant['avatar_url'] != null
+                        ? NetworkImage(applicant['avatar_url'])
+                        : null,
+                    child: applicant['avatar_url'] == null
+                        ? const Icon(Icons.person, size: 50)
+                        : null,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    applicant['full_name'] ?? 'Anonymous',
+                    style: theme.textTheme.headlineMedium,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Applied for: ${job['title']}',
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      color: theme.hintColor,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 32),
+
+            // Status Section
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: theme.cardColor,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Application Status',
+                    style: theme.textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: _getStatusColor(
+                            _currentStatus,
+                          ).withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          _currentStatus.toUpperCase(),
+                          style: TextStyle(
+                            color: _getStatusColor(_currentStatus),
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      if (_isUpdating)
+                        const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      if (_currentStatus != 'interview')
+                        OutlinedButton(
+                          onPressed: _isUpdating
+                              ? null
+                              : () => _updateStatus('interview'),
+                          child: const Text('Interview'),
+                        ),
+                      if (_currentStatus != 'hired')
+                        OutlinedButton(
+                          onPressed: _isUpdating
+                              ? null
+                              : () => _updateStatus('hired'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.green,
+                            side: const BorderSide(color: Colors.green),
+                          ),
+                          child: const Text('Hire'),
+                        ),
+                      if (_currentStatus != 'rejected')
+                        OutlinedButton(
+                          onPressed: _isUpdating
+                              ? null
+                              : () => _updateStatus('rejected'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.red,
+                            side: const BorderSide(color: Colors.red),
+                          ),
+                          child: const Text('Reject'),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // Contact Info
+            Text('Contact Information', style: theme.textTheme.titleMedium),
+            const SizedBox(height: 16),
+            ListTile(
+              leading: const Icon(Icons.email_outlined),
+              title: const Text('Email'),
+              subtitle: Text(applicant['email'] ?? 'No email provided'),
+              // Note: Email might not be in profile table directly depending on schema
+              contentPadding: EdgeInsets.zero,
+            ),
+            ListTile(
+              leading: const Icon(Icons.phone_outlined),
+              title: const Text('Phone'),
+              subtitle: Text(applicant['phone'] ?? 'No phone provided'),
+              contentPadding: EdgeInsets.zero,
+            ),
+            ListTile(
+              leading: const Icon(Icons.location_on_outlined),
+              title: const Text('Location'),
+              subtitle: Text(applicant['city'] ?? 'Unknown location'),
+              contentPadding: EdgeInsets.zero,
+            ),
+
+            const SizedBox(height: 24),
+            if (applicant['resume_url'] != null) ...[
+              Text('Resume', style: theme.textTheme.titleMedium),
+              const SizedBox(height: 16),
+              InkWell(
+                onTap: () async {
+                  final uri = Uri.parse(applicant['resume_url']);
+                  if (await canLaunchUrl(uri)) {
+                    await launchUrl(uri);
+                  } else {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Could not open resume')),
+                      );
+                    }
+                  }
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    border: Border.all(
+                      color: Colors.grey.withValues(alpha: 0.3),
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.picture_as_pdf, color: Colors.red),
+                      const SizedBox(width: 12),
+                      const Text('View Resume'),
+                      const Spacer(),
+                      const Icon(
+                        Icons.open_in_new,
+                        size: 18,
+                        color: Colors.grey,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}

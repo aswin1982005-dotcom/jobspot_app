@@ -3,6 +3,7 @@ import 'package:jobspot_app/core/theme/app_theme.dart';
 import 'package:jobspot_app/features/dashboard/presentation/widgets/stat_card.dart';
 import 'package:jobspot_app/features/jobs/presentation/unified_job_card.dart';
 import 'package:jobspot_app/features/applications/applicant_card.dart';
+import 'package:jobspot_app/features/applications/presentation/applicant_profile_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class EmployerHomeTab extends StatelessWidget {
@@ -144,7 +145,16 @@ class EmployerHomeTab extends StatelessWidget {
                 status: app['status'] ?? 'pending',
                 appliedDate: _formatDate(app['applied_at']),
                 profileImageUrl: applicant?['avatar_url'],
-                onTap: () {},
+                onTap: () async {
+                  await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) =>
+                          ApplicantProfileScreen(application: app),
+                    ),
+                  );
+                  onRefresh();
+                },
               ),
             );
           }),
@@ -185,7 +195,7 @@ class EmployerHomeTab extends StatelessWidget {
               child: UnifiedJobCard(
                 job: job,
                 role: JobCardRole.employer,
-                afterEdit: () {},
+                afterEdit: onRefresh,
                 onClose: onRefresh,
               ),
             ),

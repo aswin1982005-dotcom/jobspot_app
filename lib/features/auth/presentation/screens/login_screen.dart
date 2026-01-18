@@ -5,6 +5,7 @@ import 'package:jobspot_app/features/auth/presentation/widgets/social_button.dar
 import 'package:jobspot_app/features/dashboard/presentation/screens/seeker_dashboard.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:jobspot_app/features/dashboard/presentation/screens/employer_dashboard.dart';
+import 'package:jobspot_app/features/auth/presentation/screens/forgot_password_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -40,6 +41,7 @@ class _LoginScreenState extends State<LoginScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(e.message), backgroundColor: Colors.red),
           );
+          print(e.message);
         }
       } catch (e) {
         if (mounted) {
@@ -153,7 +155,14 @@ class _LoginScreenState extends State<LoginScreen> {
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton(
-                    onPressed: () {},
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const ForgotPasswordScreen(),
+                        ),
+                      );
+                    },
                     child: const Text('Forgot Password?'),
                   ),
                 ),
