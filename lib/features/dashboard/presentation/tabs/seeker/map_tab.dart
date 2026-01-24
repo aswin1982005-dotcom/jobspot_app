@@ -1,11 +1,27 @@
+import 'dart:async';
+import 'dart:ui' as ui;
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:jobspot_app/core/theme/app_theme.dart';
+import 'package:jobspot_app/core/theme/map_styles.dart';
+import 'package:jobspot_app/core/utils/map_clustering_helper.dart'; // Import Custom Clusterer
 import 'package:jobspot_app/data/services/job_service.dart';
 import 'package:jobspot_app/features/jobs/presentation/job_details_screen.dart';
-import 'dart:ui' as ui;
+import 'package:url_launcher/url_launcher.dart';
+
+class JobItem implements ClusterItem {
+  final Map<String, dynamic> job;
+  final LatLng jobLocation;
+
+  JobItem(this.job, this.jobLocation);
+
+  @override
+  LatLng get location => jobLocation;
+}
 
 class MapTab extends StatefulWidget {
   const MapTab({super.key});
@@ -15,19 +31,20 @@ class MapTab extends StatefulWidget {
 }
 
 class _MapTabState extends State<MapTab> {
-  late GoogleMapController mapController;
+  late GoogleMapController _mapController;
   final JobService _jobService = JobService();
 
-  LatLng? _currentPos;
-
-  static const CameraPosition _initialPosition = CameraPosition(
-    target: LatLng(19.0760, 72.8777),
-    zoom: 10,
-  );
-
-  List<Map<String, dynamic>> _jobs = [];
+  // State
   Set<Marker> _markers = {};
+  List<JobItem> _jobItems = [];
+  bool _isLoading = true;
+  double _currentZoom = 10.0;
+  String? _selectedJobId;
 
+  // Icons cache
+  final Map<String, BitmapDescriptor> _iconCache = {};
+
+  // Search & Filter
   final TextEditingController _searchController = TextEditingController();
   final List<String> _selectedJobTypes = [];
   final List<String> _jobTypes = [
@@ -38,10 +55,10 @@ class _MapTabState extends State<MapTab> {
     'Freelance',
   ];
 
-  bool _isLoading = true;
-  BitmapDescriptor? _selectedMarkerIcon;
-  BitmapDescriptor? _unselectedMarkerIcon;
-  String? _selectedJobId;
+  static const CameraPosition _initialPosition = CameraPosition(
+    target: LatLng(19.0760, 72.8777),
+    zoom: 10,
+  );
 
   @override
   void initState() {
@@ -58,138 +75,286 @@ class _MapTabState extends State<MapTab> {
   Future<void> _initMap() async {
     await _loadMarkerIcons();
     await _fetchJobs();
+    _initLocation();
   }
 
-  Future<void> _getCurrentLocation() async {
-    try {
-      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        if (mounted) {
-          _showLocationServiceDialog();
-        }
-        return;
-      }
-
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) {
-          _showErrorSnackBar("Location permission denied!");
-          return;
-        }
-      }
-
-      if (permission == LocationPermission.deniedForever) {
-        _showErrorSnackBar(
-          "Location permissions are permanently denied. Please enable them in app settings.",
-        );
-        return;
-      }
-      Position? pos = await Geolocator.getLastKnownPosition();
-      pos ??= await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-        timeLimit: const Duration(seconds: 5),
-      );
-
-      if (mounted) {
-        setState(() {
-          _currentPos = LatLng(pos!.latitude, pos.longitude);
-        });
-        _buildMarkers();
-        mapController.animateCamera(
-          CameraUpdate.newLatLngZoom(_currentPos!, 14),
-        );
-      }
-    } catch (e) {
-      debugPrint("Error getting location: $e");
+  Future<void> _initLocation() async {
+    // We just check permission to ensure the native blue dot shows up if allowed.
+    // We won't force move the camera unless we want to initially center on user.
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
     }
-  }
-
-  void _showLocationServiceDialog() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext dialogContext) {
-        return AlertDialog(
-          title: const Text("Location Services Disabled"),
-          content: const Text(
-            "Please enable location services to find jobs near you.",
-          ),
-          actions: <Widget>[
-            TextButton(
-              child: const Text("Settings"),
-              onPressed: () {
-                Navigator.of(dialogContext).pop();
-                Geolocator.openLocationSettings();
-              },
-            ),
-            TextButton(
-              child: const Text("OK"),
-              onPressed: () => Navigator.of(dialogContext).pop(),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  void _showErrorSnackBar(String message) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: Colors.red),
-    );
-  }
-
-  Future<void> _fetchJobs() async {
-    try {
-      final jobs = await _jobService.fetchJobs();
-      if (mounted) {
-        setState(() {
-          _jobs = jobs
-              .where((j) => j['latitude'] != null && j['longitude'] != null)
-              .toList();
-          _isLoading = false;
-        });
-        _buildMarkers();
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error fetching jobs for map: $e')),
-        );
-      }
-    }
+    // If granted, the MyLocation layer on GoogleMap takes care of it.
   }
 
   Future<void> _loadMarkerIcons() async {
-    final Uint8List selectedIconBytes = await getBytesFromAsset(
-      'assets/icons/map_icon_1.png',
-      72,
-    );
-    final Uint8List unselectedIconBytes = await getBytesFromAsset(
+    // Load icons for different sizes
+    // Small (Zoom < 10): 32px
+    // Medium (Zoom 10-14): 48px
+    // Large (Zoom > 14): 64px (Unselected) / 72px (Selected)
+
+    // We'll lazy load or load all upfront. Let's load upfront for smoothness.
+    // 0 = small, 1 = medium, 2 = large
+
+    // Unselected
+    _iconCache['unselected_small'] = await _getBitmapDescriptor(
+      'assets/icons/map_icon_2.png',
+      32,
+    ); // Resize to 32
+    _iconCache['unselected_medium'] = await _getBitmapDescriptor(
+      'assets/icons/map_icon_2.png',
+      48,
+    ); // Resize to 48
+    _iconCache['unselected_large'] = await _getBitmapDescriptor(
       'assets/icons/map_icon_2.png',
       64,
+    ); // Resize to 64
+
+    // Selected
+    _iconCache['selected_small'] = await _getBitmapDescriptor(
+      'assets/icons/map_icon_1.png',
+      40,
+    );
+    _iconCache['selected_medium'] = await _getBitmapDescriptor(
+      'assets/icons/map_icon_1.png',
+      64,
+    );
+    _iconCache['selected_large'] = await _getBitmapDescriptor(
+      'assets/icons/map_icon_1.png',
+      80,
     );
 
-    if (mounted) {
-      setState(() {
-        _selectedMarkerIcon = BitmapDescriptor.bytes(selectedIconBytes);
-        _unselectedMarkerIcon = BitmapDescriptor.bytes(unselectedIconBytes);
-      });
-    }
+    if (mounted) setState(() {});
   }
 
-  Future<Uint8List> getBytesFromAsset(String path, int width) async {
+  Future<BitmapDescriptor> _getBitmapDescriptor(String path, int width) async {
     ByteData data = await rootBundle.load(path);
     ui.Codec codec = await ui.instantiateImageCodec(
       data.buffer.asUint8List(),
       targetWidth: width,
     );
     ui.FrameInfo fi = await codec.getNextFrame();
-    return (await fi.image.toByteData(
+    final bytes = (await fi.image.toByteData(
       format: ui.ImageByteFormat.png,
     ))!.buffer.asUint8List();
+    return BitmapDescriptor.bytes(bytes);
+  }
+
+  Future<void> _fetchJobs() async {
+    try {
+      final jobs = await _jobService.fetchJobs();
+      if (mounted) {
+        final items = jobs
+            .where((j) => j['latitude'] != null && j['longitude'] != null)
+            .map((j) => JobItem(j, LatLng(j['latitude'], j['longitude'])))
+            .toList();
+
+        setState(() {
+          _jobItems = items;
+          _isLoading = false;
+        });
+        _updateFilteredItems();
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error fetching jobs: $e')));
+      }
+    }
+  }
+
+  void _updateFilteredItems() {
+    List<JobItem> filtered = _jobItems;
+    final query = _searchController.text.toLowerCase();
+
+    // Search Filter
+    if (query.isNotEmpty) {
+      filtered = filtered.where((item) {
+        final title = (item.job['title'] as String?)?.toLowerCase() ?? '';
+        final company =
+            (item.job['company_name'] as String?)?.toLowerCase() ?? '';
+        return title.contains(query) || company.contains(query);
+      }).toList();
+    }
+
+    // Type Filter
+    if (_selectedJobTypes.isNotEmpty) {
+      filtered = filtered.where((item) {
+        final type =
+            (item.job['job_type'] as String?) ??
+            (item.job['work_mode'] as String?) ??
+            '';
+        return _selectedJobTypes.any(
+          (selected) => type.toLowerCase().contains(selected.toLowerCase()),
+        );
+      }).toList();
+    }
+
+    // Run clustering
+    _clusterItems(filtered);
+  }
+
+  Future<void> _clusterItems(List<JobItem> items) async {
+    // Run clustering implementation
+    final clusters = MapClusterer.cluster(items, _currentZoom);
+    final markers = <Marker>{};
+
+    for (final cluster in clusters) {
+      markers.add(await _buildMarker(cluster));
+    }
+
+    if (mounted) {
+      setState(() {
+        _markers = markers;
+      });
+    }
+  }
+
+  Future<Marker> _buildMarker(MapCluster<JobItem> cluster) async {
+    if (cluster.isMultiple) {
+      return Marker(
+        markerId: MarkerId(cluster.getId()),
+        position: cluster.location,
+        onTap: () {
+          _mapController.animateCamera(
+            CameraUpdate.newLatLngZoom(cluster.location, _currentZoom + 2),
+          );
+        },
+        icon: await _getClusterBitmap(
+          cluster.count,
+          size: 100,
+          text: cluster.count.toString(),
+        ),
+      );
+    } else {
+      final item = cluster.items.first;
+      final jobId = item.job['id'].toString();
+      final isSelected = jobId == _selectedJobId;
+
+      // Dynamic sizing logic based on _currentZoom
+      String sizeKey = 'medium';
+      if (_currentZoom < 11) {
+        sizeKey = 'small';
+      } else if (_currentZoom > 15) {
+        sizeKey = 'large';
+      }
+
+      final iconKey = '${isSelected ? "selected" : "unselected"}_$sizeKey';
+      final icon = _iconCache[iconKey] ?? BitmapDescriptor.defaultMarker;
+
+      return Marker(
+        markerId: MarkerId(jobId),
+        position: cluster.location,
+        icon: icon,
+        zIndexInt: isSelected ? 10 : 1,
+        onTap: () {
+          _mapController.animateCamera(
+            CameraUpdate.newLatLngZoom(cluster.location, 16),
+          ); // Zoom in on tap
+          setState(() {
+            _selectedJobId = jobId;
+          });
+          // Re-cluster to update icon (since selection state affects it)
+          // We need to fetch currently filtered items again or store them.
+          // For simplicity, just re-running filter works.
+          _updateFilteredItems();
+          _showJobDetails(item.job);
+        },
+      );
+    }
+  }
+
+  Future<BitmapDescriptor> _getClusterBitmap(
+    int count, {
+    int size = 150,
+    String? text,
+  }) async {
+    if (kIsWeb) return BitmapDescriptor.defaultMarker;
+
+    final ui.PictureRecorder pictureRecorder = ui.PictureRecorder();
+    final Canvas canvas = Canvas(pictureRecorder);
+    final Paint paint1 = Paint()..color = AppColors.purple;
+    final Paint paint2 = Paint()..color = Colors.white;
+
+    canvas.drawCircle(Offset(size / 2, size / 2), size / 2.0, paint1);
+    canvas.drawCircle(Offset(size / 2, size / 2), size / 2.2, paint2);
+    canvas.drawCircle(Offset(size / 2, size / 2), size / 2.8, paint1);
+
+    if (text != null) {
+      TextPainter painter = TextPainter(textDirection: TextDirection.ltr);
+      painter.text = TextSpan(
+        text: text,
+        style: TextStyle(
+          fontSize: size / 3,
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+        ),
+      );
+      painter.layout();
+      painter.paint(
+        canvas,
+        Offset(size / 2 - painter.width / 2, size / 2 - painter.height / 2),
+      );
+    }
+
+    final img = await pictureRecorder.endRecording().toImage(size, size);
+    final data = await img.toByteData(format: ui.ImageByteFormat.png);
+
+    return BitmapDescriptor.bytes(data!.buffer.asUint8List());
+  }
+
+  void _showJobDetails(Map<String, dynamic> job) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.35,
+          minChildSize: 0.2,
+          maxChildSize: 0.6,
+          expand: false,
+          builder: (_, controller) {
+            return JobDetailsSheet(job: job, scrollController: controller);
+          },
+        );
+      },
+    ).then((_) {
+      if (mounted) {
+        setState(() {
+          _selectedJobId = null;
+          _updateFilteredItems();
+        });
+      }
+    });
+  }
+
+  void _onMapCreated(GoogleMapController controller) {
+    _mapController = controller;
+    // Set Map Style based on Theme
+    _updateMapStyle();
+  }
+
+  void _updateMapStyle() {
+    if (Theme.of(context).brightness == Brightness.dark) {
+      _mapController.setMapStyle(MapStyles.darkStyle);
+    } else {
+      _mapController.setMapStyle(null);
+    }
+  }
+
+  void _getCurrentLocation() async {
+    try {
+      final pos = await Geolocator.getCurrentPosition();
+      _mapController.animateCamera(
+        CameraUpdate.newLatLngZoom(LatLng(pos.latitude, pos.longitude), 14),
+      );
+    } catch (e) {
+      // Handle error or permission denied silently or via snackbar
+    }
   }
 
   void _showFilterOptions() {
@@ -224,9 +389,9 @@ class _MapTabState extends State<MapTab> {
                             _selectedJobTypes.remove(type);
                           }
                         });
-                        // Update main state as well so map updates when closed (or live)
+                        // Update main state
                         setState(() {
-                          _buildMarkers();
+                          _updateFilteredItems();
                         });
                       },
                     );
@@ -240,133 +405,19 @@ class _MapTabState extends State<MapTab> {
     );
   }
 
-  void _buildMarkers() {
-    final Set<Marker> markers = {};
-
-    if (_currentPos != null) {
-      markers.add(
-        Marker(
-          markerId: const MarkerId('user_location'),
-          position: _currentPos!,
-          icon: BitmapDescriptor.defaultMarkerWithHue(
-            BitmapDescriptor.hueAzure,
-          ),
-          infoWindow: const InfoWindow(title: 'You are here'),
-          zIndexInt: 2,
-        ),
-      );
-    }
-
-    if (_unselectedMarkerIcon != null && _selectedMarkerIcon != null) {
-      for (var job in _jobs) {
-        // --- FILTER LOGIC ---
-        final title = (job['title'] as String?)?.toLowerCase() ?? '';
-        final company =
-            (job['company_name'] as String?)?.toLowerCase() ??
-            ''; // Assuming field
-        final searchQuery = _searchController.text.toLowerCase();
-
-        // 1. Search
-        if (searchQuery.isNotEmpty) {
-          if (!title.contains(searchQuery) && !company.contains(searchQuery)) {
-            continue;
-          }
-        }
-
-        // 2. Filter (Job Type)
-        if (_selectedJobTypes.isNotEmpty) {
-          // Note: 'work_mode' might be 'Remote/Onsite' vs 'FullTime'.
-          // Usually 'job_type' is the field for FullTime.
-          // Let's assume 'job_type' exists or 'work_mode' carries this info.
-          // If schema is unknown, we check commonly used names.
-          final type =
-              (job['job_type'] as String?) ??
-              (job['work_mode'] as String?) ??
-              '';
-
-          // Simple case-insensitive match against selected types
-          bool match = false;
-          for (var selected in _selectedJobTypes) {
-            if (type.toLowerCase().contains(selected.toLowerCase())) {
-              match = true;
-              break;
-            }
-          }
-          if (!match) continue;
-        }
-
-        final jobId = job['id'].toString();
-        final isSelected = jobId == _selectedJobId;
-        final lat = job['latitude'] as double;
-        final lng = job['longitude'] as double;
-
-        markers.add(
-          Marker(
-            markerId: MarkerId(jobId),
-            position: LatLng(lat, lng),
-            icon: isSelected ? _selectedMarkerIcon! : _unselectedMarkerIcon!,
-            zIndexInt: isSelected ? 1 : 0,
-            onTap: () {
-              mapController.animateCamera(
-                CameraUpdate.newLatLngZoom(LatLng(lat, lng), 14),
-              );
-
-              setState(() {
-                _selectedJobId = jobId;
-                _buildMarkers();
-              });
-
-              _showJobDetails(job);
-            },
-          ),
-        );
-      }
-    }
-
-    if (mounted) {
-      setState(() {
-        _markers = markers;
-      });
-    }
-  }
-
-  void _onMapCreated(GoogleMapController controller) {
-    mapController = controller;
-    _getCurrentLocation(); // Fetch location once map is ready
-    if (_jobs.isNotEmpty || _currentPos != null) {
-      _buildMarkers();
-    }
-  }
-
-  void _showJobDetails(Map<String, dynamic> job) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) {
-        return DraggableScrollableSheet(
-          initialChildSize: 0.35,
-          minChildSize: 0.2,
-          maxChildSize: 0.6,
-          expand: false,
-          builder: (_, controller) {
-            return JobDetailsSheet(job: job, scrollController: controller);
-          },
-        );
-      },
-    ).then((_) {
-      if (mounted) {
-        setState(() {
-          _selectedJobId = null;
-          _buildMarkers();
-        });
-      }
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
+    // Check if style needs update on rebuild (e.g. if theme changed)
+    // Ideally we listen to theme changes, but build() is called on theme change.
+    // However, mapController might not be ready.
+    // We can try setting style here if controller exists.
+    try {
+      _updateMapStyle();
+    } catch (_) {}
+
     return Scaffold(
+      resizeToAvoidBottomInset:
+          false, // Prevent map from resizing when keyboard opens
       body: Stack(
         children: [
           GoogleMap(
@@ -375,13 +426,27 @@ class _MapTabState extends State<MapTab> {
             markers: _markers,
             myLocationButtonEnabled: false,
             myLocationEnabled: true,
+            // Native blue dot
             mapToolbarEnabled: false,
             zoomControlsEnabled: false,
+            compassEnabled: true,
+            rotateGesturesEnabled: true,
+            tiltGesturesEnabled: true,
+            onCameraMove: (position) {
+              _currentZoom = position.zoom;
+              // Debounce or just update?
+              // For lightweight clustering, we can update on idle usually, but user asked for simple/efficient.
+              // Updating on every move might be expensive if many items.
+              // Let's rely on onCameraIdle for re-clustering to be safe/smooth.
+            },
+            onCameraIdle: () {
+              _updateFilteredItems();
+            },
             onTap: (_) {
               if (_selectedJobId != null) {
                 setState(() {
                   _selectedJobId = null;
-                  _buildMarkers();
+                  _updateFilteredItems();
                 });
               }
             },
@@ -390,25 +455,35 @@ class _MapTabState extends State<MapTab> {
 
           // Search/Filter UI
           Padding(
-            padding: const EdgeInsets.only(top: 32, right: 16, left: 16),
+            padding: const EdgeInsets.only(
+              top: 48,
+              right: 16,
+              left: 16,
+            ), // Increased top padding for safe area
             child: Column(
               children: [
-                TextField(
-                  controller: _searchController,
-                  onChanged: (value) => setState(() {
-                    _buildMarkers();
-                  }),
-                  decoration: InputDecoration(
-                    fillColor: Theme.of(context).colorScheme.surface,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
-                    ),
-                    hintText: 'Search position, company...',
-                    prefixIcon: const Icon(Icons.search, color: Colors.grey),
-                    contentPadding: const EdgeInsets.symmetric(
-                      vertical: 16,
-                      horizontal: 20,
+                Material(
+                  elevation: 4,
+                  shadowColor: Colors.black26,
+                  borderRadius: BorderRadius.circular(12),
+                  child: TextField(
+                    controller: _searchController,
+                    onChanged: (value) => setState(() {
+                      _updateFilteredItems();
+                    }),
+                    decoration: InputDecoration(
+                      fillColor: Theme.of(context).colorScheme.surface,
+                      filled: true,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                      hintText: 'Search position, company...',
+                      prefixIcon: const Icon(Icons.search, color: Colors.grey),
+                      contentPadding: const EdgeInsets.symmetric(
+                        vertical: 16,
+                        horizontal: 20,
+                      ),
                     ),
                   ),
                 ),
@@ -423,11 +498,10 @@ class _MapTabState extends State<MapTab> {
                         avatar: const Icon(Icons.filter_list, size: 18),
                         label: const Text('Filter Type'),
                         backgroundColor: Theme.of(context).cardColor,
+                        // elevation: 2, // Removed elevation to fix lint
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
-                          side: BorderSide(
-                            color: Colors.grey.withValues(alpha: 0.3),
-                          ),
+                          side: BorderSide.none,
                         ),
                       ),
                     ],
@@ -461,6 +535,23 @@ class JobDetailsSheet extends StatelessWidget {
     required this.job,
     required this.scrollController,
   });
+
+  Future<void> _openDirections() async {
+    final lat = job['latitude'];
+    final lng = job['longitude'];
+    if (lat != null && lng != null) {
+      final uri = Uri.parse("google.navigation:q=$lat,$lng");
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri);
+      } else {
+        // Fallback to web map
+        final webUri = Uri.parse(
+          "https://www.google.com/maps/dir/?api=1&destination=$lat,$lng",
+        );
+        await launchUrl(webUri, mode: LaunchMode.externalApplication);
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -527,6 +618,11 @@ class JobDetailsSheet extends StatelessWidget {
                       ),
                     ],
                   ),
+                ),
+                IconButton(
+                  onPressed: _openDirections,
+                  icon: const Icon(Icons.directions, color: AppColors.purple),
+                  tooltip: "Get Directions",
                 ),
               ],
             ),
