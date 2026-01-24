@@ -6,6 +6,7 @@ import 'package:jobspot_app/features/jobs/presentation/job_posting_tab.dart';
 import 'package:jobspot_app/features/profile/presentation/profile_tab.dart';
 import 'package:provider/provider.dart';
 import 'package:jobspot_app/features/dashboard/presentation/providers/employer_home_provider.dart';
+import 'package:jobspot_app/core/utils/profile_completion_manager.dart';
 
 class EmployerDashboard extends StatefulWidget {
   const EmployerDashboard({super.key});
@@ -15,6 +16,12 @@ class EmployerDashboard extends StatefulWidget {
 }
 
 class _EmployerDashboardState extends State<EmployerDashboard> {
+  @override
+  void initState() {
+    super.initState();
+    ProfileCompletionManager.checkAndPrompt(context, 'employer');
+  }
+
   @override
   Widget build(BuildContext context) {
     return DashboardShell(

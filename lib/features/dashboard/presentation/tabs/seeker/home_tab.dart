@@ -4,6 +4,7 @@ import 'package:jobspot_app/features/dashboard/presentation/widgets/stat_card.da
 import 'package:jobspot_app/features/jobs/presentation/unified_job_card.dart';
 import 'package:jobspot_app/features/jobs/presentation/job_list_screen.dart';
 import 'package:jobspot_app/features/dashboard/presentation/providers/seeker_home_provider.dart';
+import 'package:jobspot_app/features/profile/presentation/providers/profile_provider.dart';
 import 'package:provider/provider.dart';
 
 class HomeTab extends StatefulWidget {
@@ -38,6 +39,10 @@ class _HomeTabState extends State<HomeTab> {
             final interviewCount = provider.interviewCount;
             final selectedCount = provider.selectedCount;
 
+            final providerProfile = context.watch<ProfileProvider>();
+            final userName =
+                providerProfile.profileData?['full_name'] ?? 'User';
+
             return RefreshIndicator(
               onRefresh: provider.refresh,
               child: SingleChildScrollView(
@@ -54,13 +59,13 @@ class _HomeTabState extends State<HomeTab> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Welcome back!',
+                              'Welcome back,',
                               style: textTheme.bodyMedium?.copyWith(
                                 color: Theme.of(context).hintColor,
                               ),
                             ),
                             const SizedBox(height: 4),
-                            Text('Job Seeker', style: textTheme.headlineLarge),
+                            Text(userName, style: textTheme.headlineLarge),
                           ],
                         ),
                         Container(

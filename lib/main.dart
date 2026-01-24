@@ -7,6 +7,7 @@ import 'package:jobspot_app/core/theme/app_theme.dart';
 import 'package:jobspot_app/features/auth/presentation/screens/login_screen.dart';
 import 'package:jobspot_app/features/auth/presentation/screens/role_selection_screen.dart';
 import 'package:jobspot_app/features/auth/presentation/screens/unable_account_page.dart';
+import 'package:jobspot_app/features/profile/presentation/providers/profile_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -16,8 +17,11 @@ final supabase = Supabase.instance.client;
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   runApp(
-    ChangeNotifierProvider(
-      create: (_) => ThemeNotifier(),
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => ThemeNotifier()),
+        ChangeNotifierProvider(create: (_) => ProfileProvider()),
+      ],
       child: const JobSpotApp(),
     ),
   );

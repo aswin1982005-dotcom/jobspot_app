@@ -6,6 +6,7 @@ import 'package:jobspot_app/features/dashboard/presentation/tabs/seeker/map_tab.
 import 'package:jobspot_app/features/dashboard/presentation/tabs/seeker/search_tab.dart';
 import 'package:provider/provider.dart';
 import 'package:jobspot_app/features/dashboard/presentation/providers/seeker_home_provider.dart';
+import 'package:jobspot_app/core/utils/profile_completion_manager.dart';
 
 class SeekerDashboard extends StatefulWidget {
   const SeekerDashboard({super.key});
@@ -15,9 +16,11 @@ class SeekerDashboard extends StatefulWidget {
 }
 
 class _SeekerDashboardState extends State<SeekerDashboard> {
-  // Using UniqueKey to force refresh when switching back if needed,
-  // or keys can be managed by the shell if we move state up.
-  // For now, keeping the simple list creation.
+  @override
+  void initState() {
+    super.initState();
+    ProfileCompletionManager.checkAndPrompt(context, 'seeker');
+  }
 
   @override
   Widget build(BuildContext context) {

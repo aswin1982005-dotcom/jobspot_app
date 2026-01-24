@@ -81,6 +81,12 @@ class _EditEmployerProfileScreenState extends State<EditEmployerProfileScreen> {
         'company_description': _descriptionController.text.trim(),
       };
 
+      // Check for completion (Basic info)
+      if (_companyNameController.text.trim().isNotEmpty &&
+          _cityController.text.trim().isNotEmpty) {
+        updates['profile_completed'] = true as String;
+      }
+
       await ProfileService.updateEmployerProfile(userId, updates);
 
       if (mounted) {

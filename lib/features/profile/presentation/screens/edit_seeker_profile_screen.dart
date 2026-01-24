@@ -138,6 +138,14 @@ class _EditSeekerProfileScreenState extends State<EditSeekerProfileScreen> {
         'preferred_job_type': _selectedJobType,
       };
 
+      // Determine if profile is now complete
+      // We consider it complete if name and city are provided (basic info)
+      final name = _nameController.text.trim();
+      final city = _cityController.text.trim();
+      if (name.isNotEmpty && city.isNotEmpty && name != 'User') {
+        updateData['profile_completed'] = true;
+      }
+
       if (_uploadedResumeUrl != null) {
         updateData['resume_url'] = _uploadedResumeUrl;
       }

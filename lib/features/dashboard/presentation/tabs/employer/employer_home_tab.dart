@@ -4,6 +4,7 @@ import 'package:jobspot_app/features/dashboard/presentation/widgets/stat_card.da
 import 'package:jobspot_app/features/jobs/presentation/unified_job_card.dart';
 import 'package:jobspot_app/features/applications/applicant_card.dart';
 import 'package:jobspot_app/features/applications/presentation/applicant_profile_screen.dart';
+import 'package:jobspot_app/features/profile/presentation/providers/profile_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:jobspot_app/features/dashboard/presentation/providers/employer_home_provider.dart';
 
@@ -52,6 +53,10 @@ class EmployerHomeTab extends StatelessWidget {
         final activePostings = provider.activePostings;
         final recentApplicants = provider.recentApplicants;
 
+        final providerProfile = context.watch<ProfileProvider>();
+        final companyName =
+            providerProfile.profileData?['company_name'] ?? 'Employer';
+
         return RefreshIndicator(
           onRefresh: provider.refresh,
           child: ListView(
@@ -67,16 +72,13 @@ class EmployerHomeTab extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Welcome back!',
+                        'Welcome back,',
                         style: textTheme.bodyMedium?.copyWith(
                           color: theme.hintColor,
                         ),
                       ),
                       const SizedBox(height: 4),
-                      Text(
-                        'Employer Dashboard',
-                        style: textTheme.headlineLarge,
-                      ),
+                      Text(companyName, style: textTheme.headlineLarge),
                     ],
                   ),
                   Container(
