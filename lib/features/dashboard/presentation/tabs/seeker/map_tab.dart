@@ -9,9 +9,10 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:jobspot_app/core/theme/app_theme.dart';
 import 'package:jobspot_app/core/theme/map_styles.dart';
 import 'package:jobspot_app/core/utils/map_clustering_helper.dart'; // Import Custom Clusterer
-import 'package:jobspot_app/data/services/job_service.dart';
 import 'package:jobspot_app/features/jobs/presentation/job_details_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:provider/provider.dart';
+import 'package:jobspot_app/features/dashboard/presentation/providers/seeker_home_provider.dart';
 
 class JobItem implements ClusterItem {
   final Map<String, dynamic> job;
@@ -32,7 +33,6 @@ class MapTab extends StatefulWidget {
 
 class _MapTabState extends State<MapTab> {
   late GoogleMapController _mapController;
-  final JobService _jobService = JobService();
 
   // State
   Set<Marker> _markers = {};
@@ -40,6 +40,8 @@ class _MapTabState extends State<MapTab> {
   bool _isLoading = true;
   double _currentZoom = 10.0;
   String? _selectedJobId;
+
+  List<Map<String, dynamic>>? _lastJobs;
 
   // Icons cache
   final Map<String, BitmapDescriptor> _iconCache = {};
@@ -72,32 +74,46 @@ class _MapTabState extends State<MapTab> {
     super.dispose();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _syncWithProvider();
+  }
+
+  void _syncWithProvider() {
+    final provider = Provider.of<SeekerHomeProvider>(context);
+    if (provider.recommendedJobs != _lastJobs) {
+      _lastJobs = provider.recommendedJobs;
+      _updateJobItemsFromProvider(provider.recommendedJobs);
+    }
+  }
+
+  void _updateJobItemsFromProvider(List<Map<String, dynamic>> jobs) {
+    final items = jobs
+        .where((j) => j['latitude'] != null && j['longitude'] != null)
+        .map((j) => JobItem(j, LatLng(j['latitude'], j['longitude'])))
+        .toList();
+
+    setState(() {
+      _jobItems = items;
+      _isLoading = false;
+    });
+    _updateFilteredItems();
+  }
+
   Future<void> _initMap() async {
     await _loadMarkerIcons();
-    await _fetchJobs();
     _initLocation();
   }
 
   Future<void> _initLocation() async {
-    // We just check permission to ensure the native blue dot shows up if allowed.
-    // We won't force move the camera unless we want to initially center on user.
     LocationPermission permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
     }
-    // If granted, the MyLocation layer on GoogleMap takes care of it.
   }
 
   Future<void> _loadMarkerIcons() async {
-    // Load icons for different sizes
-    // Small (Zoom < 10): 32px
-    // Medium (Zoom 10-14): 48px
-    // Large (Zoom > 14): 64px (Unselected) / 72px (Selected)
-
-    // We'll lazy load or load all upfront. Let's load upfront for smoothness.
-    // 0 = small, 1 = medium, 2 = large
-
-    // Unselected
     _iconCache['unselected_small'] = await _getBitmapDescriptor(
       'assets/icons/map_icon_2.png',
       32,
@@ -139,31 +155,6 @@ class _MapTabState extends State<MapTab> {
       format: ui.ImageByteFormat.png,
     ))!.buffer.asUint8List();
     return BitmapDescriptor.bytes(bytes);
-  }
-
-  Future<void> _fetchJobs() async {
-    try {
-      final jobs = await _jobService.fetchJobs();
-      if (mounted) {
-        final items = jobs
-            .where((j) => j['latitude'] != null && j['longitude'] != null)
-            .map((j) => JobItem(j, LatLng(j['latitude'], j['longitude'])))
-            .toList();
-
-        setState(() {
-          _jobItems = items;
-          _isLoading = false;
-        });
-        _updateFilteredItems();
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() => _isLoading = false);
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error fetching jobs: $e')));
-      }
-    }
   }
 
   void _updateFilteredItems() {
@@ -307,6 +298,9 @@ class _MapTabState extends State<MapTab> {
   }
 
   void _showJobDetails(Map<String, dynamic> job) {
+    // Capture provider from MapTab context
+    final provider = Provider.of<SeekerHomeProvider>(context, listen: false);
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -318,7 +312,12 @@ class _MapTabState extends State<MapTab> {
           maxChildSize: 0.6,
           expand: false,
           builder: (_, controller) {
-            return JobDetailsSheet(job: job, scrollController: controller);
+            final isApplied = provider.isJobApplied(job['id']);
+            return JobDetailsSheet(
+              job: job,
+              scrollController: controller,
+              isApplied: isApplied,
+            );
           },
         );
       },
@@ -334,16 +333,6 @@ class _MapTabState extends State<MapTab> {
 
   void _onMapCreated(GoogleMapController controller) {
     _mapController = controller;
-    // Set Map Style based on Theme
-    _updateMapStyle();
-  }
-
-  void _updateMapStyle() {
-    if (Theme.of(context).brightness == Brightness.dark) {
-      _mapController.setMapStyle(MapStyles.darkStyle);
-    } else {
-      _mapController.setMapStyle(null);
-    }
   }
 
   void _getCurrentLocation() async {
@@ -407,14 +396,6 @@ class _MapTabState extends State<MapTab> {
 
   @override
   Widget build(BuildContext context) {
-    // Check if style needs update on rebuild (e.g. if theme changed)
-    // Ideally we listen to theme changes, but build() is called on theme change.
-    // However, mapController might not be ready.
-    // We can try setting style here if controller exists.
-    try {
-      _updateMapStyle();
-    } catch (_) {}
-
     return Scaffold(
       resizeToAvoidBottomInset:
           false, // Prevent map from resizing when keyboard opens
@@ -424,6 +405,9 @@ class _MapTabState extends State<MapTab> {
             onMapCreated: _onMapCreated,
             initialCameraPosition: _initialPosition,
             markers: _markers,
+            style: Theme.of(context).brightness == Brightness.dark
+                ? MapStyles.darkStyle
+                : null,
             myLocationButtonEnabled: false,
             myLocationEnabled: true,
             // Native blue dot
@@ -451,7 +435,9 @@ class _MapTabState extends State<MapTab> {
               }
             },
           ),
-          if (_isLoading) const Center(child: CircularProgressIndicator()),
+          if (_isLoading ||
+              context.select<SeekerHomeProvider, bool>((p) => p.isLoading))
+            const Center(child: CircularProgressIndicator()),
 
           // Search/Filter UI
           Padding(
@@ -529,11 +515,13 @@ class _MapTabState extends State<MapTab> {
 class JobDetailsSheet extends StatelessWidget {
   final Map<String, dynamic> job;
   final ScrollController scrollController;
+  final bool isApplied;
 
   const JobDetailsSheet({
     super.key,
     required this.job,
     required this.scrollController,
+    this.isApplied = false,
   });
 
   Future<void> _openDirections() async {
@@ -658,8 +646,11 @@ class JobDetailsSheet extends StatelessWidget {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) =>
-                          JobDetailsScreen(job: job, userRole: 'seeker'),
+                      builder: (context) => JobDetailsScreen(
+                        job: job,
+                        userRole: 'seeker',
+                        isApplied: isApplied,
+                      ),
                     ),
                   );
                 },
@@ -670,9 +661,9 @@ class JobDetailsSheet extends StatelessWidget {
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                child: const Text(
-                  'View Details & Apply',
-                  style: TextStyle(color: Colors.white),
+                child: Text(
+                  isApplied ? 'Applied' : 'View Details & Apply',
+                  style: const TextStyle(color: Colors.white),
                 ),
               ),
             ),

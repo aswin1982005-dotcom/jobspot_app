@@ -4,12 +4,14 @@ class DashboardShell extends StatefulWidget {
   final List<Widget> screens;
   final List<NavigationDestination> destinations;
   final int initialIndex;
+  final Function(int)? onTabChanged;
 
   const DashboardShell({
     super.key,
     required this.screens,
     required this.destinations,
     this.initialIndex = 0,
+    this.onTabChanged,
   }) : assert(
          screens.length == destinations.length,
          'Screens and destinations must have the same length',
@@ -32,6 +34,7 @@ class _DashboardShellState extends State<DashboardShell> {
     setState(() {
       _selectedIndex = index;
     });
+    widget.onTabChanged?.call(index);
   }
 
   @override

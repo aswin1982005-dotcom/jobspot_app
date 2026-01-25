@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:jobspot_app/core/theme/app_theme.dart';
-import 'package:jobspot_app/data/services/application_service.dart';
 import 'package:jobspot_app/features/jobs/presentation/unified_job_card.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-
-import 'package:jobspot_app/data/services/job_service.dart';
+import 'package:provider/provider.dart';
+import 'package:jobspot_app/features/dashboard/presentation/providers/seeker_home_provider.dart';
 
 class SearchTab extends StatefulWidget {
   const SearchTab({super.key});
@@ -14,47 +13,32 @@ class SearchTab extends StatefulWidget {
 }
 
 class _SearchTabState extends State<SearchTab> {
-  final JobService _jobService = JobService();
-  final ApplicationService _applicationService = ApplicationService();
   PostgrestList _allJobs = [];
   PostgrestList filteredJobs = [];
-  PostgrestList _allApplications = [];
   bool _isLoading = true;
+  List<Map<String, dynamic>>? _lastJobs;
 
   @override
-  void initState() {
-    super.initState();
-    _refresh();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _syncWithProvider();
   }
 
-  void _refresh() {
-    fetchData();
-  }
-
-  Future<void> fetchData() async {
-    setState(() {
-      _isLoading = true;
-    });
-    try {
-      final jobs = await _jobService.fetchJobs();
-      final applies = await _applicationService.fetchMyApplications();
-
+  void _syncWithProvider() {
+    final provider = Provider.of<SeekerHomeProvider>(context);
+    if (provider.recommendedJobs != _lastJobs) {
+      _lastJobs = provider.recommendedJobs;
       setState(() {
-        _allJobs = jobs;
-        filteredJobs = List.from(_allJobs);
-        _allApplications = applies;
+        _allJobs = provider.recommendedJobs;
         _isLoading = false;
       });
-    } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error fetching Data: $e')));
-      }
+      _filterJobs();
     }
+  }
+
+  // Refresh now just asks provider to reload
+  void _refresh() {
+    Provider.of<SeekerHomeProvider>(context, listen: false).refresh();
   }
 
   String? _selectedJobType;
@@ -319,7 +303,11 @@ class _SearchTabState extends State<SearchTab> {
               ),
             ),
             Expanded(
-              child: _isLoading
+              child:
+                  _isLoading ||
+                      context.select<SeekerHomeProvider, bool>(
+                        (p) => p.isLoading,
+                      )
                   ? const Center(child: CircularProgressIndicator())
                   : filteredJobs.isEmpty
                   ? Center(
@@ -348,12 +336,11 @@ class _SearchTabState extends State<SearchTab> {
                           const SizedBox(height: 12),
                       itemBuilder: (context, index) {
                         final job = filteredJobs[index];
-                        final isApplied = _allApplications
-                            .where(
-                              (application) =>
-                                  application['job_post_id'] == job['id'],
-                            )
-                            .isNotEmpty;
+                        final provider = Provider.of<SeekerHomeProvider>(
+                          context,
+                          listen: false,
+                        );
+                        final isApplied = provider.isJobApplied(job['id']);
 
                         return UnifiedJobCard(
                           job: job,

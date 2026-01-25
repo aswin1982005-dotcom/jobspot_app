@@ -5,12 +5,14 @@ import 'package:jobspot_app/features/jobs/presentation/unified_job_card.dart';
 class JobListScreen extends StatefulWidget {
   final String title;
   final List<Map<String, dynamic>> jobs;
+  final Set<String>? appliedJobIds; // Added
   final Future<void> Function()? onRefresh;
 
   const JobListScreen({
     super.key,
     required this.title,
     required this.jobs,
+    this.appliedJobIds,
     this.onRefresh,
   });
 
@@ -156,10 +158,15 @@ class _JobListScreenState extends State<JobListScreen> {
                         const SizedBox(height: 12),
                     itemBuilder: (context, index) {
                       final job = displayedJobs[index];
+                      final jobId = job['id'] as String?;
+                      final isApplied =
+                          jobId != null &&
+                          (widget.appliedJobIds?.contains(jobId) ?? false);
+
                       return UnifiedJobCard(
                         job: job,
                         role: JobCardRole.seeker,
-                        canApply: true,
+                        canApply: !isApplied,
                         onApplied: widget.onRefresh,
                       );
                     },

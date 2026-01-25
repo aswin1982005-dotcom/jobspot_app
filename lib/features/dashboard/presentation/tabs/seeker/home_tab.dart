@@ -138,6 +138,7 @@ class _HomeTabState extends State<HomeTab> {
                                 builder: (context) => JobListScreen(
                                   title: 'Saved Jobs',
                                   jobs: jobsList,
+                                  appliedJobIds: provider.appliedJobIds,
                                   onRefresh: () async => provider.refresh(),
                                 ),
                               ),
@@ -158,12 +159,14 @@ class _HomeTabState extends State<HomeTab> {
                     else
                       ...savedJobs.take(3).map((saved) {
                         final job = saved['job_posts'] as Map<String, dynamic>;
+                        final jobId = job['id'] as String;
+                        final isApplied = provider.isJobApplied(jobId);
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 12),
                           child: UnifiedJobCard(
                             job: job,
                             role: JobCardRole.seeker,
-                            canApply: true,
+                            canApply: !isApplied,
                             onApplied: provider.refresh,
                           ),
                         );
@@ -184,6 +187,7 @@ class _HomeTabState extends State<HomeTab> {
                                 builder: (context) => JobListScreen(
                                   title: 'Recommended Jobs',
                                   jobs: recommendedJobs,
+                                  appliedJobIds: provider.appliedJobIds,
                                   onRefresh: () async => provider.refresh(),
                                 ),
                               ),
@@ -198,6 +202,9 @@ class _HomeTabState extends State<HomeTab> {
                       scrollDirection: Axis.horizontal,
                       child: Row(
                         children: recommendedJobs.take(5).map((job) {
+                          final jobId = job['id'] as String;
+                          final isApplied = provider.isJobApplied(jobId);
+
                           return Padding(
                             padding: const EdgeInsets.only(right: 12),
                             child: SizedBox(
@@ -205,7 +212,7 @@ class _HomeTabState extends State<HomeTab> {
                               child: UnifiedJobCard(
                                 job: job,
                                 role: JobCardRole.seeker,
-                                canApply: true,
+                                canApply: !isApplied,
                                 onApplied: provider.refresh,
                               ),
                             ),

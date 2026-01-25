@@ -124,9 +124,14 @@ class _UnifiedJobCardState extends State<UnifiedJobCard> {
             builder: (context) => JobDetailsScreen(
               job: widget.job,
               userRole: isEmployer ? 'employer' : 'seeker',
+              isApplied: !widget.canApply,
             ),
           ),
-        );
+        ).then((_) {
+          // Trigger refresh when returning from details screen
+          // This ensures any changes (applied, saved) are reflected immediately
+          widget.onApplied?.call();
+        });
       },
       child: Container(
         padding: const EdgeInsets.all(16),
