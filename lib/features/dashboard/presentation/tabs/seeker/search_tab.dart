@@ -201,107 +201,133 @@ class _SearchTabState extends State<SearchTab> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final textTheme = theme.textTheme;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Find Your Dream Job'),
-        centerTitle: true,
-        backgroundColor: AppColors.darkPurple,
-        elevation: 0,
-        foregroundColor: Colors.white,
-      ),
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: SafeArea(
         child: Column(
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+            // Custom Header & Search Area
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: theme.scaffoldBackgroundColor,
+                borderRadius: const BorderRadius.vertical(
+                  bottom: Radius.circular(30),
+                ),
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  TextField(
-                    onChanged: (value) {
-                      _filterJobs(query: value);
-                    },
-                    decoration: InputDecoration(
-                      hintText: 'Search for position, company...',
-                      prefixIcon: const Icon(Icons.search, color: Colors.grey),
-                      filled: true,
-                      fillColor: theme.cardColor,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide.none,
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(vertical: 16),
+                  Text(
+                    'Search Jobs',
+                    style: textTheme.headlineMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.black,
                     ),
                   ),
-                  const SizedBox(height: 24),
-                  SizedBox(
-                    height: 36,
-                    child: ListView(
-                      scrollDirection: Axis.horizontal,
+                  const SizedBox(height: 16),
+
+                  // Search Bar
+                  Container(
+                    decoration: BoxDecoration(
+                      color: theme.cardColor,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.05),
+                          blurRadius: 15,
+                          offset: const Offset(0, 5),
+                        ),
+                      ],
+                    ),
+                    child: TextField(
+                      onChanged: (value) => _filterJobs(query: value),
+                      style: textTheme.bodyLarge,
+                      decoration: InputDecoration(
+                        hintText: 'Job title, company, or keywords...',
+                        hintStyle: TextStyle(
+                          color: theme.hintColor.withValues(alpha: 0.7),
+                        ),
+                        prefixIcon: Icon(
+                          Icons.search_rounded,
+                          color: theme.primaryColor,
+                        ),
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 16,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // Filter Chips
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
                       children: [
-                        ActionChip(
-                          onPressed: _openFilterOptions,
-                          avatar: const Icon(Icons.filter_list, size: 18),
-                          label: const Text('Filter'),
-                          backgroundColor: theme.cardColor,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            side: BorderSide(
-                              color: Colors.grey.withValues(alpha: 0.3),
-                            ),
-                          ),
+                        _buildFilterButton(
+                          'Filter',
+                          Icons.tune_rounded,
+                          _openFilterOptions,
                         ),
-                        const SizedBox(width: 8),
-                        ActionChip(
-                          onPressed: _openSortOptions,
-                          avatar: const Icon(Icons.sort, size: 18),
-                          label: const Text('Sort'),
-                          backgroundColor: theme.cardColor,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            side: BorderSide(
-                              color: Colors.grey.withValues(alpha: 0.3),
-                            ),
-                          ),
+                        const SizedBox(width: 10),
+                        _buildFilterButton(
+                          'Sort',
+                          Icons.sort_rounded,
+                          _openSortOptions,
                         ),
-                        if (_selectedJobType != null)
-                          Padding(
-                            padding: const EdgeInsets.only(left: 8.0),
-                            child: Chip(
-                              label: Text(_selectedJobType!),
-                              labelStyle: const TextStyle(color: Colors.white),
-                              backgroundColor: AppColors.purple,
-                              onDeleted: () {
-                                _selectedJobType = null;
-                                _filterJobs();
-                              },
-                              deleteIconColor: Colors.white70,
+                        if (_selectedJobType != null) ...[
+                          const SizedBox(width: 10),
+                          Container(
+                            height: 40,
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            decoration: BoxDecoration(
+                              color: AppColors.purple.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: AppColors.purple.withValues(alpha: 0.3),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Text(
+                                  _selectedJobType!,
+                                  style: const TextStyle(
+                                    color: AppColors.purple,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                GestureDetector(
+                                  onTap: () {
+                                    _selectedJobType = null;
+                                    _filterJobs();
+                                  },
+                                  child: const Icon(
+                                    Icons.close,
+                                    size: 16,
+                                    color: AppColors.purple,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
+                        ],
                       ],
                     ),
                   ),
-                  const SizedBox(height: 24),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        '${filteredJobs.length} Jobs Found',
-                        style: theme.textTheme.titleMedium,
-                      ),
-                      Text(
-                        'Sort by: $_sortOption',
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: theme.hintColor,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
                 ],
               ),
             ),
+
+            // Results Area
             Expanded(
               child:
                   _isLoading ||
@@ -314,43 +340,114 @@ class _SearchTabState extends State<SearchTab> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(
-                            Icons.search_off,
-                            size: 64,
-                            color: theme.hintColor,
+                          Container(
+                            padding: const EdgeInsets.all(24),
+                            decoration: BoxDecoration(
+                              color: theme.dividerColor.withValues(alpha: 0.1),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              Icons.search_off_rounded,
+                              size: 48,
+                              color: theme.hintColor,
+                            ),
                           ),
                           const SizedBox(height: 16),
                           Text(
                             'No jobs found',
-                            style: theme.textTheme.titleMedium?.copyWith(
+                            style: textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: theme.hintColor,
+                            ),
+                          ),
+                          Text(
+                            'Try adjusting your search or filters',
+                            style: textTheme.bodyMedium?.copyWith(
                               color: theme.hintColor,
                             ),
                           ),
                         ],
                       ),
                     )
-                  : ListView.separated(
-                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-                      itemCount: filteredJobs.length,
-                      separatorBuilder: (context, index) =>
-                          const SizedBox(height: 12),
-                      itemBuilder: (context, index) {
-                        final job = filteredJobs[index];
-                        final provider = Provider.of<SeekerHomeProvider>(
-                          context,
-                          listen: false,
-                        );
-                        final isApplied = provider.isJobApplied(job['id']);
-
-                        return UnifiedJobCard(
-                          job: job,
-                          role: JobCardRole.seeker,
-                          canApply: !isApplied,
-                          onApplied: _refresh,
-                        );
-                      },
+                  : Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 8,
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                '${filteredJobs.length} Results',
+                                style: textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              Text(
+                                _sortOption,
+                                style: textTheme.bodySmall?.copyWith(
+                                  color: theme.primaryColor,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Expanded(
+                          child: ListView.separated(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 10,
+                            ),
+                            itemCount: filteredJobs.length,
+                            separatorBuilder: (context, index) =>
+                                const SizedBox(height: 16),
+                            itemBuilder: (context, index) {
+                              final job = filteredJobs[index];
+                              final provider = Provider.of<SeekerHomeProvider>(
+                                context,
+                                listen: false,
+                              );
+                              final isApplied = provider.isJobApplied(
+                                job['id'],
+                              );
+                              return UnifiedJobCard(
+                                job: job,
+                                role: JobCardRole.seeker,
+                                canApply: !isApplied,
+                                onApplied: _refresh,
+                              );
+                            },
+                          ),
+                        ),
+                      ],
                     ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFilterButton(String label, IconData icon, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 40,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardColor,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Theme.of(context).dividerColor),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, size: 18),
+            const SizedBox(width: 8),
+            Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
           ],
         ),
       ),

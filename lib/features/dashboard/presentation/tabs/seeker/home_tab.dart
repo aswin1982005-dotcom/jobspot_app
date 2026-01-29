@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:jobspot_app/core/theme/app_theme.dart';
-import 'package:jobspot_app/features/dashboard/presentation/widgets/stat_card.dart';
 import 'package:jobspot_app/features/jobs/presentation/unified_job_card.dart';
 import 'package:jobspot_app/features/jobs/presentation/job_list_screen.dart';
 import 'package:jobspot_app/features/dashboard/presentation/providers/seeker_home_provider.dart';
@@ -18,8 +17,10 @@ class HomeTab extends StatefulWidget {
 
 class _HomeTabState extends State<HomeTab> {
   @override
+  @override
   Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
+    final theme = Theme.of(context);
+    final textTheme = theme.textTheme;
 
     return Scaffold(
       body: SafeArea(
@@ -36,7 +37,6 @@ class _HomeTabState extends State<HomeTab> {
             final savedJobs = provider.savedJobs;
             final recommendedJobs = provider.recommendedJobs;
 
-            // Stats from provider
             final appliedCount = provider.appliedCount;
             final interviewCount = provider.interviewCount;
             final selectedCount = provider.selectedCount;
@@ -49,25 +49,35 @@ class _HomeTabState extends State<HomeTab> {
               onRefresh: provider.refresh,
               child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.all(20),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 24,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Header
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Welcome back,',
-                              style: textTheme.bodyMedium?.copyWith(
-                                color: Theme.of(context).hintColor,
+                              'Hello, $userName 👋',
+                              style: textTheme.headlineMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 24,
                               ),
                             ),
                             const SizedBox(height: 4),
-                            Text(userName, style: textTheme.headlineLarge),
+                            Text(
+                              'Find your dream job today',
+                              style: textTheme.bodyLarge?.copyWith(
+                                color: theme.hintColor,
+                              ),
+                            ),
                           ],
                         ),
                         InkWell(
@@ -79,53 +89,29 @@ class _HomeTabState extends State<HomeTab> {
                               ),
                             );
                           },
+                          borderRadius: BorderRadius.circular(12),
                           child: Container(
-                            padding: const EdgeInsets.all(8),
+                            padding: const EdgeInsets.all(10),
                             decoration: BoxDecoration(
-                              color: Theme.of(context).cardColor,
-                              borderRadius: BorderRadius.circular(12),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.05),
-                                  blurRadius: 10,
+                              color: theme.cardColor,
+                              border: Border.all(
+                                color: theme.dividerColor.withValues(
+                                  alpha: 0.5,
                                 ),
-                              ],
+                              ),
+                              borderRadius: BorderRadius.circular(12),
                             ),
                             child: Consumer<NotificationProvider>(
                               builder: (context, notifProvider, child) {
-                                return Stack(
-                                  children: [
-                                    const Icon(
-                                      Icons.notifications_outlined,
-                                      size: 24,
-                                    ),
-                                    if (notifProvider.unreadCount > 0)
-                                      Positioned(
-                                        right: 0,
-                                        top: 0,
-                                        child: Container(
-                                          padding: const EdgeInsets.all(2),
-                                          decoration: BoxDecoration(
-                                            color: Colors.red,
-                                            borderRadius: BorderRadius.circular(
-                                              6,
-                                            ),
-                                          ),
-                                          constraints: const BoxConstraints(
-                                            minWidth: 12,
-                                            minHeight: 12,
-                                          ),
-                                          child: Text(
-                                            '${notifProvider.unreadCount}',
-                                            style: const TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 8,
-                                            ),
-                                            textAlign: TextAlign.center,
-                                          ),
-                                        ),
-                                      ),
-                                  ],
+                                return Badge(
+                                  label: notifProvider.unreadCount > 0
+                                      ? Text('${notifProvider.unreadCount}')
+                                      : null,
+                                  isLabelVisible: notifProvider.unreadCount > 0,
+                                  child: Icon(
+                                    Icons.notifications_outlined,
+                                    color: theme.iconTheme.color,
+                                  ),
                                 );
                               },
                             ),
@@ -133,127 +119,105 @@ class _HomeTabState extends State<HomeTab> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 24),
-                    // Stats Cards
-                    Row(
-                      children: [
-                        Expanded(
-                          child: StatCard(
-                            title: 'Applied',
-                            count: appliedCount.toString(),
-                            icon: Icons.send,
-                            color: AppColors.purple,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: StatCard(
-                            title: 'Interviews',
-                            count: interviewCount.toString(),
-                            icon: Icons.videocam,
-                            color: AppColors.orange,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: StatCard(
-                            title: 'Selected',
-                            count: selectedCount.toString(),
-                            icon: Icons.check_box,
-                            color: const Color(0xFF01B307),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 32),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text('Saved Jobs', style: textTheme.headlineMedium),
-                        TextButton(
-                          onPressed: () {
-                            // Extract the job object from the saved entry
-                            final jobsList = savedJobs
-                                .map(
-                                  (s) => s['job_posts'] as Map<String, dynamic>,
-                                )
-                                .toList();
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => JobListScreen(
-                                  title: 'Saved Jobs',
-                                  jobs: jobsList,
-                                  appliedJobIds: provider.appliedJobIds,
-                                  onRefresh: () async => provider.refresh(),
-                                ),
-                              ),
-                            );
-                          },
-                          child: const Text('See all'),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    if (savedJobs.isEmpty)
-                      Center(
-                        child: Text(
-                          'No saved jobs yet',
-                          style: TextStyle(color: Theme.of(context).hintColor),
-                        ),
-                      )
-                    else
-                      ...savedJobs.take(3).map((saved) {
-                        final job = saved['job_posts'] as Map<String, dynamic>;
-                        final jobId = job['id'] as String;
-                        final isApplied = provider.isJobApplied(jobId);
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 12),
-                          child: UnifiedJobCard(
-                            job: job,
-                            role: JobCardRole.seeker,
-                            canApply: !isApplied,
-                            onApplied: provider.refresh,
-                          ),
-                        );
-                      }),
-                    const SizedBox(height: 20),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Recommended Jobs',
-                          style: textTheme.headlineMedium,
-                        ),
-                        TextButton(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => JobListScreen(
-                                  title: 'Recommended Jobs',
-                                  jobs: recommendedJobs,
-                                  appliedJobIds: provider.appliedJobIds,
-                                  onRefresh: () async => provider.refresh(),
-                                ),
-                              ),
-                            );
-                          },
-                          child: const Text('See all'),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        children: recommendedJobs.take(5).map((job) {
-                          final jobId = job['id'] as String;
-                          final isApplied = provider.isJobApplied(jobId);
 
-                          return Padding(
-                            padding: const EdgeInsets.only(right: 12),
-                            child: SizedBox(
+                    const SizedBox(height: 24),
+
+                    // Unified Stats Dashboard
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 20,
+                        horizontal: 16,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.darkPurple,
+                        borderRadius: BorderRadius.circular(24),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.purple.withValues(alpha: 0.3),
+                            blurRadius: 20,
+                            offset: const Offset(0, 10),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          _buildStatItem(
+                            'Applied',
+                            appliedCount,
+                            Icons.send_rounded,
+                            AppColors.sky,
+                          ),
+                          _buildDivider(),
+                          _buildStatItem(
+                            'Interviews',
+                            interviewCount,
+                            Icons.videocam_rounded,
+                            AppColors.sunny,
+                          ),
+                          _buildDivider(),
+                          _buildStatItem(
+                            'Selected',
+                            selectedCount,
+                            Icons.check_circle_rounded,
+                            AppColors.teal,
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 32),
+
+                    // Saved Jobs Section (Horizontal)
+                    if (savedJobs.isNotEmpty) ...[
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Saved Jobs',
+                            style: textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: () {
+                              final jobsList = savedJobs
+                                  .map(
+                                    (s) =>
+                                        s['job_posts'] as Map<String, dynamic>,
+                                  )
+                                  .toList();
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => JobListScreen(
+                                    title: 'Saved Jobs',
+                                    jobs: jobsList,
+                                    appliedJobIds: provider.appliedJobIds,
+                                    onRefresh: () async => provider.refresh(),
+                                  ),
+                                ),
+                              );
+                            },
+                            child: const Text('See All'),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        height: 240, // Increased height to prevent overflow
+                        child: ListView.separated(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: savedJobs.length,
+                          separatorBuilder: (_, __) =>
+                              const SizedBox(width: 16),
+                          itemBuilder: (context, index) {
+                            final job =
+                                savedJobs[index]['job_posts']
+                                    as Map<String, dynamic>;
+                            final jobId = job['id'] as String;
+                            final isApplied = provider.isJobApplied(jobId);
+                            return SizedBox(
                               width: 300,
                               child: UnifiedJobCard(
                                 job: job,
@@ -261,11 +225,61 @@ class _HomeTabState extends State<HomeTab> {
                                 canApply: !isApplied,
                                 onApplied: provider.refresh,
                               ),
-                            ),
-                          );
-                        }).toList(),
+                            );
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: 32),
+                    ],
+
+                    // Recommended Jobs (Vertical Feed)
+                    Text(
+                      'Recommended for you',
+                      style: textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
+                    const SizedBox(height: 16),
+                    if (recommendedJobs.isEmpty)
+                      Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(40.0),
+                          child: Column(
+                            children: [
+                              Icon(
+                                Icons.work_outline,
+                                size: 48,
+                                color: theme.dividerColor,
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                "No jobs found yet",
+                                style: TextStyle(color: theme.hintColor),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                    else
+                      ListView.separated(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: recommendedJobs.length,
+                        separatorBuilder: (context, index) =>
+                            const SizedBox(height: 16),
+                        itemBuilder: (context, index) {
+                          final job = recommendedJobs[index];
+                          final jobId = job['id'] as String;
+                          final isApplied = provider.isJobApplied(jobId);
+                          return UnifiedJobCard(
+                            job: job,
+                            role: JobCardRole.seeker,
+                            canApply: !isApplied,
+                            onApplied: provider.refresh,
+                          );
+                        },
+                      ),
+                    const SizedBox(height: 80), // Bottom padding
                   ],
                 ),
               ),
@@ -273,6 +287,46 @@ class _HomeTabState extends State<HomeTab> {
           },
         ),
       ),
+    );
+  }
+
+  Widget _buildStatItem(String label, int count, IconData icon, Color color) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.2),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon, color: color, size: 20),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          count.toString(),
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        Text(
+          label,
+          style: TextStyle(
+            color: Colors.white.withValues(alpha: 0.7),
+            fontSize: 12,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDivider() {
+    return Container(
+      height: 40,
+      width: 1,
+      color: Colors.white.withValues(alpha: 0.1),
     );
   }
 }

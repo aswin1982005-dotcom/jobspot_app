@@ -146,69 +146,75 @@ class _UnifiedJobCardState extends State<UnifiedJobCard> {
             ),
           ],
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header with Icon, Title, Company
-            JobCardHeader(
-              job: widget.job,
-              iconSize: isEmployer ? 32 : 24,
-              trailing: isEmployer
-                  ? _buildStatusBadge(isActive)
-                  : IconButton(
-                      icon: Icon(
-                        _isBookmarked ? Icons.bookmark : Icons.bookmark_outline,
-                        color: _isBookmarked ? colorScheme.secondary : null,
+        child: SingleChildScrollView(
+          physics: const ClampingScrollPhysics(),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Header with Icon, Title, Company
+              JobCardHeader(
+                job: widget.job,
+                iconSize: isEmployer ? 32 : 24,
+                trailing: isEmployer
+                    ? _buildStatusBadge(isActive)
+                    : IconButton(
+                        icon: Icon(
+                          _isBookmarked
+                              ? Icons.bookmark
+                              : Icons.bookmark_outline,
+                          color: _isBookmarked ? colorScheme.secondary : null,
+                        ),
+                        onPressed: _toggleSave,
                       ),
-                      onPressed: _toggleSave,
-                    ),
-            ),
-            const SizedBox(height: 12),
+              ),
+              const SizedBox(height: 12),
 
-            // Chips Row: Type, Mode, Shift (if available)
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                _buildInfoChip(
-                  context,
-                  widget.job['type'] ?? 'Full Time',
-                  Icons.work_outline,
-                ),
-                _buildInfoChip(
-                  context,
-                  widget.job['work_mode'] ?? 'Remote',
-                  Icons.location_on_outlined,
-                ),
-                if (widget.job['shift_start'] != null &&
-                    widget.job['shift_end'] != null)
+              // Chips Row: Type, Mode, Shift (if available)
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
                   _buildInfoChip(
                     context,
-                    _formatShift(
-                      widget.job['shift_start'],
-                      widget.job['shift_end'],
-                    ),
-                    Icons.access_time,
+                    widget.job['type'] ?? 'Full Time',
+                    Icons.work_outline,
                   ),
-              ],
-            ),
-            const SizedBox(height: 16),
+                  _buildInfoChip(
+                    context,
+                    widget.job['work_mode'] ?? 'Remote',
+                    Icons.location_on_outlined,
+                  ),
+                  if (widget.job['shift_start'] != null &&
+                      widget.job['shift_end'] != null)
+                    _buildInfoChip(
+                      context,
+                      _formatShift(
+                        widget.job['shift_start'],
+                        widget.job['shift_end'],
+                      ),
+                      Icons.access_time,
+                    ),
+                ],
+              ),
+              const SizedBox(height: 16),
 
-            // Footer: Pay and Action
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(child: JobCardSalaryInfo(job: widget.job)),
-                if (isEmployer && widget.job['same_day_pay'] == true)
-                  _buildSameDayPayBadge(colorScheme),
-                if (!isEmployer) _buildSeekerAction(colorScheme),
+              // Footer: Pay and Action
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(child: JobCardSalaryInfo(job: widget.job)),
+                  if (isEmployer && widget.job['same_day_pay'] == true)
+                    _buildSameDayPayBadge(colorScheme),
+                  if (!isEmployer) _buildSeekerAction(colorScheme),
+                ],
+              ),
+              if (isEmployer) ...[
+                const Divider(height: 32),
+                _buildEmployerActions(colorScheme),
               ],
-            ),
-            if (isEmployer) ...[
-              const Divider(height: 32),
-              _buildEmployerActions(colorScheme),
             ],
-          ],
+          ),
         ),
       ),
     );
@@ -314,23 +320,43 @@ class _UnifiedJobCardState extends State<UnifiedJobCard> {
 
   Widget _buildInfoChip(BuildContext context, String label, IconData icon) {
     final theme = Theme.of(context);
+
+    // Determine color based on label content for a "pop" effect
+    Color chipColor;
+
+    final lowerLabel = label.toLowerCase();
+    if (lowerLabel.contains('remote')) {
+      chipColor = Colors.green;
+    } else if (lowerLabel.contains('time') || lowerLabel.contains('full')) {
+      chipColor = Colors.blue;
+    } else if (lowerLabel.contains('part') || lowerLabel.contains('contract')) {
+      chipColor = Colors.orange;
+    } else {
+      chipColor = Colors.purple;
+    }
+
+    // Use playful pastel shades
+    final bgColor = chipColor.withValues(alpha: 0.08); // Very light background
+    final fgColor = chipColor.withValues(alpha: 0.8); // Stronger text
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: theme.dividerColor),
+        color: bgColor,
+        borderRadius: BorderRadius.circular(10),
+        // No border for cleaner look, just color
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 12, color: theme.hintColor),
-          const SizedBox(width: 4),
+          Icon(icon, size: 14, color: fgColor),
+          const SizedBox(width: 6),
           Text(
             label,
             style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.hintColor,
-              fontWeight: FontWeight.w500,
+              color: fgColor,
+              fontWeight: FontWeight.w600,
+              fontSize: 12,
             ),
           ),
         ],

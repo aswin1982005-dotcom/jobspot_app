@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:jobspot_app/core/theme/app_theme.dart';
-import 'package:jobspot_app/features/dashboard/presentation/widgets/stat_card.dart';
 import 'package:jobspot_app/features/jobs/presentation/unified_job_card.dart';
 import 'package:jobspot_app/features/applications/applicant_card.dart';
 import 'package:jobspot_app/features/applications/presentation/applicant_profile_screen.dart';
@@ -63,24 +62,29 @@ class EmployerHomeTab extends StatelessWidget {
           onRefresh: provider.refresh,
           child: ListView(
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
             children: [
-              const SizedBox(height: 10),
               // Header
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         'Welcome back,',
-                        style: textTheme.bodyMedium?.copyWith(
+                        style: textTheme.bodyLarge?.copyWith(
                           color: theme.hintColor,
                         ),
                       ),
                       const SizedBox(height: 4),
-                      Text(companyName, style: textTheme.headlineLarge),
+                      Text(
+                        companyName,
+                        style: textTheme.headlineMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ],
                   ),
                   InkWell(
@@ -92,51 +96,27 @@ class EmployerHomeTab extends StatelessWidget {
                         ),
                       );
                     },
+                    borderRadius: BorderRadius.circular(12),
                     child: Container(
-                      padding: const EdgeInsets.all(8),
+                      padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
                         color: theme.cardColor,
+                        border: Border.all(
+                          color: theme.dividerColor.withValues(alpha: 0.5),
+                        ),
                         borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.05),
-                            blurRadius: 10,
-                          ),
-                        ],
                       ),
                       child: Consumer<NotificationProvider>(
                         builder: (context, notifProvider, child) {
-                          return Stack(
-                            children: [
-                              const Icon(
-                                Icons.notifications_outlined,
-                                size: 24,
-                              ),
-                              if (notifProvider.unreadCount > 0)
-                                Positioned(
-                                  right: 0,
-                                  top: 0,
-                                  child: Container(
-                                    padding: const EdgeInsets.all(2),
-                                    decoration: BoxDecoration(
-                                      color: Colors.red,
-                                      borderRadius: BorderRadius.circular(6),
-                                    ),
-                                    constraints: const BoxConstraints(
-                                      minWidth: 12,
-                                      minHeight: 12,
-                                    ),
-                                    child: Text(
-                                      '${notifProvider.unreadCount}',
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 8,
-                                      ),
-                                      textAlign: TextAlign.center,
-                                    ),
-                                  ),
-                                ),
-                            ],
+                          return Badge(
+                            label: notifProvider.unreadCount > 0
+                                ? Text('${notifProvider.unreadCount}')
+                                : null,
+                            isLabelVisible: notifProvider.unreadCount > 0,
+                            child: Icon(
+                              Icons.notifications_outlined,
+                              color: theme.iconTheme.color,
+                            ),
                           );
                         },
                       ),
@@ -145,36 +125,49 @@ class EmployerHomeTab extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 24),
-              // Stats Cards
-              Row(
-                children: [
-                  Expanded(
-                    child: StatCard(
-                      title: 'Active Jobs',
-                      count: activeJobsCount.toString(),
-                      icon: Icons.check_circle_outline,
-                      color: const Color(0xFF01B307),
+
+              // Unified Stats Dashboard
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  vertical: 20,
+                  horizontal: 16,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.darkPurple,
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.purple.withValues(alpha: 0.3),
+                      blurRadius: 20,
+                      offset: const Offset(0, 10),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: StatCard(
-                      title: 'Applicants',
-                      count: totalApplicants.toString(),
-                      icon: Icons.people_outline,
-                      color: AppColors.purple,
+                  ],
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    _buildStatItem(
+                      'Active Jobs',
+                      activeJobsCount,
+                      Icons.check_circle_rounded,
+                      AppColors.teal,
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: StatCard(
-                      title: 'Closed',
-                      count: closedJobsCount.toString(),
-                      icon: Icons.lock_outline,
-                      color: AppColors.orange,
+                    _buildDivider(),
+                    _buildStatItem(
+                      'Applicants',
+                      totalApplicants,
+                      Icons.people_alt_rounded,
+                      AppColors.sky,
                     ),
-                  ),
-                ],
+                    _buildDivider(),
+                    _buildStatItem(
+                      'Closed',
+                      closedJobsCount,
+                      Icons.lock_rounded,
+                      AppColors.orange,
+                    ),
+                  ],
+                ),
               ),
               const SizedBox(height: 32),
 
@@ -183,8 +176,13 @@ class EmployerHomeTab extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('Recent Applicants', style: textTheme.headlineMedium),
-                    TextButton(onPressed: () {}, child: const Text('See all')),
+                    Text(
+                      'Recent Applicants',
+                      style: textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    TextButton(onPressed: () {}, child: const Text('See All')),
                   ],
                 ),
                 const SizedBox(height: 16),
@@ -212,16 +210,15 @@ class EmployerHomeTab extends StatelessWidget {
                     ),
                   );
                 }),
-                const SizedBox(height: 20),
+                const SizedBox(height: 24),
               ],
 
               // Active Postings Section
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text('Active Postings', style: textTheme.headlineMedium),
-                  TextButton(onPressed: () {}, child: const Text('See all')),
-                ],
+              Text(
+                'Active Postings',
+                style: textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               const SizedBox(height: 16),
               if (activePostings.isEmpty)
@@ -231,13 +228,13 @@ class EmployerHomeTab extends StatelessWidget {
                     child: Column(
                       children: [
                         Icon(
-                          Icons.work_outline,
+                          Icons.dashboard_customize_outlined,
                           size: 48,
-                          color: theme.hintColor,
+                          color: theme.dividerColor,
                         ),
                         const SizedBox(height: 16),
                         Text(
-                          'No active postings',
+                          'No active jobs',
                           style: textTheme.bodyMedium?.copyWith(
                             color: theme.hintColor,
                           ),
@@ -258,10 +255,51 @@ class EmployerHomeTab extends StatelessWidget {
                     ),
                   ),
                 ),
+              const SizedBox(height: 80),
             ],
           ),
         );
       },
+    );
+  }
+
+  Widget _buildStatItem(String label, int count, IconData icon, Color color) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.2),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon, color: color, size: 20),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          count.toString(),
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        Text(
+          label,
+          style: TextStyle(
+            color: Colors.white.withValues(alpha: 0.7),
+            fontSize: 12,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDivider() {
+    return Container(
+      height: 40,
+      width: 1,
+      color: Colors.white.withValues(alpha: 0.1),
     );
   }
 }

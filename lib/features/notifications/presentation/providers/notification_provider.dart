@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:jobspot_app/data/models/notification_model.dart';
 import 'package:jobspot_app/data/services/notification_service.dart';
 
-class NotificationProvider extends ChangeNotifier {
+class NotificationProvider extends ChangeNotifier with WidgetsBindingObserver {
   final NotificationService _notificationService = NotificationService();
 
   List<NotificationModel> _notifications = [];
@@ -15,16 +15,56 @@ class NotificationProvider extends ChangeNotifier {
 
   int get unreadCount => _notifications.where((n) => !n.isRead).length;
 
+  Timer? _pollingTimer;
+
   NotificationProvider() {
     _init();
+    WidgetsBinding.instance.addObserver(this);
   }
 
   void _init() {
     _loadInitialData();
     _subscribeToRealtime();
+    _startPolling();
+  }
+
+  void _startPolling() {
+    _pollingTimer?.cancel();
+    // Poll every 2 minutes as a backup to Realtime
+    _pollingTimer = Timer.periodic(const Duration(minutes: 2), (_) {
+      debugPrint("Auto-refreshing notifications (Polling)...");
+      refresh();
+    });
+  }
+
+  void _stopPolling() {
+    _pollingTimer?.cancel();
+    _pollingTimer = null;
+  }
+
+  Future<void> refresh() async {
+    await _loadInitialData();
+    // Re-subscribe if needed, or check connection status
+    // For now, simpler is just to fetch latest state
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      debugPrint("App resumed: Refreshing notifications...");
+      refresh();
+      _startPolling();
+      // Optionally re-subscribe if Supabase connection was lost
+      // _subscribeToRealtime();
+    } else if (state == AppLifecycleState.paused) {
+      _stopPolling();
+    }
   }
 
   Future<void> _loadInitialData() async {
+    // If already loading, don't trigger another one (debounce)
+    if (_isLoading) return;
+
     _isLoading = true;
     notifyListeners();
 
@@ -39,6 +79,7 @@ class NotificationProvider extends ChangeNotifier {
   }
 
   void _subscribeToRealtime() {
+    _subscription?.cancel(); // Cancel existing before re-subscribing
     _subscription = _notificationService.notificationStream.listen(
       (data) {
         _notifications = data;
@@ -46,6 +87,9 @@ class NotificationProvider extends ChangeNotifier {
       },
       onError: (e) {
         debugPrint("Error in notification stream: $e");
+      },
+      onDone: () {
+        debugPrint("Notification stream closed.");
       },
     );
   }
@@ -82,7 +126,9 @@ class NotificationProvider extends ChangeNotifier {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _subscription?.cancel();
+    _stopPolling();
     super.dispose();
   }
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:jobspot_app/core/theme/app_theme.dart';
 import 'package:jobspot_app/data/services/application_service.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:jobspot_app/features/reviews/presentation/add_review_screen.dart';
 
 class ApplicantProfileScreen extends StatefulWidget {
   final Map<String, dynamic> application;
@@ -71,7 +72,27 @@ class _ApplicantProfileScreenState extends State<ApplicantProfileScreen> {
     final job = widget.application['job_posts'] as Map<String, dynamic>;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Applicant Profile'), elevation: 0),
+      appBar: AppBar(
+        title: const Text('Applicant Profile'),
+        elevation: 0,
+        actions: [
+          IconButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => AddReviewScreen(
+                    revieweeId: applicant['id'],
+                    revieweeName: applicant['full_name'] ?? 'Candidate',
+                  ),
+                ),
+              );
+            },
+            icon: const Icon(Icons.star_rate_rounded),
+            tooltip: 'Rate Candidate',
+          ),
+        ],
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(

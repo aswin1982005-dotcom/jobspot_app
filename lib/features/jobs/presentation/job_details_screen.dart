@@ -1,26 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:jobspot_app/core/theme/app_theme.dart';
 import 'package:jobspot_app/data/services/application_service.dart';
 import 'package:jobspot_app/data/services/job_service.dart';
 import 'package:jobspot_app/features/jobs/presentation/create_job_screen.dart';
+import 'package:jobspot_app/features/reviews/presentation/company_reviews_screen.dart';
 
-/// A screen that displays detailed information about a job posting.
-///
-/// It adapts its UI based on whether the viewer is a 'seeker' or an 'employer'.
-/// Seekers see an "Apply Now" button, while employers see "Edit" and "Close" actions.
 class JobDetailsScreen extends StatefulWidget {
-  /// The job data to display.
   final Map<String, dynamic> job;
-
-  /// The role of the current user ('seeker' or 'employer').
   final String userRole;
-
-  /// Whether the seeker has already applied for this job.
   final bool isApplied;
-
-  /// Callback when the job is applied for (seeker only).
   final VoidCallback? onApplied;
-
-  /// Callback when the job is edited or closed (employer only).
   final VoidCallback? onJobChanged;
 
   const JobDetailsScreen({
@@ -36,10 +25,12 @@ class JobDetailsScreen extends StatefulWidget {
   State<JobDetailsScreen> createState() => _JobDetailsScreenState();
 }
 
-class _JobDetailsScreenState extends State<JobDetailsScreen> {
+class _JobDetailsScreenState extends State<JobDetailsScreen>
+    with SingleTickerProviderStateMixin {
   final JobService _jobService = JobService();
   final ApplicationService _applicationService = ApplicationService();
 
+  late TabController _tabController;
   bool _isBookmarked = false;
   bool _isApplying = false;
   late bool _hasApplied;
@@ -50,9 +41,16 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
     super.initState();
     _currentJob = Map.from(widget.job);
     _hasApplied = widget.isApplied;
+    _tabController = TabController(length: 2, vsync: this);
     if (widget.userRole == 'seeker') {
       _checkSavedStatus();
     }
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
   }
 
   Future<void> _checkSavedStatus() async {
@@ -71,25 +69,19 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
   Future<void> _toggleSave() async {
     final jobId = _currentJob['id'];
     if (jobId == null) return;
-
     final previousStatus = _isBookmarked;
     setState(() => _isBookmarked = !previousStatus);
-
     try {
       await _jobService.toggleSaveJob(jobId, previousStatus);
     } catch (e) {
       if (mounted) {
         setState(() => _isBookmarked = previousStatus);
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error saving job: $e')));
       }
     }
   }
 
   Future<void> _applyJob() async {
     if (_isApplying || _hasApplied) return;
-
     setState(() => _isApplying = true);
     try {
       await _applicationService.fastApply(
@@ -117,15 +109,11 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
   Future<void> _toggleJobStatus() async {
     final jobId = _currentJob['id'];
     if (jobId == null) return;
-
     final bool currentActive = _currentJob['is_active'] ?? true;
     final bool newStatus = !currentActive;
-
     try {
       await _jobService.updateJobStatus(jobId, newStatus);
-      setState(() {
-        _currentJob['is_active'] = newStatus;
-      });
+      setState(() => _currentJob['is_active'] = newStatus);
       widget.onJobChanged?.call();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -134,9 +122,9 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error updating job status: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error updating status: $e')));
       }
     }
   }
@@ -153,169 +141,493 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
     }
   }
 
+  // --- UI Components ---
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final textTheme = theme.textTheme;
-    final colorScheme = theme.colorScheme;
-
     final isEmployer = widget.userRole == 'employer';
     final isActive = _currentJob['is_active'] ?? true;
-    final isSameDayPay = _currentJob['same_day_pay'] == true;
-
-    // Formatting Salary
-    final minPay = _currentJob['pay_amount_min'] ?? 0;
-    final maxPay = _currentJob['pay_amount_max'];
-    final payType = _currentJob['pay_type']?.toString().toUpperCase() ?? '';
-    final salaryStr = maxPay != null ? '₹$minPay - ₹$maxPay' : '₹$minPay';
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Job Details'),
-        actions: [
-          IconButton(icon: const Icon(Icons.share_outlined), onPressed: () {}),
-        ],
-      ),
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header Section
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(24),
-              color: theme.cardColor,
-              child: Column(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(16),
+      backgroundColor: theme.scaffoldBackgroundColor,
+      body: NestedScrollView(
+        headerSliverBuilder: (context, innerBoxIsScrolled) {
+          return [
+            SliverAppBar(
+              pinned: true,
+              expandedHeight: 280.0,
+              backgroundColor: theme.scaffoldBackgroundColor,
+              elevation: 0,
+              leading: IconButton(
+                icon: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: theme.scaffoldBackgroundColor,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.arrow_back),
+                ),
+                onPressed: () => Navigator.pop(context),
+              ),
+              actions: [
+                IconButton(
+                  icon: Container(
+                    padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: colorScheme.primary.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(20),
+                      color: theme.scaffoldBackgroundColor,
+                      shape: BoxShape.circle,
                     ),
-                    child: Icon(
-                      Icons.business,
-                      color: colorScheme.primary,
-                      size: 48,
-                    ),
+                    child: const Icon(Icons.share_outlined),
                   ),
-                  const SizedBox(height: 16),
-                  Text(
-                    _currentJob['title'] ?? 'Untitled Position',
-                    style: textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    _currentJob['location'] ?? 'Remote',
-                    style: textTheme.bodyLarge?.copyWith(
-                      color: theme.hintColor,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    alignment: WrapAlignment.center,
-                    children: [
-                      _buildInfoChip(
-                        context,
-                        _currentJob['work_mode'] ?? 'Remote',
+                  onPressed: () {},
+                ),
+                const SizedBox(width: 8),
+              ],
+              flexibleSpace: FlexibleSpaceBar(
+                background: _buildHeaderContent(context),
+              ),
+              bottom: PreferredSize(
+                preferredSize: const Size.fromHeight(50),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: theme.scaffoldBackgroundColor,
+                    border: Border(
+                      bottom: BorderSide(
+                        color: theme.dividerColor.withValues(alpha: 0.1),
                       ),
-                      _buildInfoChip(context, payType.replaceAll('_', ' ')),
-                      if (isSameDayPay) _buildSameDayPayBadge(colorScheme),
+                    ),
+                  ),
+                  child: TabBar(
+                    controller: _tabController,
+                    labelColor: theme.colorScheme.primary,
+                    unselectedLabelColor: theme.hintColor,
+                    indicatorColor: theme.colorScheme.primary,
+                    indicatorWeight: 3,
+                    labelStyle: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                    tabs: const [
+                      Tab(text: "Description"),
+                      Tab(text: "Company"),
                     ],
+                  ),
+                ),
+              ),
+            ),
+          ];
+        },
+        body: TabBarView(
+          controller: _tabController,
+          children: [_buildDescriptionTab(context), _buildCompanyTab(context)],
+        ),
+      ),
+      bottomNavigationBar: _buildBottomBar(context, isEmployer, isActive),
+    );
+  }
+
+  Widget _buildHeaderContent(BuildContext context) {
+    final theme = Theme.of(context);
+    final minPay = _currentJob['pay_amount_min'] ?? 0;
+    final maxPay = _currentJob['pay_amount_max'];
+    final salaryStr = maxPay != null ? '₹$minPay - ₹$maxPay' : '₹$minPay';
+
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(24, 60, 24, 20),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surface,
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.05),
+                    blurRadius: 15,
+                    offset: const Offset(0, 5),
                   ),
                 ],
               ),
+              child: Icon(
+                Icons.business,
+                size: 48,
+                color: theme.colorScheme.primary,
+              ),
             ),
-
-            Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+            const SizedBox(height: 16),
+            Text(
+              _currentJob['title'] ?? 'Position',
+              style: theme.textTheme.headlineMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _currentJob['company_name'] ?? 'Company Name',
+              style: theme.textTheme.bodyLarge?.copyWith(
+                color: theme.hintColor,
+              ),
+            ),
+            const SizedBox(height: 16),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  _buildSectionTitle(context, 'Salary'),
-                  Text(
-                    salaryStr,
-                    style: textTheme.titleLarge?.copyWith(
-                      color: colorScheme.primary,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-
-                  _buildSectionTitle(context, 'Job Description'),
-                  Text(
-                    _currentJob['description'] ?? 'No description provided.',
-                    style: textTheme.bodyMedium?.copyWith(height: 1.5),
-                  ),
-                  const SizedBox(height: 24),
-
-                  _buildSectionTitle(context, 'Schedule'),
-                  _buildInfoRow(
+                  _buildTag(
                     context,
-                    Icons.calendar_today_outlined,
-                    'Working Days',
-                    (_currentJob['working_days'] as List?)?.join(', ') ??
-                        'Not specified',
+                    _currentJob['work_mode'] ?? 'Remote',
+                    Colors.blue,
                   ),
-                  const SizedBox(height: 12),
-                  _buildInfoRow(
+                  const SizedBox(width: 8),
+                  _buildTag(
                     context,
-                    Icons.access_time,
-                    'Shift Hours',
-                    '${_currentJob['shift_start']?.toString().substring(0, 5) ?? '09:00'} - ${_currentJob['shift_end']?.toString().substring(0, 5) ?? '18:00'}',
+                    _currentJob['type'] ?? 'Full Time',
+                    Colors.purple,
                   ),
-                  const SizedBox(height: 24),
-
-                  if (_currentJob['requirements'] != null &&
-                      (_currentJob['requirements'] as List).isNotEmpty) ...[
-                    _buildSectionTitle(context, 'Requirements'),
-                    ...(_currentJob['requirements'] as List).map(
-                      (req) => Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              '• ',
-                              style: TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                            Expanded(child: Text(req.toString())),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                  const SizedBox(height: 100), // Space for bottom button
+                  const SizedBox(width: 8),
+                  _buildTag(context, salaryStr, Colors.green),
                 ],
               ),
             ),
           ],
         ),
       ),
-      bottomSheet: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: theme.scaffoldBackgroundColor,
-          border: Border(top: BorderSide(color: theme.dividerColor)),
+    );
+  }
+
+  Widget _buildTag(BuildContext context, String text, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          color: color,
+          fontWeight: FontWeight.w600,
+          fontSize: 12,
         ),
+      ),
+    );
+  }
+
+  Widget _buildDescriptionTab(BuildContext context) {
+    final theme = Theme.of(context);
+    final requirements = _currentJob['requirements'] as List?;
+
+    final salaryMin = _currentJob['pay_amount_min'] ?? 0;
+    final salaryMax = _currentJob['pay_amount_max'];
+    final salaryStr = salaryMax != null
+        ? '₹$salaryMin - $salaryMax'
+        : '₹$salaryMin';
+    final rate = _currentJob['payment_rate'] ?? 'Month';
+
+    final startTime =
+        _currentJob['shift_start']?.toString().substring(0, 5) ?? '09:00';
+    final endTime =
+        _currentJob['shift_end']?.toString().substring(0, 5) ?? '18:00';
+    final shiftStr = '$startTime - $endTime';
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // New Overview Section
+          Text(
+            "Job Overview",
+            style: theme.textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 16),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              return Wrap(
+                spacing: 16,
+                runSpacing: 16,
+                children: [
+                  _buildOverviewCard(
+                    context,
+                    'Salary',
+                    '$salaryStr / $rate',
+                    Icons.currency_rupee_rounded,
+                    Colors.green,
+                  ),
+                  _buildOverviewCard(
+                    context,
+                    'Type',
+                    _currentJob['type'] ?? 'Full Time',
+                    Icons.work_outline_rounded,
+                    Colors.purple,
+                  ),
+                  _buildOverviewCard(
+                    context,
+                    'Shift',
+                    shiftStr,
+                    Icons.access_time_rounded,
+                    Colors.orange,
+                  ),
+                  _buildOverviewCard(
+                    context,
+                    'Mode',
+                    _currentJob['work_mode'] ?? 'On Site',
+                    Icons.location_on_outlined,
+                    Colors.blue,
+                  ),
+                ],
+              );
+            },
+          ),
+          const SizedBox(height: 32),
+
+          Text(
+            "About the Role",
+            style: theme.textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            _currentJob['description'] ?? 'No description.',
+            style: theme.textTheme.bodyMedium?.copyWith(height: 1.6),
+          ),
+          const SizedBox(height: 32),
+          if (requirements != null && requirements.isNotEmpty) ...[
+            Text(
+              "Requirements",
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 12),
+            ...requirements.map(
+              (req) => Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      Icons.check_circle_outline,
+                      size: 20,
+                      color: theme.colorScheme.secondary,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        req.toString(),
+                        style: theme.textTheme.bodyMedium,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+          const SizedBox(height: 100),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOverviewCard(
+    BuildContext context,
+    String label,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
+    final theme = Theme.of(context);
+    return Container(
+      width: (MediaQuery.of(context).size.width - 64) / 2,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: theme.dividerColor.withValues(alpha: 0.5)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, size: 20, color: color),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            label,
+            style: theme.textTheme.bodySmall?.copyWith(color: theme.hintColor),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: theme.textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCompanyTab(BuildContext context) {
+    final theme = Theme.of(context);
+    final isSeeker = widget.userRole == 'seeker';
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: theme.cardColor,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              children: [
+                Text(
+                  "Location",
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.location_on, color: theme.colorScheme.secondary),
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                        _currentJob['location'] ?? 'Remote',
+                        style: theme.textTheme.bodyLarge,
+                        textAlign: TextAlign.center,
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 2,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+          // Reviews Section Entry
+          InkWell(
+            onTap: () {
+              if (isSeeker) {
+                final companyId = _currentJob['user_id'];
+                if (companyId != null && companyId is String) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => CompanyReviewsScreen(
+                        companyId: companyId,
+                        companyName: _currentJob['company_name'] ?? 'Company',
+                      ),
+                    ),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Profile unavailable')),
+                  );
+                }
+              }
+            },
+            child: Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.primary.withValues(alpha: 0.05),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.star, color: AppColors.sunny, size: 28),
+                  const SizedBox(width: 16),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "Company Reviews",
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        isSeeker ? "Tap to view ratings" : "View your ratings",
+                        style: theme.textTheme.bodySmall,
+                      ),
+                    ],
+                  ),
+                  const Spacer(),
+                  const Icon(
+                    Icons.arrow_forward_ios,
+                    size: 16,
+                    color: Colors.grey,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBottomBar(BuildContext context, bool isEmployer, bool isActive) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: theme.scaffoldBackgroundColor,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            offset: const Offset(0, -5),
+            blurRadius: 20,
+          ),
+        ],
+      ),
+      child: SafeArea(
         child: Row(
           children: [
             if (!isEmployer) ...[
               Container(
                 decoration: BoxDecoration(
-                  color: colorScheme.secondary.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
+                  color: theme.colorScheme.surface,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: theme.dividerColor),
                 ),
                 child: IconButton(
                   icon: Icon(
                     _isBookmarked ? Icons.bookmark : Icons.bookmark_outline,
+                    color: _isBookmarked
+                        ? theme.colorScheme.secondary
+                        : theme.iconTheme.color,
                   ),
-                  color: colorScheme.secondary,
                   onPressed: _toggleSave,
                 ),
               ),
@@ -326,21 +638,31 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
                       ? _applyJob
                       : null,
                   style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 20,
+                    ), // Taller button
+                    backgroundColor: theme.colorScheme.primary,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
                   ),
                   child: _isApplying
                       ? const SizedBox(
-                          height: 20,
-                          width: 20,
+                          height: 24,
+                          width: 24,
                           child: CircularProgressIndicator(
-                            strokeWidth: 2,
                             color: Colors.white,
+                            strokeWidth: 2,
                           ),
                         )
                       : Text(
                           !isActive
-                              ? 'Job Closed'
-                              : (_hasApplied ? 'Applied' : 'Apply Now'),
+                              ? "Closed"
+                              : (_hasApplied ? "Applied" : "Apply Now"),
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                 ),
               ),
@@ -349,15 +671,17 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
                 child: OutlinedButton(
                   onPressed: _toggleJobStatus,
                   style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    padding: const EdgeInsets.symmetric(vertical: 20),
                     side: BorderSide(
-                      color: isActive ? colorScheme.error : colorScheme.primary,
+                      color: isActive ? Colors.red : theme.colorScheme.primary,
                     ),
-                    foregroundColor: isActive
-                        ? colorScheme.error
-                        : colorScheme.primary,
                   ),
-                  child: Text(isActive ? 'Close Posting' : 'Reopen Posting'),
+                  child: Text(
+                    isActive ? "Close Job" : "Reopen",
+                    style: TextStyle(
+                      color: isActive ? Colors.red : theme.colorScheme.primary,
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(width: 16),
@@ -365,108 +689,15 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
                 child: ElevatedButton(
                   onPressed: _navigateToEdit,
                   style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    padding: const EdgeInsets.symmetric(vertical: 20),
                   ),
-                  child: const Text('Edit Posting'),
+                  child: const Text("Edit"),
                 ),
               ),
             ],
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildSectionTitle(BuildContext context, String title) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Text(
-        title,
-        style: Theme.of(
-          context,
-        ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-      ),
-    );
-  }
-
-  Widget _buildInfoChip(BuildContext context, String label) {
-    return Chip(
-      label: Text(label),
-      backgroundColor: Theme.of(context).cardColor,
-      labelStyle: TextStyle(fontSize: 12, color: Theme.of(context).hintColor),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
-        side: BorderSide(color: Colors.grey.withValues(alpha: 0.2)),
-      ),
-    );
-  }
-
-  Widget _buildSameDayPayBadge(ColorScheme colorScheme) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: colorScheme.secondary.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.bolt, size: 16, color: colorScheme.secondary),
-          const SizedBox(width: 4),
-          const Text(
-            'SAME DAY PAY',
-            style: TextStyle(
-              color: Color(0xFFE67E22),
-              fontSize: 10,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildInfoRow(
-    BuildContext context,
-    IconData icon,
-    String label,
-    String value,
-  ) {
-    return Row(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: Theme.of(
-              context,
-            ).colorScheme.primary.withValues(alpha: 0.05),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Icon(
-            icon,
-            size: 20,
-            color: Theme.of(context).colorScheme.primary,
-          ),
-        ),
-        const SizedBox(width: 12),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              label,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).hintColor,
-              ),
-            ),
-            Text(
-              value,
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
-            ),
-          ],
-        ),
-      ],
     );
   }
 }

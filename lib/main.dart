@@ -128,9 +128,27 @@ class _RootPageState extends State<RootPage> {
         debugPrint(
           "NOTIFICATION CLICKED: ${event.notification.jsonRepresentation()}",
         );
-        // By default, OneSignal opens the app.
-        // We can handle specific redirection here if we want to deep link.
-        // For now, standard "open app" behavior is adequate as per user request.
+        // Refresh notifications when user opens app via notification
+        final context = navigatorKey.currentContext;
+        if (context != null) {
+          Provider.of<NotificationProvider>(context, listen: false).refresh();
+        }
+      });
+
+      // Handler for foreground notifications
+      OneSignal.Notifications.addForegroundWillDisplayListener((event) {
+        debugPrint(
+          "FOREGROUND NOTIFICATION RECEIVED: ${event.notification.title}",
+        );
+        // Refresh notifications immediately
+        final context = navigatorKey.currentContext;
+        if (context != null) {
+          Provider.of<NotificationProvider>(context, listen: false).refresh();
+        }
+
+        // Show the alert (default behavior is to show it, but explicit confirm is good)
+        event.preventDefault();
+        event.notification.display();
       });
     } catch (e) {
       debugPrint("Error initializing OneSignal: $e");
