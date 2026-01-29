@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:onesignal_flutter/onesignal_flutter.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -11,6 +12,31 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _pushNotifications = true;
   bool _emailNotifications = true;
   bool _publicProfile = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkPermission();
+  }
+
+  Future<void> _checkPermission() async {
+    final status = OneSignal.User.pushSubscription.optedIn;
+    // Also consider permission status if needed, but opting in/out is the main control
+    if (mounted) {
+      setState(() {
+        _pushNotifications = status ?? false;
+      });
+    }
+  }
+
+  Future<void> _togglePushNotifications(bool enable) async {
+    setState(() => _pushNotifications = enable);
+    if (enable) {
+      OneSignal.User.pushSubscription.optIn();
+    } else {
+      OneSignal.User.pushSubscription.optOut();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -46,7 +72,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           SwitchListTile(
             title: const Text('Push Notifications'),
             value: _pushNotifications,
-            onChanged: (val) => setState(() => _pushNotifications = val),
+            onChanged: _togglePushNotifications,
             secondary: const Icon(Icons.notifications_outlined),
           ),
           SwitchListTile(

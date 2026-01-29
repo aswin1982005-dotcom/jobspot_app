@@ -8,8 +8,10 @@ import 'package:jobspot_app/features/auth/presentation/screens/login_screen.dart
 import 'package:jobspot_app/features/auth/presentation/screens/role_selection_screen.dart';
 import 'package:jobspot_app/features/auth/presentation/screens/unable_account_page.dart';
 import 'package:jobspot_app/features/profile/presentation/providers/profile_provider.dart';
+import 'package:jobspot_app/features/notifications/presentation/providers/notification_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:onesignal_flutter/onesignal_flutter.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 final supabase = Supabase.instance.client;
@@ -21,6 +23,7 @@ void main() async {
       providers: [
         ChangeNotifierProvider(create: (_) => ThemeNotifier()),
         ChangeNotifierProvider(create: (_) => ProfileProvider()),
+        ChangeNotifierProvider(create: (_) => NotificationProvider()),
       ],
       child: const JobSpotApp(),
     ),
@@ -74,26 +77,64 @@ class _RootPageState extends State<RootPage> {
 
   Future<void> _initAuth() async {
     await dotenv.load(fileName: ".env");
+
+    // Initialize Supabase
     await Supabase.initialize(
       url: dotenv.env['SUPABASE_URL']!,
       anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
     );
+
+    // Initialize OneSignal
+    _initOneSignal();
+
     final session = supabase.auth.currentSession;
 
     if (session == null) {
       _updateHome(const LoginScreen());
     } else {
       _handleUser(session.user);
+      // Link OneSignal User
+      OneSignal.login(session.user.id);
     }
 
     _authSub = supabase.auth.onAuthStateChange.listen((event) {
       final user = event.session?.user;
       if (user != null) {
         _handleUser(user);
+        OneSignal.login(user.id);
       } else {
+        OneSignal.logout();
         _updateHome(const LoginScreen());
       }
     }, onError: (_) => _updateHome(const LoginScreen()));
+  }
+
+  Future<void> _initOneSignal() async {
+    final appId = dotenv.env['ONESIGNAL_APP_ID'];
+    if (appId == null) {
+      debugPrint("ONESIGNAL_APP_ID not found in .env");
+      return;
+    }
+
+    try {
+      OneSignal.Debug.setLogLevel(OSLogLevel.verbose);
+      OneSignal.initialize(appId);
+
+      // Request permission
+      OneSignal.Notifications.requestPermission(true);
+
+      // Handler for notification clicks
+      OneSignal.Notifications.addClickListener((event) {
+        debugPrint(
+          "NOTIFICATION CLICKED: ${event.notification.jsonRepresentation()}",
+        );
+        // By default, OneSignal opens the app.
+        // We can handle specific redirection here if we want to deep link.
+        // For now, standard "open app" behavior is adequate as per user request.
+      });
+    } catch (e) {
+      debugPrint("Error initializing OneSignal: $e");
+    }
   }
 
   Future<void> _handleUser(User user) async {

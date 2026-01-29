@@ -183,10 +183,11 @@ class _MyApplicationsScreenState extends State<MyApplicationsScreen> {
                                     label: Text(filter),
                                     selected: isSelected,
                                     onSelected: (selected) {
-                                      if (selected)
+                                      if (selected) {
                                         setState(
                                           () => _selectedFilter = filter,
                                         );
+                                      }
                                     },
                                     backgroundColor: theme.cardColor,
                                     selectedColor: AppColors.purple,
