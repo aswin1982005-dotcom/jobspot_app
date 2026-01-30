@@ -3,6 +3,7 @@ import 'package:jobspot_app/data/models/review_model.dart';
 import 'package:jobspot_app/data/services/review_service.dart';
 import 'package:jobspot_app/features/reviews/presentation/add_review_screen.dart';
 import 'package:timeago/timeago.dart' as timeago;
+import 'package:cached_network_image/cached_network_image.dart';
 
 class CompanyReviewsScreen extends StatefulWidget {
   final String companyId;
@@ -144,7 +145,9 @@ class _CompanyReviewsScreenState extends State<CompanyReviewsScreen> {
                         ),
                         leading: CircleAvatar(
                           backgroundImage: review.reviewerAvatar != null
-                              ? NetworkImage(review.reviewerAvatar!)
+                              ? CachedNetworkImageProvider(
+                                  review.reviewerAvatar!,
+                                )
                               : null,
                           child: review.reviewerAvatar == null
                               ? Text(

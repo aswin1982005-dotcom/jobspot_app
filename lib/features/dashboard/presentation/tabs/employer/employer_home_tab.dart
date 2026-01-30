@@ -73,16 +73,17 @@ class EmployerHomeTab extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Welcome back,',
-                        style: textTheme.bodyLarge?.copyWith(
-                          color: theme.hintColor,
+                        'Hello, $companyName 👋',
+                        style: textTheme.headlineMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 24,
                         ),
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        companyName,
-                        style: textTheme.headlineMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
+                        'Manage your hiring pipeline',
+                        style: textTheme.bodyLarge?.copyWith(
+                          color: theme.hintColor,
                         ),
                       ),
                     ],
@@ -164,7 +165,8 @@ class EmployerHomeTab extends StatelessWidget {
                       'Closed',
                       closedJobsCount,
                       Icons.lock_rounded,
-                      AppColors.orange,
+                      AppColors
+                          .sunny, // Changed to Sunny to match Seeker's warm accent
                     ),
                   ],
                 ),

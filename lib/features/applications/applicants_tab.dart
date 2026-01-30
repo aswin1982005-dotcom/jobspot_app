@@ -17,7 +17,7 @@ class _ApplicantsTabState extends State<ApplicantsTab> {
   final List<String> _filters = [
     'All',
     'pending',
-    'interview',
+    'shortlisted',
     'hired',
     'rejected',
   ];

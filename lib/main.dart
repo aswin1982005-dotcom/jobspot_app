@@ -12,6 +12,8 @@ import 'package:jobspot_app/features/notifications/presentation/providers/notifi
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:onesignal_flutter/onesignal_flutter.dart';
+import 'package:jobspot_app/features/splash/presentation/screens/splash_screen.dart';
+import 'package:jobspot_app/features/dashboard/presentation/providers/seeker_home_provider.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 final supabase = Supabase.instance.client;
@@ -24,6 +26,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => ThemeNotifier()),
         ChangeNotifierProvider(create: (_) => ProfileProvider()),
         ChangeNotifierProvider(create: (_) => NotificationProvider()),
+        ChangeNotifierProvider(create: (_) => SeekerHomeProvider()),
       ],
       child: const JobSpotApp(),
     ),
@@ -60,7 +63,10 @@ class RootPage extends StatefulWidget {
 
 class _RootPageState extends State<RootPage> {
   bool _loading = true;
+  bool _videoComplete = false;
+  bool _showSplash = true;
   Widget? _home;
+  Widget? _pendingHome;
   StreamSubscription<AuthState>? _authSub;
 
   @override
@@ -180,6 +186,11 @@ class _RootPageState extends State<RootPage> {
           ? UserRoleExtension.fromDbValue(roleStr)
           : null;
 
+      // Preload data if seeker
+      if (role == UserRole.seeker && mounted) {
+        Provider.of<SeekerHomeProvider>(context, listen: false).loadData();
+      }
+
       _updateHome(DashboardRouter(role: role));
     } catch (_) {
       _updateHome(const LoginScreen());
@@ -195,17 +206,35 @@ class _RootPageState extends State<RootPage> {
 
   void _updateHome(Widget screen) {
     if (!mounted) return;
+    _pendingHome = screen;
+    _attemptNavigation();
+  }
 
-    if (_home?.runtimeType == screen.runtimeType && !_loading) return;
-
-    setState(() {
-      _home = screen;
-      _loading = false;
-    });
+  void _attemptNavigation() {
+    // If splash cycle is done (video done AND we have a destination)
+    // Or if we are already running (splash done) and just updating home
+    if ((_videoComplete && _pendingHome != null) ||
+        (!_showSplash && _pendingHome != null)) {
+      setState(() {
+        _home = _pendingHome;
+        _loading = false;
+        _showSplash = false;
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_showSplash) {
+      return SplashScreen(
+        onFinish: () {
+          _videoComplete = true;
+          _attemptNavigation();
+        },
+      );
+    }
+
+    // Normal loading state (after splash)
     if (_loading || _home == null) {
       return const Scaffold(
         body: Center(child: CircularProgressIndicator(color: AppColors.purple)),

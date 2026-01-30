@@ -13,6 +13,11 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+        isCoreLibraryDesugaringEnabled = true
+    }
+
+    tasks.withType<JavaCompile>().configureEach {
+        options.compilerArgs.add("-Xlint:-options")
     }
 
     kotlinOptions {
@@ -38,6 +43,9 @@ android {
 }
 
 dependencies {
+    // Desugaring for Java 17 support
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
+    
     // Import the Firebase BoM
     implementation(platform("com.google.firebase:firebase-bom:34.8.0"))
 
