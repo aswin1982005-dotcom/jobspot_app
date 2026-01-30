@@ -5,6 +5,15 @@ plugins {
     id("com.google.gms.google-services")
 }
 
+import java.util.Properties
+import java.io.FileInputStream
+
+val localProperties = Properties()
+val localPropertiesFile = rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    localProperties.load(FileInputStream(localPropertiesFile))
+}
+
 android {
     namespace = "com.example.jobspot_app"
     compileSdk = flutter.compileSdkVersion
@@ -30,6 +39,7 @@ android {
         targetSdk = 34
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        manifestPlaceholders["MAPS_API_KEY"] = localProperties.getProperty("MAPS_API_KEY") ?: ""
     }
 
 

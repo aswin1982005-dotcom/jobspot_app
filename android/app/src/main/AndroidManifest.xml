@@ -11,13 +11,12 @@
 
         <meta-data
             android:name="com.google.android.geo.API_KEY"
-            android:value="AIzaSyBhxM-BhyHPZRVmwGHVugs-PTbVp8qiVkM" />
+            android:value="${MAPS_API_KEY}" />
 
         <meta-data
             android:name="com.onesignal.AppId"
             android:value="345bb020-288c-4c09-b0b0-4a8d50214761" />
-
-
+        
         <activity
             android:name=".MainActivity"
             android:exported="true"

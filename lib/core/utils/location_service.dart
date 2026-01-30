@@ -21,7 +21,7 @@ class LocationService {
       '&sessiontoken=$sessionToken',
     );
 
-    final res = await http.get(uri, headers: await _getHeaders());
+    final res = await http.get(uri);
 
     final data = json.decode(res.body);
 
@@ -51,7 +51,7 @@ class LocationService {
       '&sessiontoken=$sessionToken',
     );
 
-    final res = await http.get(uri, headers: await _getHeaders());
+    final res = await http.get(uri);
 
     final result = json.decode(res.body)['result'];
 
@@ -61,14 +61,6 @@ class LocationService {
       result['geometry']['location']['lng'],
       placeId,
     );
-  }
-
-  Future<Map<String, String>> _getHeaders() async {
-    return {
-      'X-Android-Package': 'com.example.jobspot_app',
-      'X-Android-Cert':
-          '3B:F9:1D:94:63:FF:78:61:5A:4F:60:02:CC:15:E8:27:AE:5F:26:77',
-    };
   }
 
   Future<LocationAddress> reverseGeocode(double lat, double lng) async {
