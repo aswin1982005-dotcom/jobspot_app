@@ -51,6 +51,8 @@ dependencies:
   file_picker: ^10.3.8
   url_launcher: ^6.3.2
   timeago: ^3.7.1
+  video_player: ^2.10.1
+  cached_network_image: ^3.4.1
 
 dev_dependencies:
   flutter_test:
@@ -78,6 +80,7 @@ flutter:
   assets:
     - assets/images/
     - assets/icons/
+    - assets/videos/
     - .env
 
   # An image asset can refer to one or more resolution-specific "variants", see

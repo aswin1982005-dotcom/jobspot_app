@@ -24,46 +24,43 @@ class _SeekerDashboardState extends State<SeekerDashboard> {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => SeekerHomeProvider()..loadData(),
-      child: Builder(
-        builder: (context) {
-          return DashboardShell(
-            onTabChanged: (_) {
-              // Refresh data when switching tabs to ensure consistency
-              Provider.of<SeekerHomeProvider>(context, listen: false).refresh();
-            },
-            screens: [
-              const HomeTab(),
-              const SearchTab(),
-              const MapTab(),
-              const ProfileTab(role: 'seeker'),
-            ],
-            destinations: const [
-              NavigationDestination(
-                icon: Icon(Icons.home_outlined),
-                selectedIcon: Icon(Icons.home),
-                label: 'Home',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.search_outlined),
-                selectedIcon: Icon(Icons.search),
-                label: 'Search',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.pin_drop_outlined),
-                selectedIcon: Icon(Icons.pin_drop_rounded),
-                label: 'Job Map',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.person_outline),
-                selectedIcon: Icon(Icons.person),
-                label: 'Profile',
-              ),
-            ],
-          );
-        },
-      ),
+    return Builder(
+      builder: (context) {
+        return DashboardShell(
+          onTabChanged: (_) {
+            // Refresh data when switching tabs to ensure consistency
+            Provider.of<SeekerHomeProvider>(context, listen: false).refresh();
+          },
+          screens: [
+            const HomeTab(),
+            const SearchTab(),
+            const MapTab(),
+            const ProfileTab(role: 'seeker'),
+          ],
+          destinations: const [
+            NavigationDestination(
+              icon: Icon(Icons.home_outlined),
+              selectedIcon: Icon(Icons.home),
+              label: 'Home',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.search_outlined),
+              selectedIcon: Icon(Icons.search),
+              label: 'Search',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.pin_drop_outlined),
+              selectedIcon: Icon(Icons.pin_drop_rounded),
+              label: 'Job Map',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.person_outline),
+              selectedIcon: Icon(Icons.person),
+              label: 'Profile',
+            ),
+          ],
+        );
+      },
     );
   }
 }

@@ -204,8 +204,25 @@ class _MapTabState extends State<MapTab> {
     }
   }
 
+  // Cluster icon cache
+  final Map<int, BitmapDescriptor> _clusterIconCache = {};
+
   Future<Marker> _buildMarker(MapCluster<JobItem> cluster) async {
     if (cluster.isMultiple) {
+      final count = cluster.count;
+      BitmapDescriptor icon;
+
+      if (_clusterIconCache.containsKey(count)) {
+        icon = _clusterIconCache[count]!;
+      } else {
+        icon = await _getClusterBitmap(
+          count,
+          size: 100,
+          text: count.toString(),
+        );
+        _clusterIconCache[count] = icon;
+      }
+
       return Marker(
         markerId: MarkerId(cluster.getId()),
         position: cluster.location,
@@ -214,11 +231,7 @@ class _MapTabState extends State<MapTab> {
             CameraUpdate.newLatLngZoom(cluster.location, _currentZoom + 2),
           );
         },
-        icon: await _getClusterBitmap(
-          cluster.count,
-          size: 100,
-          text: cluster.count.toString(),
-        ),
+        icon: icon,
       );
     } else {
       final item = cluster.items.first;

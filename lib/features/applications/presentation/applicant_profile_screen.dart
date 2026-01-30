@@ -3,6 +3,7 @@ import 'package:jobspot_app/core/theme/app_theme.dart';
 import 'package:jobspot_app/data/services/application_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:jobspot_app/features/reviews/presentation/add_review_screen.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class ApplicantProfileScreen extends StatefulWidget {
   final Map<String, dynamic> application;
@@ -54,7 +55,7 @@ class _ApplicantProfileScreenState extends State<ApplicantProfileScreen> {
     switch (status.toLowerCase()) {
       case 'pending':
         return AppColors.orange;
-      case 'interview':
+      case 'shortlisted':
         return AppColors.purple;
       case 'hired':
         return Colors.green;
@@ -105,7 +106,7 @@ class _ApplicantProfileScreenState extends State<ApplicantProfileScreen> {
                   CircleAvatar(
                     radius: 50,
                     backgroundImage: applicant['avatar_url'] != null
-                        ? NetworkImage(applicant['avatar_url'])
+                        ? CachedNetworkImageProvider(applicant['avatar_url'])
                         : null,
                     child: applicant['avatar_url'] == null
                         ? const Icon(Icons.person, size: 50)
@@ -179,12 +180,12 @@ class _ApplicantProfileScreenState extends State<ApplicantProfileScreen> {
                     spacing: 8,
                     runSpacing: 8,
                     children: [
-                      if (_currentStatus != 'interview')
+                      if (_currentStatus != 'shortlisted')
                         OutlinedButton(
                           onPressed: _isUpdating
                               ? null
-                              : () => _updateStatus('interview'),
-                          child: const Text('Interview'),
+                              : () => _updateStatus('shortlisted'),
+                          child: const Text('shortlisted'),
                         ),
                       if (_currentStatus != 'hired')
                         OutlinedButton(

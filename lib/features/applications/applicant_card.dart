@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:jobspot_app/core/theme/app_theme.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class ApplicantCard extends StatelessWidget {
   final String name;
@@ -23,7 +24,7 @@ class ApplicantCard extends StatelessWidget {
     switch (status.toLowerCase()) {
       case 'pending':
         return AppColors.orange;
-      case 'interview':
+      case 'shortlisted':
         return AppColors.purple;
       case 'hired':
         return Colors.green;
@@ -60,7 +61,7 @@ class ApplicantCard extends StatelessWidget {
               radius: 28,
               backgroundColor: AppColors.purple.withValues(alpha: 0.1),
               backgroundImage: profileImageUrl != null
-                  ? NetworkImage(profileImageUrl!)
+                  ? CachedNetworkImageProvider(profileImageUrl!)
                   : null,
               child: profileImageUrl == null
                   ? Text(
