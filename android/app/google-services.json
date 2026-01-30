@@ -7,7 +7,7 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:886134002225:android:c6e68114ede3e134d47b10",
+        "mobilesdk_app_id": "1:886134002225:android:8cf122bfd3e25bd7d47b10",
         "android_client_info": {
           "package_name": "com.example.jobspot_app"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyBfHKRtbODznEhDHziHJp-Qy0Cxr8DBXjs"
+          "current_key": "AIzaSyD23aUT9Oib"
         }
       ],
       "services": {
