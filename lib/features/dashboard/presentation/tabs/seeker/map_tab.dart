@@ -40,10 +40,11 @@ class _MapTabState extends State<MapTab> {
   bool _isLoading = true;
   double _currentZoom = 10.0;
   String? _selectedJobId;
-  CameraPosition _initialPosition = CameraPosition(
+  final CameraPosition _initialPosition = CameraPosition(
     target: LatLng(19.0760, 72.8777),
     zoom: 10,
   );
+  Position? _userPosition;
 
   List<Map<String, dynamic>>? _lastJobs;
 
@@ -112,10 +113,8 @@ class _MapTabState extends State<MapTab> {
     } else {
       try {
         final pos = await Geolocator.getCurrentPosition();
-        _initialPosition = CameraPosition(
-          target: LatLng(pos.latitude, pos.longitude),
-          zoom: 10,
-        );
+        _userPosition = pos;
+        _getCurrentLocation();
       } catch (e) {
         // Handle error or permission denied silently or via snackbar
       }
@@ -224,11 +223,7 @@ class _MapTabState extends State<MapTab> {
       if (_clusterIconCache.containsKey(count)) {
         icon = _clusterIconCache[count]!;
       } else {
-        icon = await _getClusterBitmap(
-          count,
-          size: 100,
-          text: count.toString(),
-        );
+        icon = await _getClusterBitmap(count, size: 30, text: count.toString());
         _clusterIconCache[count] = icon;
       }
 
@@ -286,7 +281,7 @@ class _MapTabState extends State<MapTab> {
 
     final ui.PictureRecorder pictureRecorder = ui.PictureRecorder();
     final Canvas canvas = Canvas(pictureRecorder);
-    final Paint paint1 = Paint()..color = AppColors.purple;
+    final Paint paint1 = Paint()..color = AppColors.darkPurple;
     final Paint paint2 = Paint()..color = Colors.white;
 
     canvas.drawCircle(Offset(size / 2, size / 2), size / 2.0, paint1);
@@ -335,6 +330,7 @@ class _MapTabState extends State<MapTab> {
               job: job,
               scrollController: controller,
               isApplied: isApplied,
+              userPosition: _userPosition,
             );
           },
         );
@@ -528,13 +524,30 @@ class JobDetailsSheet extends StatelessWidget {
   final Map<String, dynamic> job;
   final ScrollController scrollController;
   final bool isApplied;
+  final Position? userPosition;
 
   const JobDetailsSheet({
     super.key,
     required this.job,
     required this.scrollController,
     this.isApplied = false,
+    this.userPosition,
   });
+
+  String _calculateDistance() {
+    if (userPosition == null) return '';
+    final lat = job['latitude'];
+    final lng = job['longitude'];
+    if (lat == null || lng == null) return '';
+
+    final distanceInMeters = Geolocator.distanceBetween(
+      userPosition!.latitude,
+      userPosition!.longitude,
+      lat,
+      lng,
+    );
+    return '${(distanceInMeters / 1000).toStringAsFixed(1)} km away';
+  }
 
   Future<void> _openDirections() async {
     final lat = job['latitude'];
@@ -561,15 +574,24 @@ class JobDetailsSheet extends StatelessWidget {
     final minPay = job['pay_amount_min'] ?? 0;
     final maxPay = job['pay_amount_max'];
     final salaryStr = maxPay != null ? '₹$minPay - ₹$maxPay' : '₹$minPay';
+    final companyName = job['company_name'] ?? 'Unknown Company';
+    final distance = _calculateDistance();
 
     return Container(
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: 10,
+            offset: const Offset(0, -5),
+          ),
+        ],
       ),
       child: SingleChildScrollView(
         controller: scrollController,
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -585,15 +607,16 @@ class JobDetailsSheet extends StatelessWidget {
             ),
             const SizedBox(height: 24),
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: AppColors.purple.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(16),
                   ),
                   child: const Icon(
-                    Icons.business,
+                    Icons.business_rounded,
                     size: 32,
                     color: AppColors.purple,
                   ),
@@ -608,80 +631,163 @@ class JobDetailsSheet extends StatelessWidget {
                         style: textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        job['location'] ?? 'Remote',
+                        companyName,
                         style: textTheme.bodyMedium?.copyWith(
-                          color: Colors.grey[600],
+                          color: textTheme.bodyMedium?.color?.withValues(
+                            alpha: 0.7,
+                          ),
+                          fontWeight: FontWeight.w500,
                         ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.location_on_outlined,
+                            size: 14,
+                            color: Colors.grey[600],
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              job['location'] ?? 'Remote',
+                              style: textTheme.bodySmall?.copyWith(
+                                color: Colors.grey[600],
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
                 ),
-                IconButton(
-                  onPressed: _openDirections,
-                  icon: const Icon(Icons.directions, color: AppColors.purple),
-                  tooltip: "Get Directions",
-                ),
               ],
             ),
             const SizedBox(height: 20),
-            Wrap(
-              spacing: 8.0,
-              children: [
-                Chip(
-                  label: Text(job['work_mode']?.toString().toUpperCase() ?? ''),
-                  backgroundColor: AppColors.purple.withValues(alpha: 0.1),
-                  labelStyle: const TextStyle(
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  _buildChip(
+                    context,
+                    label: job['work_mode']?.toString().toUpperCase() ?? '',
+                    icon: Icons.work_outline,
                     color: AppColors.purple,
-                    fontSize: 12,
                   ),
-                  side: BorderSide.none,
-                ),
-                Chip(
-                  label: Text(salaryStr),
-                  backgroundColor: Colors.green.withValues(alpha: 0.1),
-                  labelStyle: const TextStyle(
+                  const SizedBox(width: 8),
+                  _buildChip(
+                    context,
+                    label: salaryStr,
+                    icon: Icons.attach_money,
                     color: Colors.green,
-                    fontSize: 12,
                   ),
-                  side: BorderSide.none,
+                  const SizedBox(width: 8),
+                  _buildChip(
+                    context,
+                    label: distance,
+                    icon: Icons.directions,
+                    color: Colors.orange,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: _openDirections,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.orange,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 0,
+                    ),
+                    icon: const Icon(Icons.directions_outlined),
+                    label: Text(
+                      'Directions',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => JobDetailsScreen(
+                            job: job,
+                            userRole: 'seeker',
+                            isApplied: isApplied,
+                          ),
+                        ),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.darkPurple,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 0,
+                    ),
+                    child: Text(
+                      isApplied ? 'Applied' : 'View Details',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
                 ),
               ],
             ),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => JobDetailsScreen(
-                        job: job,
-                        userRole: 'seeker',
-                        isApplied: isApplied,
-                      ),
-                    ),
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.darkPurple,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: Text(
-                  isApplied ? 'Applied' : 'View Details & Apply',
-                  style: const TextStyle(color: Colors.white),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildChip(
+    BuildContext context, {
+    required String label,
+    required IconData icon,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: color),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: TextStyle(
+              color: color,
+              fontWeight: FontWeight.w600,
+              fontSize: 12,
+            ),
+          ),
+        ],
       ),
     );
   }

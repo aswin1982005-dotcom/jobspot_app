@@ -25,6 +25,7 @@ class _EditEmployerProfileScreenState extends State<EditEmployerProfileScreen> {
   late TextEditingController _contactMobileController;
   late TextEditingController _descriptionController;
 
+  bool _useLoginEmail = false;
   bool _isLoading = false;
 
   @override
@@ -49,6 +50,7 @@ class _EditEmployerProfileScreenState extends State<EditEmployerProfileScreen> {
     _descriptionController = TextEditingController(
       text: profile['company_description'] ?? '',
     );
+    _checkIfUsingLoginEmail();
   }
 
   @override
@@ -62,6 +64,25 @@ class _EditEmployerProfileScreenState extends State<EditEmployerProfileScreen> {
     _contactMobileController.dispose();
     _descriptionController.dispose();
     super.dispose();
+  }
+
+  void _checkIfUsingLoginEmail() {
+    final loginEmail = Supabase.instance.client.auth.currentUser?.email;
+    if (loginEmail != null && _contactEmailController.text == loginEmail) {
+      _useLoginEmail = true;
+    }
+  }
+
+  void _toggleLoginEmail(bool? value) {
+    setState(() {
+      _useLoginEmail = value ?? false;
+      if (_useLoginEmail) {
+        final loginEmail = Supabase.instance.client.auth.currentUser?.email;
+        if (loginEmail != null) {
+          _contactEmailController.text = loginEmail;
+        }
+      }
+    });
   }
 
   Future<void> _saveProfile() async {
@@ -85,7 +106,7 @@ class _EditEmployerProfileScreenState extends State<EditEmployerProfileScreen> {
       // Check for completion (Basic info)
       if (_companyNameController.text.trim().isNotEmpty &&
           _cityController.text.trim().isNotEmpty) {
-        updates['profile_completed'] = true as String;
+        updates['profile_completed'] = 'True';
       }
 
       await ProfileService.updateEmployerProfile(userId, updates);
@@ -213,7 +234,19 @@ class _EditEmployerProfileScreenState extends State<EditEmployerProfileScreen> {
             TextFormField(
               controller: _contactEmailController,
               keyboardType: TextInputType.emailAddress,
+              readOnly: _useLoginEmail,
               decoration: _buildInputDecoration('Official Email', Icons.email),
+            ),
+            CheckboxListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text(
+                'Use Login Email',
+                style: TextStyle(fontSize: 14),
+              ),
+              value: _useLoginEmail,
+              onChanged: _toggleLoginEmail,
+              controlAffinity: ListTileControlAffinity.leading,
+              activeColor: Theme.of(context).primaryColor,
             ),
             const SizedBox(height: 16),
             TextFormField(

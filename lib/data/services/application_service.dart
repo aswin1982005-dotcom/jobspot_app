@@ -32,11 +32,7 @@ class ApplicationService {
 
     var query = _client.from('job_applications').select('''
           *,
-          job_posts!inner(*),
-          applicant:applicant_id(
-            full_name,
-            profile_photo
-          )
+          job_posts!inner(*)
         ''');
 
     query = query.eq('job_posts.employer_id', userId);
@@ -46,8 +42,39 @@ class ApplicationService {
     }
 
     final response = await query.order('applied_at', ascending: false);
+    final applications = List<Map<String, dynamic>>.from(response);
 
-    return List<Map<String, dynamic>>.from(response);
+    if (applications.isEmpty) return [];
+
+    // 2. Fetch Applicant Profiles manually
+    final applicantIds = applications
+        .map((app) => app['applicant_id'] as String)
+        .toSet()
+        .toList();
+
+    // Fetch profiles from job_seeker_profiles
+    final profilesResponse = await _client
+        .from('job_seeker_profiles')
+        .select(
+          'user_id, full_name, profile_photo, city, skills, education_level, availability_status, email, phone',
+        )
+        .filter('user_id', 'in', applicantIds);
+
+    final profiles = List<Map<String, dynamic>>.from(profilesResponse);
+    final profileMap = {for (var p in profiles) p['user_id'] as String: p};
+
+    // 3. Merge Data
+    for (var app in applications) {
+      final applicantId = app['applicant_id'] as String;
+      // Add applicant data to 'applicant' key as expected by UI
+      if (profileMap.containsKey(applicantId)) {
+        app['applicant'] = profileMap[applicantId];
+      } else {
+        app['applicant'] = {'full_name': 'Unknown User'};
+      }
+    }
+
+    return applications;
   }
 
   Future<void> fastApply({

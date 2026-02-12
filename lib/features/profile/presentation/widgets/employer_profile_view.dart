@@ -82,10 +82,10 @@ class _EmployerProfileViewState extends State<EmployerProfileView> {
                 // Business Info Section
                 const ProfileSectionHeader(title: 'Business Information'),
                 const SizedBox(height: 12),
-                const ProfileInfoTile(
+                ProfileInfoTile(
                   icon: Icons.language,
                   label: 'Website',
-                  value: 'www.google.com',
+                  value: _profile?['website'] ?? 'Not provided',
                 ),
                 ProfileInfoTile(
                   icon: Icons.email_outlined,

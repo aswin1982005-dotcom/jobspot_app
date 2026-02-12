@@ -4,6 +4,8 @@ import 'package:jobspot_app/data/services/application_service.dart';
 import 'package:jobspot_app/data/services/job_service.dart';
 import 'package:jobspot_app/features/jobs/presentation/create_job_screen.dart';
 import 'package:jobspot_app/features/reviews/presentation/company_reviews_screen.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class JobDetailsScreen extends StatefulWidget {
   final Map<String, dynamic> job;
@@ -129,6 +131,48 @@ class _JobDetailsScreenState extends State<JobDetailsScreen>
     }
   }
 
+  void _shareJob() {
+    final title = _currentJob['title'] ?? 'Job Opportunity';
+    final company = _currentJob['company_name'] ?? 'Unknown Company';
+    final location = _currentJob['location'] ?? 'Remote';
+    final googleMapsUrl =
+        "https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent(location)}";
+
+    final shareText =
+        "Check out this job:\n\n$title at $company\nLocation: $location\n\nSee location on Maps: $googleMapsUrl";
+    // ignore: deprecated_member_use
+    Share.share(shareText);
+  }
+
+  Future<void> _openMap() async {
+    final location = _currentJob['location'];
+    if (location == null || location.isEmpty || location == 'Remote') {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No specific location available')),
+        );
+      }
+      return;
+    }
+
+    final uri = Uri.parse(
+      "https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent(location)}",
+    );
+    try {
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Could not open maps')));
+        }
+      }
+    } catch (e) {
+      debugPrint('Error launching map: $e');
+    }
+  }
+
   void _navigateToEdit() async {
     final result = await Navigator.push(
       context,
@@ -180,7 +224,7 @@ class _JobDetailsScreenState extends State<JobDetailsScreen>
                     ),
                     child: const Icon(Icons.share_outlined),
                   ),
-                  onPressed: () {},
+                  onPressed: _shareJob,
                 ),
                 const SizedBox(width: 8),
               ],
@@ -528,6 +572,22 @@ class _JobDetailsScreenState extends State<JobDetailsScreen>
                   ],
                 ),
               ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          // Directions Button
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: _openMap,
+              icon: const Icon(Icons.map),
+              label: const Text("Get Directions"),
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
             ),
           ),
           const SizedBox(height: 24),

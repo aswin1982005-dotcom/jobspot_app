@@ -83,7 +83,7 @@ class _ApplicantProfileScreenState extends State<ApplicantProfileScreen> {
                 context,
                 MaterialPageRoute(
                   builder: (_) => AddReviewScreen(
-                    revieweeId: applicant['id'],
+                    revieweeId: applicant['user_id'],
                     revieweeName: applicant['full_name'] ?? 'Candidate',
                   ),
                 ),
@@ -216,6 +216,25 @@ class _ApplicantProfileScreenState extends State<ApplicantProfileScreen> {
             ),
             const SizedBox(height: 24),
 
+            // Professional Details
+            Text('Professional Details', style: theme.textTheme.titleMedium),
+            const SizedBox(height: 16),
+            ListTile(
+              leading: const Icon(Icons.school_outlined),
+              title: const Text('Education'),
+              subtitle: Text(applicant['education_level'] ?? 'Not provided'),
+              contentPadding: EdgeInsets.zero,
+            ),
+            ListTile(
+              leading: const Icon(Icons.bolt_outlined),
+              title: const Text('Skills'),
+              subtitle: Text(
+                (applicant['skills'] as List?)?.join(', ') ?? 'Not provided',
+              ),
+              contentPadding: EdgeInsets.zero,
+            ),
+            const SizedBox(height: 24),
+
             // Contact Info
             Text('Contact Information', style: theme.textTheme.titleMedium),
             const SizedBox(height: 16),
@@ -223,14 +242,33 @@ class _ApplicantProfileScreenState extends State<ApplicantProfileScreen> {
               leading: const Icon(Icons.email_outlined),
               title: const Text('Email'),
               subtitle: Text(applicant['email'] ?? 'No email provided'),
-              // Note: Email might not be in profile table directly depending on schema
               contentPadding: EdgeInsets.zero,
+              trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+              onTap: () async {
+                final email = applicant['email'];
+                if (email != null) {
+                  final uri = Uri.parse('mailto:$email');
+                  if (await canLaunchUrl(uri)) {
+                    await launchUrl(uri);
+                  }
+                }
+              },
             ),
             ListTile(
               leading: const Icon(Icons.phone_outlined),
               title: const Text('Phone'),
               subtitle: Text(applicant['phone'] ?? 'No phone provided'),
               contentPadding: EdgeInsets.zero,
+              trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+              onTap: () async {
+                final phone = applicant['phone'];
+                if (phone != null) {
+                  final uri = Uri.parse('tel:$phone');
+                  if (await canLaunchUrl(uri)) {
+                    await launchUrl(uri);
+                  }
+                }
+              },
             ),
             ListTile(
               leading: const Icon(Icons.location_on_outlined),

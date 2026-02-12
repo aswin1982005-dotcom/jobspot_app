@@ -18,9 +18,12 @@ class _EditSeekerProfileScreenState extends State<EditSeekerProfileScreen> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _nameController;
   late final TextEditingController _cityController;
+  late final TextEditingController _phoneController;
+  late final TextEditingController _emailController;
   late final TextEditingController _skillsController;
 
   bool _isLoading = false;
+  bool _useLoginEmail = false;
 
   final List<String> _educationLevels = [
     '10th',
@@ -28,7 +31,7 @@ class _EditSeekerProfileScreenState extends State<EditSeekerProfileScreen> {
     'Diploma',
     'UG Degree',
     'PG Degree',
-    'Masters',
+    'Other',
   ];
 
   String? _selectedEducation;
@@ -49,6 +52,10 @@ class _EditSeekerProfileScreenState extends State<EditSeekerProfileScreen> {
     final profile = widget.profile;
     _nameController = TextEditingController(text: profile?['full_name'] ?? '');
     _cityController = TextEditingController(text: profile?['city'] ?? '');
+    _phoneController = TextEditingController(text: profile?['phone'] ?? '');
+    _emailController = TextEditingController(text: profile?['email'] ?? '');
+
+    _checkIfUsingLoginEmail();
 
     _selectedEducation = profile?['education_level'];
     if (_selectedEducation != null &&
@@ -74,9 +81,29 @@ class _EditSeekerProfileScreenState extends State<EditSeekerProfileScreen> {
   void dispose() {
     _nameController.dispose();
     _cityController.dispose();
-    // _educationController.dispose(); // Removed
+    _phoneController.dispose();
+    _emailController.dispose();
     _skillsController.dispose();
     super.dispose();
+  }
+
+  void _checkIfUsingLoginEmail() {
+    final loginEmail = SupabaseService.getCurrentUser()?.email;
+    if (loginEmail != null && _emailController.text == loginEmail) {
+      _useLoginEmail = true;
+    }
+  }
+
+  void _toggleLoginEmail(bool? value) {
+    setState(() {
+      _useLoginEmail = value ?? false;
+      if (_useLoginEmail) {
+        final loginEmail = SupabaseService.getCurrentUser()?.email;
+        if (loginEmail != null) {
+          _emailController.text = loginEmail;
+        }
+      }
+    });
   }
 
   Future<void> _handleSave() async {
@@ -98,13 +125,14 @@ class _EditSeekerProfileScreenState extends State<EditSeekerProfileScreen> {
         'user_id': userId,
         'full_name': _nameController.text.trim(),
         'city': _cityController.text.trim(),
+        'phone': _phoneController.text.trim(),
+        'email': _emailController.text.trim().isNotEmpty
+            ? _emailController.text.trim()
+            : SupabaseService.getCurrentUser()?.email,
         'education_level': _selectedEducation,
         'skills': skillsList,
         'preferred_job_type': _selectedJobType,
       };
-
-      // Determine if profile is now complete
-      // We consider it complete if name and city are provided (basic info)
       final name = _nameController.text.trim();
       final city = _cityController.text.trim();
       if (name.isNotEmpty && city.isNotEmpty && name != 'User') {
@@ -227,6 +255,52 @@ class _EditSeekerProfileScreenState extends State<EditSeekerProfileScreen> {
                     borderSide: BorderSide.none,
                   ),
                 ),
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _phoneController,
+                keyboardType: TextInputType.phone,
+                decoration: const InputDecoration(
+                  labelText: 'Phone Number',
+                  prefixIcon: Icon(Icons.phone_outlined),
+                  filled: true,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(12)),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+                validator: (v) => v?.isNotEmpty == true && v!.length < 10
+                    ? 'Enter valid phone'
+                    : null,
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _emailController,
+                keyboardType: TextInputType.emailAddress,
+                readOnly: _useLoginEmail,
+                decoration: const InputDecoration(
+                  labelText: 'Email Address',
+                  prefixIcon: Icon(Icons.email_outlined),
+                  filled: true,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(12)),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+                validator: (v) => v?.isNotEmpty == true && !v!.contains('@')
+                    ? 'Enter valid email'
+                    : null,
+              ),
+              CheckboxListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text(
+                  'Use Login Email',
+                  style: TextStyle(fontSize: 14),
+                ),
+                value: _useLoginEmail,
+                onChanged: _toggleLoginEmail,
+                controlAffinity: ListTileControlAffinity.leading,
+                activeColor: theme.colorScheme.primary,
               ),
               const SizedBox(height: 32),
               Text('Professional Details', style: theme.textTheme.titleMedium),

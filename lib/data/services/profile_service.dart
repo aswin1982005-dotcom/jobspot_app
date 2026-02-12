@@ -55,8 +55,8 @@ class ProfileService {
     if (updateData.isNotEmpty) {
       await _supabase
           .from('employer_profiles')
-          .upsert(updateData)
-          .eq('id', userId);
+          .update(updateData)
+          .eq('user_id', userId);
     }
   }
 
@@ -77,7 +77,7 @@ class ProfileService {
       await _supabase
           .from('job_seeker_profiles')
           .upsert(updateData)
-          .eq('id', userId);
+          .eq('user_id', userId);
     }
   }
 
