@@ -240,10 +240,25 @@ class ThemeModeTile extends StatelessWidget {
   }
 }
 
-class LogoutButton extends StatelessWidget {
-  final VoidCallback onLogout;
+class LogoutButton extends StatefulWidget {
+  final Future<void> Function() onLogout;
 
   const LogoutButton({super.key, required this.onLogout});
+
+  @override
+  State<LogoutButton> createState() => _LogoutButtonState();
+}
+
+class _LogoutButtonState extends State<LogoutButton> {
+  bool _isLoading = false;
+
+  Future<void> _handleLogout() async {
+    setState(() => _isLoading = true);
+    await widget.onLogout();
+    if (mounted) {
+      setState(() => _isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -251,9 +266,21 @@ class LogoutButton extends StatelessWidget {
     return SizedBox(
       width: double.infinity,
       child: OutlinedButton.icon(
-        onPressed: onLogout,
-        icon: Icon(Icons.logout, color: colorScheme.error),
-        label: Text('Logout', style: TextStyle(color: colorScheme.error)),
+        onPressed: _isLoading ? null : _handleLogout,
+        icon: _isLoading
+            ? SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: colorScheme.error,
+                ),
+              )
+            : Icon(Icons.logout, color: colorScheme.error),
+        label: Text(
+          _isLoading ? 'Logging out...' : 'Logout',
+          style: TextStyle(color: colorScheme.error),
+        ),
         style: OutlinedButton.styleFrom(
           padding: const EdgeInsets.symmetric(vertical: 16),
           side: BorderSide(color: colorScheme.error),

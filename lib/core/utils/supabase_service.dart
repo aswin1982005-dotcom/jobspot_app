@@ -19,6 +19,7 @@ class SupabaseService {
     return _client.auth.signInWithOAuth(
       OAuthProvider.google,
       redirectTo: 'io.supabase.flutterquickstart://login-callback/',
+      queryParams: {'prompt': 'select_account'},
     );
   }
 
