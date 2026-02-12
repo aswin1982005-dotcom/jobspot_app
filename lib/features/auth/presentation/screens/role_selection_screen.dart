@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:jobspot_app/core/theme/app_theme.dart';
 import 'package:jobspot_app/features/auth/presentation/screens/signup_screen.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:jobspot_app/core/utils/supabase_service.dart';
+import 'package:jobspot_app/features/profile/presentation/screens/edit_employer_profile_screen.dart';
+import 'package:jobspot_app/features/profile/presentation/screens/edit_seeker_profile_screen.dart';
+import 'package:jobspot_app/data/services/profile_service.dart';
 
 class RoleSelectionScreen extends StatefulWidget {
   const RoleSelectionScreen({super.key});
@@ -12,6 +15,7 @@ class RoleSelectionScreen extends StatefulWidget {
 
 class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
   String? _selectedRole;
+  bool _isLoading = false;
 
   @override
   Widget build(BuildContext context) {
@@ -22,16 +26,11 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () async {
-            if (Supabase.instance.client.auth.currentUser != null) {
-              await Supabase.instance.client.auth.signOut();
-            } else {
-              Navigator.pop(context);
-            }
-          },
-        ),
+        automaticallyImplyLeading: false, // No back button
+        actions: [
+          // Optional: Add sign out button if needed, but user didn't explicitly ask for it here.
+          // Keeping it clean as requested.
+        ],
       ),
       body: SafeArea(
         child: Padding(
@@ -74,34 +73,82 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
 
               const Spacer(),
 
-              ElevatedButton(
-                onPressed: _selectedRole == null
-                    ? null
-                    : () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) =>
-                                SignupScreen(role: _selectedRole!),
-                          ),
-                        );
-                      },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.darkPurple,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+              if (_isLoading)
+                const Center(child: CircularProgressIndicator())
+              else
+                ElevatedButton(
+                  onPressed: _selectedRole == null
+                      ? null
+                      : () async {
+                          setState(() => _isLoading = true);
+                          try {
+                            final user = SupabaseService.getCurrentUser();
+                            if (user != null) {
+                              // 1. Create Initial Profile
+                              await ProfileService.createInitialProfile(
+                                user.id,
+                                _selectedRole!,
+                              );
+
+                              if (!mounted) return;
+
+                              // 2. Navigate to Edit Profile with Slide Transition
+                              Widget nextScreen;
+                              if (_selectedRole == 'seeker') {
+                                nextScreen = const EditSeekerProfileScreen(
+                                  profile: null, // New profile
+                                );
+                              } else {
+                                nextScreen = const EditEmployerProfileScreen(
+                                  profile: null, // New profile
+                                );
+                              }
+
+                              // ignore: use_build_context_synchronously
+                              Navigator.push(
+                                context,
+                                _createSlideRoute(nextScreen),
+                              );
+                            } else {
+                              // Fallback for non-auth flow (shouldn't happen in this context usually)
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      SignupScreen(role: _selectedRole!),
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            if (mounted) {
+                              // ignore: use_build_context_synchronously
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Error: $e'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                            }
+                          } finally {
+                            if (mounted) setState(() => _isLoading = false);
+                          }
+                        },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.darkPurple,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text(
+                    'Continue',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
-                child: const Text(
-                  'Continue',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
             ],
           ),
         ),
@@ -184,6 +231,24 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  Route _createSlideRoute(Widget page) {
+    return PageRouteBuilder(
+      pageBuilder: (context, animation, secondaryAnimation) => page,
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        const begin = Offset(1.0, 0.0);
+        const end = Offset.zero;
+        const curve = Curves.easeInOut;
+
+        var tween = Tween(
+          begin: begin,
+          end: end,
+        ).chain(CurveTween(curve: curve));
+
+        return SlideTransition(position: animation.drive(tween), child: child);
+      },
     );
   }
 }

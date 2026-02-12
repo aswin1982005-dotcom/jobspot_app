@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:jobspot_app/features/dashboard/presentation/screens/admin_dashboard.dart';
+
 import 'package:jobspot_app/features/auth/presentation/screens/role_selection_screen.dart';
 import 'package:jobspot_app/features/auth/presentation/widgets/social_button.dart';
 import 'package:jobspot_app/features/dashboard/presentation/screens/seeker_dashboard.dart';
+import 'package:jobspot_app/core/utils/supabase_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:jobspot_app/features/dashboard/presentation/screens/employer_dashboard.dart';
 import 'package:jobspot_app/features/auth/presentation/screens/forgot_password_screen.dart';
+import 'package:jobspot_app/features/auth/presentation/screens/otp_login_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -41,7 +43,6 @@ class _LoginScreenState extends State<LoginScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(e.message), backgroundColor: Colors.red),
           );
-          print(e.message);
         }
       } catch (e) {
         if (mounted) {
@@ -54,6 +55,43 @@ class _LoginScreenState extends State<LoginScreen> {
         }
       } finally {
         if (mounted) setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  Future<void> _handleSocialLogin(Future<bool> Function() signInMethod) async {
+    setState(() => _isLoading = true);
+    try {
+      final success = await signInMethod();
+      if (!success) {
+        if (mounted) {
+          setState(() => _isLoading = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Social login cancelled or failed.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+      // If success is true, the browser opens and the auth listener will handle navigation upon redirect.
+      // We can keep loading true until then, or let the user see the previous screen.
+    } on AuthException catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.message), backgroundColor: Colors.red),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Login failed: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     }
   }
@@ -208,14 +246,9 @@ class _LoginScreenState extends State<LoginScreen> {
                       child: SocialButton(
                         icon: Icons.g_mobiledata,
                         label: 'Google',
-                        onPressed: () {
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const SeekerDashboard(),
-                            ),
-                          );
-                        },
+                        onPressed: () => _handleSocialLogin(
+                          SupabaseService.signInWithGoogle,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -223,14 +256,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       child: SocialButton(
                         icon: Icons.apple,
                         label: 'Apple',
-                        onPressed: () {
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const EmployerDashboard(),
-                            ),
-                          );
-                        },
+                        onPressed: () =>
+                            _handleSocialLogin(SupabaseService.signInWithApple),
                       ),
                     ),
                   ],
@@ -239,10 +266,10 @@ class _LoginScreenState extends State<LoginScreen> {
                 // Phone OTP Button
                 OutlinedButton.icon(
                   onPressed: () {
-                    Navigator.pushReplacement(
+                    Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => const AdminDashboard(),
+                        builder: (context) => const OtpLoginScreen(),
                       ),
                     );
                   },

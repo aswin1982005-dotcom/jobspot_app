@@ -1,5 +1,5 @@
-import 'dart:io';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter/foundation.dart';
 
 class ProfileService {
   static final _supabase = Supabase.instance.client;
@@ -81,21 +81,16 @@ class ProfileService {
     }
   }
 
-  static Future<String?> uploadResume(
-    String userId,
-    File file,
-    String extension,
-  ) async {
-    final fileName =
-        '$userId/resume_${DateTime.now().millisecondsSinceEpoch}.$extension';
+  static Future<void> createInitialProfile(String userId, String role) async {
     try {
-      await _supabase.storage
-          .from('resumes')
-          .upload(fileName, file, fileOptions: const FileOptions(upsert: true));
-      return _supabase.storage.from('resumes').getPublicUrl(fileName);
+      // 1. Create/Update user_profiles entry
+      await _supabase.from('user_profiles').upsert({
+        'user_id': userId,
+        'role': role,
+        'profile_completed': false,
+      });
     } catch (e) {
-      // If bucket doesn't exist or permission denied
-      print('Error uploading resume: $e');
+      debugPrint('Error creating initial profile: $e');
       rethrow;
     }
   }

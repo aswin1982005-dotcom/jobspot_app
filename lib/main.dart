@@ -176,6 +176,11 @@ class _RootPageState extends State<RootPage> {
         return;
       }
 
+      if (profile["role"] == null) {
+        _updateHome(const RoleSelectionScreen());
+        return;
+      }
+
       if (profile['account_disabled'] == true) {
         _updateHome(UnableAccountPage(userProfile: profile));
         return;

@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:jobspot_app/core/theme/app_theme.dart';
 import 'package:jobspot_app/features/auth/presentation/widgets/social_button.dart';
+import 'package:jobspot_app/core/utils/supabase_service.dart';
+import 'package:jobspot_app/features/dashboard/presentation/screens/seeker_dashboard.dart';
+import 'package:jobspot_app/features/dashboard/presentation/screens/employer_dashboard.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class SignupScreen extends StatefulWidget {
@@ -8,6 +11,7 @@ class SignupScreen extends StatefulWidget {
 
   const SignupScreen({super.key, required this.role});
 
+  @override
   @override
   State<SignupScreen> createState() => _SignupScreenState();
 }
@@ -19,6 +23,51 @@ class _SignupScreenState extends State<SignupScreen> {
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
   bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _setupAuthListener();
+  }
+
+  void _setupAuthListener() {
+    Supabase.instance.client.auth.onAuthStateChange.listen((data) async {
+      final event = data.event;
+      if (event == AuthChangeEvent.signedIn) {
+        if (!mounted) return;
+        final user = data.session?.user;
+        // Make sure we have the role metadata if not present (although usually user might already exist)
+        // If it's a new user, Supabase might not have metadata yet if we didn't send it in signInWithOAuth options?
+        // signInWithOAuth supports scopes and queryparams, but metadata is usually part of user object if stored.
+        // For now, checks if role is missing and updates it.
+
+        var currentRole = user?.userMetadata?['role'];
+        if (currentRole == null && user != null) {
+          // It's possible this is a new user from OAuth.
+          try {
+            await SupabaseService.updateUserMetadata({'role': widget.role});
+            currentRole = widget.role;
+          } catch (_) {}
+        }
+
+        if (!mounted) return;
+
+        final effectiveRole = currentRole ?? widget.role;
+
+        if (effectiveRole == 'seeker') {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const SeekerDashboard()),
+          );
+        } else {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const EmployerDashboard()),
+          );
+        }
+      }
+    });
+  }
 
   @override
   void dispose() {
@@ -65,6 +114,42 @@ class _SignupScreenState extends State<SignupScreen> {
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _handleSocialLogin(Future<bool> Function() signInMethod) async {
+    setState(() => _isLoading = true);
+    try {
+      final success = await signInMethod();
+      if (!success) {
+        if (mounted) {
+          setState(() => _isLoading = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Social login cancelled or failed.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+      // If success, wait for auth listener.
+    } on AuthException catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.message), backgroundColor: Colors.red),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Signup failed: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -219,9 +304,9 @@ class _SignupScreenState extends State<SignupScreen> {
                       child: SocialButton(
                         icon: Icons.g_mobiledata,
                         label: 'Google',
-                        onPressed: () {
-                          // Social login logic
-                        },
+                        onPressed: () => _handleSocialLogin(
+                          SupabaseService.signInWithGoogle,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -229,7 +314,8 @@ class _SignupScreenState extends State<SignupScreen> {
                       child: SocialButton(
                         icon: Icons.apple,
                         label: 'Apple',
-                        onPressed: () {},
+                        onPressed: () =>
+                            _handleSocialLogin(SupabaseService.signInWithApple),
                       ),
                     ),
                   ],

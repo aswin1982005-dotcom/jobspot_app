@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:jobspot_app/core/theme/app_theme.dart';
 import 'package:jobspot_app/data/services/profile_service.dart';
 import 'package:jobspot_app/core/utils/supabase_service.dart';
+import 'package:jobspot_app/features/profile/presentation/screens/profile_loading_screen.dart';
 
 class EditSeekerProfileScreen extends StatefulWidget {
   final Map<String, dynamic>? profile;
@@ -17,10 +18,20 @@ class _EditSeekerProfileScreenState extends State<EditSeekerProfileScreen> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _nameController;
   late final TextEditingController _cityController;
-  late final TextEditingController _educationController;
   late final TextEditingController _skillsController;
 
   bool _isLoading = false;
+
+  final List<String> _educationLevels = [
+    '10th',
+    'Plus Two',
+    'Diploma',
+    'UG Degree',
+    'PG Degree',
+    'Masters',
+  ];
+
+  String? _selectedEducation;
 
   final List<String> _jobTypes = [
     'Full-time',
@@ -38,9 +49,18 @@ class _EditSeekerProfileScreenState extends State<EditSeekerProfileScreen> {
     final profile = widget.profile;
     _nameController = TextEditingController(text: profile?['full_name'] ?? '');
     _cityController = TextEditingController(text: profile?['city'] ?? '');
-    _educationController = TextEditingController(
-      text: profile?['education_level'] ?? '',
-    );
+
+    _selectedEducation = profile?['education_level'];
+    if (_selectedEducation != null &&
+        !_educationLevels.contains(_selectedEducation)) {
+      // Handle case where existing value isn't in list, or default to null
+      if (_educationLevels.contains(_selectedEducation)) {
+        // It's valid
+      } else {
+        _selectedEducation = null;
+      }
+    }
+
     _skillsController = TextEditingController(
       text: (profile?['skills'] as List?)?.join(', ') ?? '',
     );
@@ -54,7 +74,7 @@ class _EditSeekerProfileScreenState extends State<EditSeekerProfileScreen> {
   void dispose() {
     _nameController.dispose();
     _cityController.dispose();
-    _educationController.dispose();
+    // _educationController.dispose(); // Removed
     _skillsController.dispose();
     super.dispose();
   }
@@ -78,7 +98,7 @@ class _EditSeekerProfileScreenState extends State<EditSeekerProfileScreen> {
         'user_id': userId,
         'full_name': _nameController.text.trim(),
         'city': _cityController.text.trim(),
-        'education_level': _educationController.text.trim(),
+        'education_level': _selectedEducation,
         'skills': skillsList,
         'preferred_job_type': _selectedJobType,
       };
@@ -94,10 +114,21 @@ class _EditSeekerProfileScreenState extends State<EditSeekerProfileScreen> {
       await ProfileService.updateSeekerProfile(userId, updateData);
 
       if (mounted) {
-        Navigator.pop(context, true);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Profile updated successfully')),
-        );
+        if (widget.profile == null) {
+          // New Profile Creation Flow
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const ProfileLoadingScreen(role: 'seeker'),
+            ),
+          );
+        } else {
+          // Edit Profile Flow
+          Navigator.pop(context, true);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Profile updated successfully')),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -200,8 +231,8 @@ class _EditSeekerProfileScreenState extends State<EditSeekerProfileScreen> {
               const SizedBox(height: 32),
               Text('Professional Details', style: theme.textTheme.titleMedium),
               const SizedBox(height: 16),
-              TextFormField(
-                controller: _educationController,
+              DropdownButtonFormField<String>(
+                value: _selectedEducation,
                 decoration: const InputDecoration(
                   labelText: 'Education Level',
                   prefixIcon: Icon(Icons.school_outlined),
@@ -211,6 +242,13 @@ class _EditSeekerProfileScreenState extends State<EditSeekerProfileScreen> {
                     borderSide: BorderSide.none,
                   ),
                 ),
+                items: _educationLevels.map((level) {
+                  return DropdownMenuItem(value: level, child: Text(level));
+                }).toList(),
+                onChanged: _isLoading
+                    ? null
+                    : (value) => setState(() => _selectedEducation = value),
+                validator: (value) => value == null ? 'Required' : null,
               ),
               const SizedBox(height: 16),
               TextFormField(

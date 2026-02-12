@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:jobspot_app/core/theme/app_theme.dart';
 import 'package:jobspot_app/data/services/profile_service.dart';
+import 'package:jobspot_app/features/profile/presentation/screens/profile_loading_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class EditEmployerProfileScreen extends StatefulWidget {
@@ -90,7 +91,19 @@ class _EditEmployerProfileScreenState extends State<EditEmployerProfileScreen> {
       await ProfileService.updateEmployerProfile(userId, updates);
 
       if (mounted) {
-        Navigator.pop(context, true); // Return true to indicate success
+        if (widget.profile == null) {
+          // New Profile Creation Flow
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) =>
+                  const ProfileLoadingScreen(role: 'employer'),
+            ),
+          );
+        } else {
+          // Edit Profile Flow
+          Navigator.pop(context, true); // Return true to indicate success
+        }
       }
     } catch (e) {
       if (mounted) {
