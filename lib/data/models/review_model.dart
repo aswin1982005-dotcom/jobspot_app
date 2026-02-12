@@ -27,8 +27,10 @@ class ReviewModel {
     if (json['reviewer'] != null) {
       final reviewer = json['reviewer'];
       if (reviewer is Map) {
-        name = reviewer['full_name'] ?? reviewer['company_name'];
-        avatar = reviewer['avatar_url']; // Fixed typo
+        // Check both possible keys for name
+        name =
+            reviewer['full_name'] ?? reviewer['company_name'] ?? 'Unknown User';
+        avatar = reviewer['avatar_url'];
       }
     }
 
@@ -39,7 +41,7 @@ class ReviewModel {
       rating: json['rating'],
       comment: json['comment'],
       createdAt: DateTime.parse(json['created_at']),
-      reviewerName: name,
+      reviewerName: name ?? 'Anonymous',
       reviewerAvatar: avatar,
     );
   }

@@ -56,7 +56,7 @@ class ApplicationService {
     final profilesResponse = await _client
         .from('job_seeker_profiles')
         .select(
-          'user_id, full_name, profile_photo, city, skills, education_level, availability_status, email, phone',
+          'user_id, full_name, avatar_url, city, skills, education_level, availability_status, email, phone',
         )
         .filter('user_id', 'in', applicantIds);
 

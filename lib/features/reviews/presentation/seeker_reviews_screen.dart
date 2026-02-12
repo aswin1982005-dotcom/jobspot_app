@@ -5,21 +5,24 @@ import 'package:jobspot_app/features/reviews/presentation/add_review_screen.dart
 import 'package:timeago/timeago.dart' as timeago;
 import 'package:cached_network_image/cached_network_image.dart';
 
-class CompanyReviewsScreen extends StatefulWidget {
-  final String companyId;
-  final String companyName;
+class SeekerReviewsScreen extends StatefulWidget {
+  final String seekerId;
+  final String seekerName;
+  final bool
+  canWriteReview; // Only employers who hired/connected should effectively write reviews, or at least be an employer
 
-  const CompanyReviewsScreen({
+  const SeekerReviewsScreen({
     super.key,
-    required this.companyId,
-    required this.companyName,
+    required this.seekerId,
+    required this.seekerName,
+    this.canWriteReview = false,
   });
 
   @override
-  State<CompanyReviewsScreen> createState() => _CompanyReviewsScreenState();
+  State<SeekerReviewsScreen> createState() => _SeekerReviewsScreenState();
 }
 
-class _CompanyReviewsScreenState extends State<CompanyReviewsScreen> {
+class _SeekerReviewsScreenState extends State<SeekerReviewsScreen> {
   final ReviewService _reviewService = ReviewService();
   late Future<List<ReviewModel>> _reviewsFuture;
 
@@ -31,32 +34,34 @@ class _CompanyReviewsScreenState extends State<CompanyReviewsScreen> {
 
   void _loadReviews() {
     setState(() {
-      _reviewsFuture = _reviewService.fetchCompanyReviews(widget.companyId);
+      _reviewsFuture = _reviewService.fetchSeekerReviews(widget.seekerId);
     });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('${widget.companyName} Reviews')),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () async {
-          final result = await Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => AddReviewScreen(
-                revieweeId: widget.companyId,
-                revieweeName: widget.companyName,
-              ),
-            ),
-          );
-          if (result == true) {
-            _loadReviews(); // Refresh after adding
-          }
-        },
-        label: const Text('Write Review'),
-        icon: const Icon(Icons.rate_review),
-      ),
+      appBar: AppBar(title: Text('${widget.seekerName} Reviews')),
+      floatingActionButton: widget.canWriteReview
+          ? FloatingActionButton.extended(
+              onPressed: () async {
+                final result = await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => AddReviewScreen(
+                      revieweeId: widget.seekerId,
+                      revieweeName: widget.seekerName,
+                    ),
+                  ),
+                );
+                if (result == true) {
+                  _loadReviews(); // Refresh after adding
+                }
+              },
+              label: const Text('Rate Employee'),
+              icon: const Icon(Icons.rate_review),
+            )
+          : null,
       body: FutureBuilder<List<ReviewModel>>(
         future: _reviewsFuture,
         builder: (context, snapshot) {
@@ -86,7 +91,10 @@ class _CompanyReviewsScreenState extends State<CompanyReviewsScreen> {
                     style: TextStyle(fontSize: 18, color: Colors.grey[600]),
                   ),
                   const SizedBox(height: 8),
-                  const Text('Be the first to share your experience!'),
+                  if (widget.canWriteReview)
+                    const Text('Be the first to rate this employee!')
+                  else
+                    const Text('This seeker has no reviews yet.'),
                 ],
               ),
             );
@@ -154,14 +162,18 @@ class _CompanyReviewsScreenState extends State<CompanyReviewsScreen> {
                                   review.reviewerName
                                           ?.substring(0, 1)
                                           .toUpperCase() ??
-                                      'U',
+                                      'C',
                                 )
                               : null,
                         ),
                         title: Row(
                           children: [
-                            Text(review.reviewerName ?? 'Anonymous'),
-                            const Spacer(),
+                            Expanded(
+                              child: Text(
+                                review.reviewerName ?? 'Anonymous Company',
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
                             Text(
                               timeago.format(review.createdAt),
                               style: Theme.of(context).textTheme.bodySmall,

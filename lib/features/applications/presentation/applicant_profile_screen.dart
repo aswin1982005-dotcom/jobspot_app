@@ -4,6 +4,7 @@ import 'package:jobspot_app/data/services/application_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:jobspot_app/features/reviews/presentation/add_review_screen.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:jobspot_app/features/reviews/presentation/seeker_reviews_screen.dart';
 
 class ApplicantProfileScreen extends StatefulWidget {
   final Map<String, dynamic> application;
@@ -77,6 +78,23 @@ class _ApplicantProfileScreenState extends State<ApplicantProfileScreen> {
         title: const Text('Applicant Profile'),
         elevation: 0,
         actions: [
+          IconButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => SeekerReviewsScreen(
+                    seekerId: applicant['user_id'],
+                    seekerName: applicant['full_name'] ?? 'Candidate',
+                    canWriteReview:
+                        true, // Employer viewing applicant can write reviews
+                  ),
+                ),
+              );
+            },
+            icon: const Icon(Icons.reviews_outlined),
+            tooltip: 'See Reviews',
+          ),
           IconButton(
             onPressed: () {
               Navigator.push(

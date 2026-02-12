@@ -8,7 +8,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:jobspot_app/core/theme/app_theme.dart';
 import 'package:jobspot_app/core/theme/map_styles.dart';
-import 'package:jobspot_app/core/utils/map_clustering_helper.dart'; // Import Custom Clusterer
+import 'package:jobspot_app/core/utils/map_clustering_helper.dart';
 import 'package:jobspot_app/features/jobs/presentation/job_details_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:provider/provider.dart';
@@ -48,10 +48,8 @@ class _MapTabState extends State<MapTab> {
 
   List<Map<String, dynamic>>? _lastJobs;
 
-  // Icons cache
   final Map<String, BitmapDescriptor> _iconCache = {};
 
-  // Search & Filter
   final TextEditingController _searchController = TextEditingController();
   final List<String> _selectedJobTypes = [];
   final List<String> _jobTypes = [
@@ -142,11 +140,11 @@ class _MapTabState extends State<MapTab> {
     );
     _iconCache['selected_medium'] = await _getBitmapDescriptor(
       'assets/icons/map_icon_1.png',
-      64,
+      56,
     );
     _iconCache['selected_large'] = await _getBitmapDescriptor(
       'assets/icons/map_icon_1.png',
-      80,
+      72,
     );
 
     if (mounted) setState(() {});
@@ -192,12 +190,10 @@ class _MapTabState extends State<MapTab> {
       }).toList();
     }
 
-    // Run clustering
     _clusterItems(filtered);
   }
 
   Future<void> _clusterItems(List<JobItem> items) async {
-    // Run clustering implementation
     final clusters = MapClusterer.cluster(items, _currentZoom);
     final markers = <Marker>{};
 

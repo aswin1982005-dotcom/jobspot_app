@@ -4,21 +4,107 @@ import 'package:jobspot_app/data/models/review_model.dart';
 class ReviewService {
   final SupabaseClient _client = Supabase.instance.client;
 
-  /// Fetch reviews for a specific user (company or seeker)
-  Future<List<ReviewModel>> fetchReviews(String revieweeId) async {
+  /// Fetch reviews for a specific Company (Reviewers are Seekers)
+  Future<List<ReviewModel>> fetchCompanyReviews(String companyId) async {
     try {
-      final response = await _client
+      // 1. Fetch reviews
+      final reviewsResponse = await _client
           .from('reviews')
-          .select(
-            '*, reviewer:reviewer_id(full_name, company_name, avatar_url)',
-          )
-          .eq('reviewee_id', revieweeId)
+          .select()
+          .eq('reviewee_id', companyId)
           .order('created_at', ascending: false);
 
-      final List<dynamic> data = response as List<dynamic>;
-      return data.map((json) => ReviewModel.fromJson(json)).toList();
+      final List<dynamic> reviewsData = reviewsResponse as List<dynamic>;
+      if (reviewsData.isEmpty) return [];
+
+      // 2. Extract reviewer IDs
+      final reviewerIds = reviewsData
+          .map((r) => r['reviewer_id'])
+          .toSet()
+          .toList();
+
+      // 3. Fetch Seeker Profiles
+      final profilesResponse = await _client
+          .from('job_seeker_profiles')
+          .select('user_id, full_name, avatar_url')
+          .filter('user_id', 'in', reviewerIds);
+
+      final List<dynamic> profilesData = profilesResponse as List<dynamic>;
+
+      // 4. Create a map for quick lookup: user_id -> profile data
+      final Map<String, dynamic> profilesMap = {
+        for (var p in profilesData) p['user_id']: p,
+      };
+
+      // 5. Merge and return
+      return reviewsData.map((reviewJson) {
+        final reviewerId = reviewJson['reviewer_id'];
+        final profile = profilesMap[reviewerId];
+
+        // Manually construct or Inject profile data into json to use fromJson?
+        // Let's use simpler approach: copy the json and add the 'reviewer' object
+        // that ReviewModel.fromJson expects.
+
+        final Map<String, dynamic> mergedJson = Map.from(reviewJson);
+        if (profile != null) {
+          mergedJson['reviewer'] = profile;
+        }
+
+        return ReviewModel.fromJson(mergedJson);
+      }).toList();
     } catch (e) {
-      throw Exception('Failed to load reviews: $e');
+      print('Error fetching company reviews: $e');
+      throw Exception('Failed to load company reviews: $e');
+    }
+  }
+
+  /// Fetch reviews for a specific Seeker (Reviewers are Employers)
+  Future<List<ReviewModel>> fetchSeekerReviews(String seekerId) async {
+    try {
+      // 1. Fetch reviews
+      final reviewsResponse = await _client
+          .from('reviews')
+          .select()
+          .eq('reviewee_id', seekerId)
+          .order('created_at', ascending: false);
+
+      final List<dynamic> reviewsData = reviewsResponse as List<dynamic>;
+      if (reviewsData.isEmpty) return [];
+
+      // 2. Extract reviewer IDs
+      final reviewerIds = reviewsData
+          .map((r) => r['reviewer_id'])
+          .toSet()
+          .toList();
+
+      // 3. Fetch Employer Profiles
+      final profilesResponse = await _client
+          .from('employer_profiles')
+          .select('user_id, company_name, avatar_url')
+          .filter('user_id', 'in', reviewerIds);
+
+      final List<dynamic> profilesData = profilesResponse as List<dynamic>;
+
+      // 4. Map user_id -> profile
+      final Map<String, dynamic> profilesMap = {
+        for (var p in profilesData) p['user_id']: p,
+      };
+
+      // 5. Merge
+      return reviewsData.map((reviewJson) {
+        final reviewerId = reviewJson['reviewer_id'];
+        final profile = profilesMap[reviewerId];
+
+        final Map<String, dynamic> mergedJson = Map.from(reviewJson);
+        if (profile != null) {
+          mergedJson['reviewer'] = profile;
+        }
+
+        return ReviewModel.fromJson(mergedJson);
+      }).toList();
+    } catch (e) {
+      print('Error fetching seeker reviews: $e');
+      throw Exception('Failed to load seeker reviews: $e');
     }
   }
 

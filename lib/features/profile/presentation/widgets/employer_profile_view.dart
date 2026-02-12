@@ -5,6 +5,7 @@ import 'package:jobspot_app/features/profile/presentation/screens/edit_employer_
 import 'package:jobspot_app/features/profile/presentation/widgets/profile_widgets.dart';
 import 'package:jobspot_app/features/profile/presentation/screens/settings_screen.dart';
 import 'package:jobspot_app/features/profile/presentation/screens/help_support_screen.dart';
+import 'package:jobspot_app/features/reviews/presentation/company_reviews_screen.dart';
 
 class EmployerProfileView extends StatefulWidget {
   const EmployerProfileView({super.key});
@@ -131,6 +132,24 @@ class _EmployerProfileViewState extends State<EmployerProfileView> {
                         builder: (context) => const SettingsScreen(),
                       ),
                     );
+                  },
+                ),
+                ProfileMenuTile(
+                  icon: Icons.star_outline,
+                  title: 'My Company Reviews',
+                  onTap: () {
+                    if (_profile != null) {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => CompanyReviewsScreen(
+                            companyId: SupabaseService.getCurrentUser()!.id,
+                            companyName:
+                                _profile!['company_name'] ?? 'My Company',
+                          ),
+                        ),
+                      );
+                    }
                   },
                 ),
                 ProfileMenuTile(

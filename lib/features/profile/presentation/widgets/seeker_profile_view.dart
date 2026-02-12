@@ -7,6 +7,7 @@ import 'package:jobspot_app/features/profile/presentation/screens/settings_scree
 import 'package:jobspot_app/features/profile/presentation/screens/help_support_screen.dart';
 import 'package:jobspot_app/features/profile/presentation/providers/profile_provider.dart';
 import 'package:provider/provider.dart';
+import 'package:jobspot_app/features/reviews/presentation/seeker_reviews_screen.dart';
 
 class SeekerProfileView extends StatelessWidget {
   const SeekerProfileView({super.key});
@@ -128,6 +129,27 @@ class SeekerProfileView extends StatelessWidget {
                       title: 'Notifications',
                       onTap: () {
                         // For now link to settings or show snackbar
+                      },
+                    ),
+
+                    // See Reviews
+                    ProfileMenuTile(
+                      icon: Icons.star_outline,
+                      title: 'My Reviews',
+                      onTap: () {
+                        if (profile != null) {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => SeekerReviewsScreen(
+                                seekerId: SupabaseService.getCurrentUser()!.id,
+                                seekerName: profile['full_name'] ?? 'Me',
+                                canWriteReview:
+                                    false, // User can't review themselves
+                              ),
+                            ),
+                          );
+                        }
                       },
                     ),
 

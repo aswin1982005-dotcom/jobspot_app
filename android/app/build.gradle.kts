@@ -41,6 +41,7 @@ android {
         versionCode = flutter.versionCode
         versionName = flutter.versionName
         manifestPlaceholders["MAPS_API_KEY"] = envProperties.getProperty("GOOGLE_MAPS_API_KEY") ?: ""
+        manifestPlaceholders["ONESIGNAL_APP_ID"] = envProperties.getProperty("ONESIGNAL_APP_ID") ?: ""
     }
 
 

@@ -595,8 +595,8 @@ class _JobDetailsScreenState extends State<JobDetailsScreen>
           InkWell(
             onTap: () {
               if (isSeeker) {
-                final companyId = _currentJob['user_id'];
-                if (companyId != null && companyId is String) {
+                final companyId = _currentJob['employer_id'];
+                if (companyId != null) {
                   Navigator.push(
                     context,
                     MaterialPageRoute(

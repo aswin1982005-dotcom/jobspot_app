@@ -15,8 +15,8 @@
 
         <meta-data
             android:name="com.onesignal.AppId"
-            android:value="345bb020-288c-4c09-b0b0-4a8d50214761" />
-        
+            android:value="${ONESIGNAL_APP_ID}" />
+
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -35,10 +35,13 @@
             <!-- Add this intent filter for deep links -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
+
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <!-- Accepts URIs that begin with "io.supabase.flutterquickstart://login-callback" -->
-                <data android:scheme="io.supabase.flutterquickstart" android:host="login-callback" />
+                <data
+                    android:scheme="io.supabase.flutterquickstart"
+                    android:host="login-callback" />
             </intent-filter>
         </activity>
 
