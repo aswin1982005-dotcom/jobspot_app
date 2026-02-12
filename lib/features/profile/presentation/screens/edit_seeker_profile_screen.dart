@@ -1,9 +1,7 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:jobspot_app/core/theme/app_theme.dart';
 import 'package:jobspot_app/data/services/profile_service.dart';
 import 'package:jobspot_app/core/utils/supabase_service.dart';
-import 'package:file_picker/file_picker.dart';
 
 class EditSeekerProfileScreen extends StatefulWidget {
   final Map<String, dynamic>? profile;
@@ -23,8 +21,6 @@ class _EditSeekerProfileScreenState extends State<EditSeekerProfileScreen> {
   late final TextEditingController _skillsController;
 
   bool _isLoading = false;
-  String? _resumeFileName;
-  String? _uploadedResumeUrl;
 
   final List<String> _jobTypes = [
     'Full-time',
@@ -63,57 +59,6 @@ class _EditSeekerProfileScreenState extends State<EditSeekerProfileScreen> {
     super.dispose();
   }
 
-  Future<void> _pickResume() async {
-    try {
-      FilePickerResult? result = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['pdf', 'doc', 'docx'],
-      );
-
-      if (result != null && result.files.single.path != null) {
-        setState(() => _isLoading = true);
-
-        final file = File(result.files.single.path!);
-        final userId = SupabaseService.getCurrentUser()?.id;
-
-        if (userId != null) {
-          try {
-            final url = await ProfileService.uploadResume(
-              userId,
-              file,
-              result.files.single.extension ?? 'pdf',
-            );
-
-            setState(() {
-              _resumeFileName = result.files.single.name;
-              // We will save the URL when user clicks Save, store it in a temp variable
-              // Or better, we can update the profile map or a separate variable
-            });
-            // We need a variable to store the uploaded URL to send it during save
-            // Let's add that variable to the class state
-            _uploadedResumeUrl = url;
-
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Resume uploaded successfully')),
-              );
-            }
-          } catch (e) {
-            if (mounted) {
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(SnackBar(content: Text('Upload failed: $e')));
-            }
-          }
-        }
-      }
-    } catch (e) {
-      debugPrint('Error picking file: $e');
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
   Future<void> _handleSave() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -144,10 +89,6 @@ class _EditSeekerProfileScreenState extends State<EditSeekerProfileScreen> {
       final city = _cityController.text.trim();
       if (name.isNotEmpty && city.isNotEmpty && name != 'User') {
         updateData['profile_completed'] = true;
-      }
-
-      if (_uploadedResumeUrl != null) {
-        updateData['resume_url'] = _uploadedResumeUrl;
       }
 
       await ProfileService.updateSeekerProfile(userId, updateData);
@@ -305,55 +246,7 @@ class _EditSeekerProfileScreenState extends State<EditSeekerProfileScreen> {
                     ? null
                     : (value) => setState(() => _selectedJobType = value),
               ),
-              const SizedBox(height: 32),
-              Text('Resume', style: theme.textTheme.titleMedium),
-              const SizedBox(height: 16),
-              InkWell(
-                onTap: _pickResume,
-                borderRadius: BorderRadius.circular(12),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 20,
-                    horizontal: 16,
-                  ),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey.shade300),
-                    borderRadius: BorderRadius.circular(12),
-                    color: theme.colorScheme.surface,
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.upload_file,
-                        color: theme.colorScheme.primary,
-                        size: 28,
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              _resumeFileName ?? 'Upload Resume (PDF/DOC)',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            if (_resumeFileName == null)
-                              Text(
-                                'Tap to select file',
-                                style: TextStyle(
-                                  color: theme.hintColor,
-                                  fontSize: 12,
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+
               const SizedBox(height: 40),
               if (_isLoading)
                 const Center(child: CircularProgressIndicator())

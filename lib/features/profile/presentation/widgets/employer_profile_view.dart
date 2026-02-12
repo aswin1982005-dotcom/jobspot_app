@@ -154,11 +154,10 @@ class _EmployerProfileViewState extends State<EmployerProfileView> {
                     try {
                       await SupabaseService.signOut();
                     } catch (e) {
-                      if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Error signing out: $e')),
-                        );
-                      }
+                      if (!context.mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Error signing out: $e')),
+                      );
                     }
                   },
                 ),

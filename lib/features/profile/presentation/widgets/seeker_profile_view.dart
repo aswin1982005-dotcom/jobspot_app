@@ -7,7 +7,6 @@ import 'package:jobspot_app/features/profile/presentation/screens/settings_scree
 import 'package:jobspot_app/features/profile/presentation/screens/help_support_screen.dart';
 import 'package:jobspot_app/features/profile/presentation/providers/profile_provider.dart';
 import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 class SeekerProfileView extends StatelessWidget {
   const SeekerProfileView({super.key});
@@ -31,7 +30,6 @@ class SeekerProfileView extends StatelessWidget {
         }
 
         final profile = provider.profileData;
-        final hasResume = profile?['resume_url'] != null;
 
         return SingleChildScrollView(
           child: Column(
@@ -124,17 +122,6 @@ class SeekerProfileView extends StatelessWidget {
                       },
                     ),
 
-                    // Resume
-                    ProfileMenuTile(
-                      icon: Icons.description_outlined,
-                      title: 'Resume',
-                      subtitle: hasResume
-                          ? 'View Resume'
-                          : 'Not uploaded, upload now',
-                      subtitleColor: hasResume ? Colors.grey : Colors.red,
-                      onTap: () => _handleResumeTap(context, profile),
-                    ),
-
                     // Notifications (Can link to settings or specific page)
                     ProfileMenuTile(
                       icon: Icons.notifications_outlined,
@@ -193,28 +180,6 @@ class SeekerProfileView extends StatelessWidget {
     );
     if (result == true && context.mounted) {
       context.read<ProfileProvider>().refreshProfile();
-    }
-  }
-
-  Future<void> _handleResumeTap(
-    BuildContext context,
-    Map<String, dynamic>? profile,
-  ) async {
-    final resumeUrl = profile?['resume_url'] as String?;
-    if (resumeUrl != null && resumeUrl.isNotEmpty) {
-      final uri = Uri.parse(resumeUrl);
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri);
-      } else {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Could not launch resume URL')),
-          );
-        }
-      }
-    } else {
-      // Not uploaded -> Go to upload (Edit Screen)
-      _navigateToEditProfile(context, profile);
     }
   }
 }

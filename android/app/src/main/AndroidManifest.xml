@@ -32,6 +32,14 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- Add this intent filter for deep links -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <!-- Accepts URIs that begin with "io.supabase.flutterquickstart://login-callback" -->
+                <data android:scheme="io.supabase.flutterquickstart" android:host="login-callback" />
+            </intent-filter>
         </activity>
 
         <meta-data
