@@ -2,10 +2,8 @@ import 'package:flutter/material.dart';
 
 import 'package:jobspot_app/features/auth/presentation/screens/role_selection_screen.dart';
 import 'package:jobspot_app/features/auth/presentation/widgets/social_button.dart';
-import 'package:jobspot_app/features/dashboard/presentation/screens/seeker_dashboard.dart';
 import 'package:jobspot_app/core/utils/supabase_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:jobspot_app/features/dashboard/presentation/screens/employer_dashboard.dart';
 import 'package:jobspot_app/features/auth/presentation/screens/forgot_password_screen.dart';
 import 'package:jobspot_app/features/auth/presentation/screens/otp_login_screen.dart';
 

@@ -40,6 +40,10 @@ class _MapTabState extends State<MapTab> {
   bool _isLoading = true;
   double _currentZoom = 10.0;
   String? _selectedJobId;
+  CameraPosition _initialPosition = CameraPosition(
+    target: LatLng(19.0760, 72.8777),
+    zoom: 10,
+  );
 
   List<Map<String, dynamic>>? _lastJobs;
 
@@ -56,11 +60,6 @@ class _MapTabState extends State<MapTab> {
     'Internship',
     'Freelance',
   ];
-
-  static const CameraPosition _initialPosition = CameraPosition(
-    target: LatLng(19.0760, 72.8777),
-    zoom: 10,
-  );
 
   @override
   void initState() {
@@ -110,6 +109,16 @@ class _MapTabState extends State<MapTab> {
     LocationPermission permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
+    } else {
+      try {
+        final pos = await Geolocator.getCurrentPosition();
+        _initialPosition = CameraPosition(
+          target: LatLng(pos.latitude, pos.longitude),
+          zoom: 10,
+        );
+      } catch (e) {
+        // Handle error or permission denied silently or via snackbar
+      }
     }
   }
 
@@ -261,9 +270,6 @@ class _MapTabState extends State<MapTab> {
           setState(() {
             _selectedJobId = jobId;
           });
-          // Re-cluster to update icon (since selection state affects it)
-          // We need to fetch currently filtered items again or store them.
-          // For simplicity, just re-running filter works.
           _updateFilteredItems();
           _showJobDetails(item.job);
         },
@@ -311,7 +317,6 @@ class _MapTabState extends State<MapTab> {
   }
 
   void _showJobDetails(Map<String, dynamic> job) {
-    // Capture provider from MapTab context
     final provider = Provider.of<SeekerHomeProvider>(context, listen: false);
 
     showModalBottomSheet(
@@ -410,8 +415,7 @@ class _MapTabState extends State<MapTab> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      resizeToAvoidBottomInset:
-          false, // Prevent map from resizing when keyboard opens
+      resizeToAvoidBottomInset: false,
       body: Stack(
         children: [
           GoogleMap(
@@ -423,7 +427,6 @@ class _MapTabState extends State<MapTab> {
                 : null,
             myLocationButtonEnabled: false,
             myLocationEnabled: true,
-            // Native blue dot
             mapToolbarEnabled: false,
             zoomControlsEnabled: false,
             compassEnabled: true,
@@ -431,10 +434,6 @@ class _MapTabState extends State<MapTab> {
             tiltGesturesEnabled: true,
             onCameraMove: (position) {
               _currentZoom = position.zoom;
-              // Debounce or just update?
-              // For lightweight clustering, we can update on idle usually, but user asked for simple/efficient.
-              // Updating on every move might be expensive if many items.
-              // Let's rely on onCameraIdle for re-clustering to be safe/smooth.
             },
             onCameraIdle: () {
               _updateFilteredItems();

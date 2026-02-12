@@ -232,7 +232,7 @@ class _EditSeekerProfileScreenState extends State<EditSeekerProfileScreen> {
               Text('Professional Details', style: theme.textTheme.titleMedium),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
-                value: _selectedEducation,
+                initialValue: _selectedEducation,
                 decoration: const InputDecoration(
                   labelText: 'Education Level',
                   prefixIcon: Icon(Icons.school_outlined),
