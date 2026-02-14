@@ -45,7 +45,7 @@ class _EditEmployerProfileScreenState extends State<EditEmployerProfileScreen> {
       text: profile['official_email'] ?? '',
     );
     _contactMobileController = TextEditingController(
-      text: profile['contact_mobile'] ?? '',
+      text: profile['contact_mobile'].toString(),
     );
     _descriptionController = TextEditingController(
       text: profile['company_description'] ?? '',

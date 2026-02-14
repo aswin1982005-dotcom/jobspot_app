@@ -52,7 +52,9 @@ class _EditSeekerProfileScreenState extends State<EditSeekerProfileScreen> {
     final profile = widget.profile;
     _nameController = TextEditingController(text: profile?['full_name'] ?? '');
     _cityController = TextEditingController(text: profile?['city'] ?? '');
-    _phoneController = TextEditingController(text: profile?['phone'] ?? '');
+    _phoneController = TextEditingController(
+      text: profile?['phone'].toString(),
+    );
     _emailController = TextEditingController(text: profile?['email'] ?? '');
 
     _checkIfUsingLoginEmail();
