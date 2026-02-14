@@ -26,7 +26,6 @@ class LocationService {
     final data = json.decode(res.body);
 
     if (data['status'] != 'OK') {
-      print('Search Error: ${data['error_message']}');
       return [];
     }
 
@@ -60,6 +59,7 @@ class LocationService {
       result['geometry']['location']['lat'],
       result['geometry']['location']['lng'],
       placeId,
+      result['formatted_address'],
     );
   }
 
@@ -104,6 +104,7 @@ class LocationService {
     double lat,
     double lng,
     String? placeId,
+    String? formattedAddress,
   ) {
     String get(String type) {
       try {
@@ -118,13 +119,19 @@ class LocationService {
 
     final streetNumber = get('street_number');
     final route = get('route');
-    final addressLine = streetNumber.isNotEmpty
-        ? '$streetNumber $route'
-        : route;
+    final addressLine = (streetNumber.isNotEmpty || route.isNotEmpty)
+        ? '$streetNumber $route'.trim()
+        : formattedAddress ?? '';
+
+    // Robust city fallback
+    String city = get('locality');
+    if (city.isEmpty) city = get('sublocality');
+    if (city.isEmpty) city = get('administrative_area_level_2');
+    if (city.isEmpty) city = get('postal_town');
 
     return LocationAddress(
       addressLine: addressLine,
-      city: get('locality').isNotEmpty ? get('locality') : get('sublocality'),
+      city: city,
       state: get('administrative_area_level_1'),
       country: get('country'),
       postalCode: get('postal_code'),

@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:jobspot_app/data/services/application_service.dart';
 import 'package:jobspot_app/data/services/job_service.dart';
+import 'package:jobspot_app/data/services/recommendation_service.dart';
 
 class SeekerHomeProvider extends ChangeNotifier {
   final JobService _jobService = JobService();
   final ApplicationService _applicationService = ApplicationService();
+  final RecommendationService _recommendationService = RecommendationService();
 
   List<Map<String, dynamic>> _savedJobs = [];
   List<Map<String, dynamic>> _recommendedJobs = [];
@@ -42,7 +44,7 @@ class SeekerHomeProvider extends ChangeNotifier {
     try {
       final results = await Future.wait([
         _jobService.fetchSavedJobs(),
-        _jobService.fetchJobs(), // Recommended
+        _recommendationService.getRecommendedJobs(),
         _applicationService.fetchMyApplications(),
       ]);
 
