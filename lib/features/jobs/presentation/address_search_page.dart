@@ -26,7 +26,6 @@ class _AddressSearchPageState extends State<AddressSearchPage> {
     if (_debounce?.isActive ?? false) _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 500), () {
       if (query.isNotEmpty) {
-        print('k');
         _fetchSuggestions(query);
       } else {
         setState(() => _suggestions = []);
@@ -42,12 +41,10 @@ class _AddressSearchPageState extends State<AddressSearchPage> {
         sessionToken: _sessionToken,
       );
       setState(() {
-        print(results);
         _suggestions = results;
         _isLoading = false;
       });
     } catch (e) {
-      print(e);
       setState(() => _isLoading = false);
     }
   }

@@ -275,7 +275,7 @@ class _ApplicantProfileScreenState extends State<ApplicantProfileScreen> {
             ListTile(
               leading: const Icon(Icons.phone_outlined),
               title: const Text('Phone'),
-              subtitle: Text(applicant['phone'] ?? 'No phone provided'),
+              subtitle: Text(applicant['phone']!.toString()),
               contentPadding: EdgeInsets.zero,
               trailing: const Icon(Icons.arrow_forward_ios, size: 16),
               onTap: () async {

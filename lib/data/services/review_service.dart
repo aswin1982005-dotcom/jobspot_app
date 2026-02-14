@@ -53,7 +53,6 @@ class ReviewService {
         return ReviewModel.fromJson(mergedJson);
       }).toList();
     } catch (e) {
-      print('Error fetching company reviews: $e');
       throw Exception('Failed to load company reviews: $e');
     }
   }
@@ -103,7 +102,6 @@ class ReviewService {
         return ReviewModel.fromJson(mergedJson);
       }).toList();
     } catch (e) {
-      print('Error fetching seeker reviews: $e');
       throw Exception('Failed to load seeker reviews: $e');
     }
   }

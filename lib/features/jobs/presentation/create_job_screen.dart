@@ -154,7 +154,6 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
   }
 
   void _updateAddress(LocationAddress result) {
-    print(result);
     setState(() {
       _selectedAddress = result;
       _locationController.text = result.addressLine.isNotEmpty
