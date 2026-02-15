@@ -23,7 +23,7 @@ class AdminService {
         'page_offset': offset,
       },
     );
-    return List<Map<String, dynamic>>.from(response);
+    return (response as List).map((e) => Map<String, dynamic>.from(e)).toList();
   }
 
   /// Disable a user account
@@ -111,7 +111,7 @@ class AdminService {
     final response = await query
         .order('created_at', ascending: false)
         .range(offset, offset + limit - 1);
-    return List<Map<String, dynamic>>.from(response);
+    return (response as List).map((e) => Map<String, dynamic>.from(e)).toList();
   }
 
   /// Admin disable a job
@@ -193,7 +193,7 @@ class AdminService {
         'page_offset': offset,
       },
     );
-    return List<Map<String, dynamic>>.from(response);
+    return (response as List).map((e) => Map<String, dynamic>.from(e)).toList();
   }
 
   /// Fetch job reports
@@ -210,7 +210,7 @@ class AdminService {
         'page_offset': offset,
       },
     );
-    return List<Map<String, dynamic>>.from(response);
+    return (response as List).map((e) => Map<String, dynamic>.from(e)).toList();
   }
 
   /// Update report status
@@ -304,7 +304,7 @@ class AdminService {
       'get_admin_actions',
       params: {'page_limit': limit, 'page_offset': offset},
     );
-    return List<Map<String, dynamic>>.from(response);
+    return (response as List).map((e) => Map<String, dynamic>.from(e)).toList();
   }
 
   /// Log an admin action (internal helper)

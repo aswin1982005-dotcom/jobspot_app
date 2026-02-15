@@ -63,8 +63,16 @@ class AdminHomeProvider extends ChangeNotifier {
       _jobStats = overview['job_stats'] ?? {};
       _reportStats = overview['report_stats'] ?? {};
 
-      _recentUsers = activity['recent_users'] ?? [];
-      _recentJobs = activity['recent_jobs'] ?? [];
+      _recentUsers =
+          (activity['recent_users'] as List?)
+              ?.map((e) => Map<String, dynamic>.from(e))
+              .toList() ??
+          [];
+      _recentJobs =
+          (activity['recent_jobs'] as List?)
+              ?.map((e) => Map<String, dynamic>.from(e))
+              .toList() ??
+          [];
     } catch (e) {
       _error = e.toString();
       debugPrint('Error loading admin dashboard data: $e');

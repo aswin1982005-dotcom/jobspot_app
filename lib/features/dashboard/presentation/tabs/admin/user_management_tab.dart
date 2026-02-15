@@ -197,18 +197,14 @@ class _UserManagementTabState extends State<UserManagementTab>
     String? subtitle;
     String? avatarUrl;
 
-    if (role == 'seeker') {
-      name = user['full_name'] ?? 'Job Seeker';
-      subtitle = user['city'] != null && user['state'] != null
-          ? '${user['city']}, ${user['state']}'
-          : null;
+    if (role == 'seeker' && user['profile_completed']) {
+      name = user['seeker_profile']['full_name'] ?? 'Job Seeker';
+      subtitle = user['seeker_profile']['city'];
       avatarUrl = user['avatar_url'];
-    } else if (role == 'employer') {
-      name = user['company_name'] ?? 'Company';
-      subtitle = user['city'] != null && user['state'] != null
-          ? '${user['city']}, ${user['state']}'
-          : null;
-      avatarUrl = user['logo_url'];
+    } else if (role == 'employer' && user['profile_completed']) {
+      name = user['employer_profile']['company_name'];
+      subtitle = user['employer_profile']['city'];
+      avatarUrl = user['avatar_url'];
     }
 
     return Card(

@@ -5,8 +5,17 @@ import 'package:jobspot_app/features/notifications/presentation/providers/notifi
 import 'package:jobspot_app/features/notifications/presentation/screens/notifications_screen.dart';
 import 'package:provider/provider.dart';
 
-class AdminHomeTab extends StatelessWidget {
+class AdminHomeTab extends StatefulWidget {
   const AdminHomeTab({super.key});
+
+  @override
+  State<AdminHomeTab> createState() => _AdminHomeTabState();
+}
+
+class _AdminHomeTabState extends State<AdminHomeTab>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
 
   String _formatDate(String? dateStr) {
     if (dateStr == null) return '';
@@ -31,6 +40,7 @@ class AdminHomeTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     final theme = Theme.of(context);
     final textTheme = theme.textTheme;
 
