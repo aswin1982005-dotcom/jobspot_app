@@ -3,8 +3,17 @@ import 'package:jobspot_app/core/theme/app_theme.dart';
 import 'package:jobspot_app/features/dashboard/presentation/providers/support_provider.dart';
 import 'package:provider/provider.dart';
 
-class SupportTab extends StatelessWidget {
+class SupportTab extends StatefulWidget {
   const SupportTab({super.key});
+
+  @override
+  State<SupportTab> createState() => _SupportTabState();
+}
+
+class _SupportTabState extends State<SupportTab>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
 
   String _formatDate(String? dateStr) {
     if (dateStr == null) return '';
@@ -62,6 +71,7 @@ class SupportTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     final theme = Theme.of(context);
     final textTheme = theme.textTheme;
 

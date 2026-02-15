@@ -71,7 +71,7 @@ class JobService {
         .select('*, job_posts(*)')
         .eq('seeker_id', userId)
         .order('saved_at', ascending: false);
-    return List<Map<String, dynamic>>.from(response);
+    return (response as List).map((e) => Map<String, dynamic>.from(e)).toList();
   }
 
   Future<void> toggleSaveJob(String jobId, bool isCurrentlySaved) async {

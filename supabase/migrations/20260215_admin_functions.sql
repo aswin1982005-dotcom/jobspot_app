@@ -24,25 +24,25 @@ AS $$
 BEGIN
   RETURN QUERY
   SELECT 
-    u.id as user_id,
+    u.user_id as user_id,
     u.role::text,
     u.profile_completed,
     u.is_disabled,
     u.disabled_at,
     u.disable_reason,
     u.created_at,
-    CASE 
+    CASE
       WHEN u.role = 'seeker' THEN to_jsonb(s)
       ELSE NULL
     END as seeker_profile,
-    CASE 
+    CASE
       WHEN u.role = 'employer' THEN to_jsonb(e)
       ELSE NULL
     END as employer_profile
   FROM user_profiles u
-  LEFT JOIN job_seeker_profiles s ON u.id = s.user_id
-  LEFT JOIN employer_profiles e ON u.id = e.user_id
-  WHERE 
+  LEFT JOIN job_seeker_profiles s ON u.user_id = s.user_id
+  LEFT JOIN employer_profiles e ON u.user_id = e.user_id
+  WHERE
     (role_filter IS NULL OR u.role::text = role_filter) AND
     (disabled_only IS NULL OR u.is_disabled = disabled_only)
   ORDER BY u.created_at DESC
@@ -66,7 +66,7 @@ BEGIN
   -- Reuse existing logic or functions if available, or re-implement for speed
   -- For now, calling the existing functions if they exist, or implementing logic inline
   -- Assuming underlying tables: user_profiles, job_posts, user_reports, job_reports
-  
+
   -- User Stats
   SELECT jsonb_build_object(
     'total_users', COUNT(*),
@@ -112,7 +112,7 @@ DECLARE
 BEGIN
   -- Recent Users
   SELECT jsonb_agg(t) INTO recent_users FROM (
-    SELECT 
+    SELECT
       u.user_id,
       u.role,
       u.created_at,
@@ -121,15 +121,15 @@ BEGIN
       e.company_name as employer_name,
       e.avatar_url as employer_avatar
     FROM user_profiles u
-    LEFT JOIN job_seeker_profiles s ON u.id = s.user_id AND u.role = 'seeker'
-    LEFT JOIN employer_profiles e ON u.id = e.user_id AND u.role = 'employer'
+    LEFT JOIN job_seeker_profiles s ON u.user_id = s.user_id AND u.role = 'seeker'
+    LEFT JOIN employer_profiles e ON u.user_id = e.user_id AND u.role = 'employer'
     ORDER BY u.created_at DESC
     LIMIT 5
   ) t;
 
   -- Recent Jobs
   SELECT jsonb_agg(t) INTO recent_jobs FROM (
-    SELECT 
+    SELECT
       j.id,
       j.title,
       j.location,
@@ -175,7 +175,7 @@ SECURITY DEFINER
 AS $$
 BEGIN
   RETURN QUERY
-  SELECT 
+  SELECT
     a.id,
     a.admin_id,
     a.action_type,
@@ -188,8 +188,8 @@ BEGIN
     u.role::text as admin_role
   FROM admin_actions a
   JOIN user_profiles u ON a.admin_id = u.id
-  LEFT JOIN job_seeker_profiles s ON u.id = s.user_id AND u.role = 'seeker'
-  LEFT JOIN employer_profiles e ON u.id = e.user_id AND u.role = 'employer'
+  LEFT JOIN job_seeker_profiles s ON u.user_id = s.user_id AND u.role = 'seeker'
+  LEFT JOIN employer_profiles e ON u.user_id = e.user_id AND u.role = 'employer'
   ORDER BY a.created_at DESC
   LIMIT page_limit OFFSET page_offset;
 END;

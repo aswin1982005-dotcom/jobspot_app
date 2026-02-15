@@ -3,6 +3,10 @@ import 'package:jobspot_app/core/theme/app_theme.dart';
 import 'package:jobspot_app/data/services/profile_service.dart';
 import 'package:jobspot_app/core/utils/supabase_service.dart';
 import 'package:jobspot_app/features/profile/presentation/screens/profile_loading_screen.dart';
+import 'package:jobspot_app/core/models/location_address.dart';
+import 'package:jobspot_app/features/jobs/presentation/address_search_page.dart';
+import 'package:jobspot_app/features/jobs/presentation/map_picker_page.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 class EditSeekerProfileScreen extends StatefulWidget {
   final Map<String, dynamic>? profile;
@@ -45,6 +49,23 @@ class _EditSeekerProfileScreenState extends State<EditSeekerProfileScreen> {
   ];
 
   String? _selectedJobType;
+  LocationAddress? _selectedAddress;
+
+  final List<String> _commonSkills = [
+    'Flutter',
+    'Dart',
+    'Java',
+    'Kotlin',
+    'Swift',
+    'React',
+    'Node.js',
+    'Python',
+    'Design',
+    'Marketing',
+    'Sales',
+    'Management',
+    'Communication',
+  ];
 
   @override
   void initState() {
@@ -53,7 +74,7 @@ class _EditSeekerProfileScreenState extends State<EditSeekerProfileScreen> {
     _nameController = TextEditingController(text: profile?['full_name'] ?? '');
     _cityController = TextEditingController(text: profile?['city'] ?? '');
     _phoneController = TextEditingController(
-      text: profile?['phone'].toString(),
+      text: profile?['phone'].toString() ?? '',
     );
     _emailController = TextEditingController(text: profile?['email'] ?? '');
 
@@ -76,6 +97,18 @@ class _EditSeekerProfileScreenState extends State<EditSeekerProfileScreen> {
     _selectedJobType = profile?['preferred_job_type'];
     if (!_jobTypes.contains(_selectedJobType)) {
       _selectedJobType = 'Part-time';
+    }
+
+    if (profile?['latitude'] != null && profile?['longitude'] != null) {
+      _selectedAddress = LocationAddress(
+        addressLine: profile?['address_line'] ?? '',
+        city: profile?['city'] ?? '',
+        state: '',
+        country: '',
+        postalCode: '',
+        latitude: profile!['latitude'],
+        longitude: profile['longitude'],
+      );
     }
   }
 
@@ -108,6 +141,51 @@ class _EditSeekerProfileScreenState extends State<EditSeekerProfileScreen> {
     });
   }
 
+  Future<void> _pickLocationFromSearch() async {
+    final result = await Navigator.push<LocationAddress>(
+      context,
+      MaterialPageRoute(builder: (context) => const AddressSearchPage()),
+    );
+    if (result != null) _updateAddress(result);
+  }
+
+  Future<void> _pickLocationFromMap() async {
+    final initialPos = _selectedAddress != null
+        ? LatLng(_selectedAddress!.latitude, _selectedAddress!.longitude)
+        : const LatLng(19.0760, 72.8777); // Default to Mumbai
+
+    final result = await Navigator.push<LocationAddress>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => MapPickerPage(initialPosition: initialPos),
+      ),
+    );
+    if (result != null) _updateAddress(result);
+  }
+
+  void _updateAddress(LocationAddress result) {
+    setState(() {
+      _selectedAddress = result;
+      // If we have a detected city, use it; otherwise let user type it or leave it empty?
+      // Previously fell back to addressLine, but that might be a full address string.
+      _cityController.text = result.city;
+    });
+  }
+
+  void _addSkill(String? skill) {
+    if (skill == null) return;
+    final currentSkills = _skillsController.text
+        .split(',')
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty)
+        .toList();
+
+    if (!currentSkills.contains(skill)) {
+      currentSkills.add(skill);
+      _skillsController.text = currentSkills.join(', ');
+    }
+  }
+
   Future<void> _handleSave() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -134,14 +212,16 @@ class _EditSeekerProfileScreenState extends State<EditSeekerProfileScreen> {
         'education_level': _selectedEducation,
         'skills': skillsList,
         'preferred_job_type': _selectedJobType,
+        'latitude': _selectedAddress?.latitude,
+        'longitude': _selectedAddress?.longitude,
+        'address_line': _selectedAddress?.addressLine,
       };
-      final name = _nameController.text.trim();
-      final city = _cityController.text.trim();
-      if (name.isNotEmpty && city.isNotEmpty && name != 'User') {
-        updateData['profile_completed'] = true;
-      }
 
-      await ProfileService.updateSeekerProfile(userId, updateData);
+      await ProfileService.updateSeekerProfile(
+        userId,
+        updateData,
+        complete: true,
+      );
 
       if (mounted) {
         if (widget.profile == null) {
@@ -246,17 +326,28 @@ class _EditSeekerProfileScreenState extends State<EditSeekerProfileScreen> {
                 validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
               ),
               const SizedBox(height: 16),
-              TextFormField(
-                controller: _cityController,
-                decoration: const InputDecoration(
-                  labelText: 'City / Location',
-                  prefixIcon: Icon(Icons.location_on_outlined),
-                  filled: true,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(12)),
-                    borderSide: BorderSide.none,
+              InkWell(
+                onTap: _pickLocationFromSearch,
+                child: IgnorePointer(
+                  child: TextFormField(
+                    controller: _cityController,
+                    decoration: const InputDecoration(
+                      labelText: 'Preferred Job Location',
+                      prefixIcon: Icon(Icons.location_on_outlined),
+                      filled: true,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.all(Radius.circular(12)),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
                   ),
                 ),
+              ),
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                onPressed: _pickLocationFromMap,
+                icon: const Icon(Icons.map),
+                label: const Text('Pick on Map'),
               ),
               const SizedBox(height: 16),
               TextFormField(
@@ -340,6 +431,22 @@ class _EditSeekerProfileScreenState extends State<EditSeekerProfileScreen> {
                     borderSide: BorderSide.none,
                   ),
                 ),
+              ),
+              const SizedBox(height: 8),
+              DropdownButtonFormField<String>(
+                decoration: const InputDecoration(
+                  labelText: 'Add Common Skill',
+                  prefixIcon: Icon(Icons.add_circle_outline),
+                  filled: true,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(12)),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+                items: _commonSkills
+                    .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+                    .toList(),
+                onChanged: _addSkill,
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(

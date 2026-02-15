@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:jobspot_app/core/utils/location_service.dart';
-import 'package:uuid/uuid.dart';
 
 class AddressSearchPage extends StatefulWidget {
   const AddressSearchPage({super.key});
@@ -16,7 +15,6 @@ class _AddressSearchPageState extends State<AddressSearchPage> {
   final _locationService = LocationService(
     dotenv.env['GOOGLE_MAPS_API_KEY'] ?? '',
   );
-  final _sessionToken = const Uuid().v4();
 
   List<Map<String, String>> _suggestions = [];
   Timer? _debounce;
@@ -27,6 +25,7 @@ class _AddressSearchPageState extends State<AddressSearchPage> {
     _debounce = Timer(const Duration(milliseconds: 500), () {
       if (query.isNotEmpty) {
         _fetchSuggestions(query);
+        print(_suggestions);
       } else {
         setState(() => _suggestions = []);
       }
@@ -36,15 +35,13 @@ class _AddressSearchPageState extends State<AddressSearchPage> {
   Future<void> _fetchSuggestions(String query) async {
     setState(() => _isLoading = true);
     try {
-      final results = await _locationService.searchPlaces(
-        query,
-        sessionToken: _sessionToken,
-      );
+      final results = await _locationService.searchPlaces(query);
       setState(() {
         _suggestions = results;
         _isLoading = false;
       });
     } catch (e) {
+      print(e);
       setState(() => _isLoading = false);
     }
   }
@@ -54,7 +51,6 @@ class _AddressSearchPageState extends State<AddressSearchPage> {
     try {
       final address = await _locationService.getPlaceDetails(
         suggestion['place_id']!,
-        sessionToken: _sessionToken,
       );
       if (mounted) {
         Navigator.pop(context, address);

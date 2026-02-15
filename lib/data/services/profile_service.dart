@@ -62,13 +62,14 @@ class ProfileService {
 
   static Future<void> updateSeekerProfile(
     String userId,
-    Map<String, dynamic> updateData,
-  ) async {
+    Map<String, dynamic> updateData, {
+    bool complete = false,
+  }) async {
     // Separate profile_completed key if present to update user_profiles
-    if (updateData.containsKey('profile_completed')) {
+    if (complete) {
       await _supabase.from('user_profiles').upsert({
         'user_id': userId,
-        'profile_completed': updateData['profile_completed'],
+        'profile_completed': true,
       });
       updateData.remove('profile_completed');
     }

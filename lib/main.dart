@@ -1,8 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:google_maps_flutter_android/google_maps_flutter_android.dart';
-import 'package:google_maps_flutter_platform_interface/google_maps_flutter_platform_interface.dart';
+
 import 'package:jobspot_app/core/constants/user_role.dart';
 import 'package:jobspot_app/core/routes/dashboard_router.dart';
 import 'package:jobspot_app/core/theme/app_theme.dart';
@@ -23,19 +22,7 @@ final supabase = Supabase.instance.client;
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize map renderer
-  final GoogleMapsFlutterPlatform mapsImplementation =
-      GoogleMapsFlutterPlatform.instance;
-  if (mapsImplementation is GoogleMapsFlutterAndroid) {
-    mapsImplementation.useAndroidViewSurface = true;
-    try {
-      await mapsImplementation.initializeWithRenderer(
-        AndroidMapRenderer.latest,
-      );
-    } catch (e) {
-      debugPrint("Error initializing map renderer: $e");
-    }
-  }
+  // Map initialization moved to MapScreen
 
   runApp(
     MultiProvider(
@@ -85,6 +72,7 @@ class _RootPageState extends State<RootPage> {
   Widget? _home;
   Widget? _pendingHome;
   StreamSubscription<AuthState>? _authSub;
+  bool _oneSignalInitialized = false;
 
   @override
   void initState() {
@@ -113,8 +101,10 @@ class _RootPageState extends State<RootPage> {
       _updateHome(const LoginScreen());
     } else {
       _handleUser(session.user);
-      _initOneSignal();
-      OneSignal.login(session.user.id);
+      await _initOneSignal();
+      if (_oneSignalInitialized) {
+        OneSignal.login(session.user.id);
+      }
     }
 
     _authSub = supabase.auth.onAuthStateChange.listen((event) async {
@@ -122,9 +112,13 @@ class _RootPageState extends State<RootPage> {
       if (user != null) {
         _handleUser(user);
         await _initOneSignal();
-        OneSignal.login(user.id);
+        if (_oneSignalInitialized) {
+          OneSignal.login(user.id);
+        }
       } else {
-        OneSignal.logout();
+        if (_oneSignalInitialized) {
+          OneSignal.logout();
+        }
         _updateHome(const LoginScreen());
       }
     }, onError: (_) => _updateHome(const LoginScreen()));
@@ -171,6 +165,8 @@ class _RootPageState extends State<RootPage> {
         event.preventDefault();
         event.notification.display();
       });
+
+      _oneSignalInitialized = true;
     } catch (e) {
       debugPrint("Error initializing OneSignal: $e");
     }
@@ -205,11 +201,6 @@ class _RootPageState extends State<RootPage> {
       final role = roleStr != null
           ? UserRoleExtension.fromDbValue(roleStr)
           : null;
-
-      // Preload data if seeker
-      if (role == UserRole.seeker && mounted) {
-        Provider.of<SeekerHomeProvider>(context, listen: false).loadData();
-      }
 
       _updateHome(DashboardRouter(role: role));
     } catch (_) {

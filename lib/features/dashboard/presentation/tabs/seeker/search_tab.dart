@@ -12,11 +12,15 @@ class SearchTab extends StatefulWidget {
   State<SearchTab> createState() => _SearchTabState();
 }
 
-class _SearchTabState extends State<SearchTab> {
+class _SearchTabState extends State<SearchTab>
+    with AutomaticKeepAliveClientMixin {
   PostgrestList _allJobs = [];
   PostgrestList filteredJobs = [];
   bool _isLoading = true;
   List<Map<String, dynamic>>? _lastJobs;
+
+  @override
+  bool get wantKeepAlive => true;
 
   @override
   void didChangeDependencies() {
@@ -200,6 +204,7 @@ class _SearchTabState extends State<SearchTab> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     final theme = Theme.of(context);
     final textTheme = theme.textTheme;
 

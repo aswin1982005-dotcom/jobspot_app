@@ -3,11 +3,21 @@ import 'package:jobspot_app/core/theme/app_theme.dart';
 import 'package:jobspot_app/features/dashboard/presentation/providers/job_management_provider.dart';
 import 'package:provider/provider.dart';
 
-class JobManagementTab extends StatelessWidget {
+class JobManagementTab extends StatefulWidget {
   const JobManagementTab({super.key});
 
   @override
+  State<JobManagementTab> createState() => _JobManagementTabState();
+}
+
+class _JobManagementTabState extends State<JobManagementTab>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
   Widget build(BuildContext context) {
+    super.build(context);
     final theme = Theme.of(context);
     final textTheme = theme.textTheme;
 

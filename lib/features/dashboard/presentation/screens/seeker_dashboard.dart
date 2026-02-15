@@ -19,7 +19,10 @@ class _SeekerDashboardState extends State<SeekerDashboard> {
   @override
   void initState() {
     super.initState();
-    ProfileCompletionManager.checkAndPrompt(context, 'seeker');
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ProfileCompletionManager.checkAndPrompt(context, 'seeker');
+      Provider.of<SeekerHomeProvider>(context, listen: false).loadData();
+    });
   }
 
   @override

@@ -13,7 +13,7 @@ class RecommendationService {
       }
 
       if (data is List) {
-        return List<Map<String, dynamic>>.from(data);
+        return data.map((e) => Map<String, dynamic>.from(e)).toList();
       } else {
         throw Exception('Unexpected response format');
       }

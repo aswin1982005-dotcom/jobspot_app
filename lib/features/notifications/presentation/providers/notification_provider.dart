@@ -30,8 +30,8 @@ class NotificationProvider extends ChangeNotifier with WidgetsBindingObserver {
 
   void _startPolling() {
     _pollingTimer?.cancel();
-    // Poll every 2 minutes as a backup to Realtime
-    _pollingTimer = Timer.periodic(const Duration(minutes: 2), (_) {
+    // Poll every 5 minutes as a backup to Realtime
+    _pollingTimer = Timer.periodic(const Duration(minutes: 5), (_) {
       debugPrint("Auto-refreshing notifications (Polling)...");
       refresh();
     });
@@ -56,7 +56,9 @@ class NotificationProvider extends ChangeNotifier with WidgetsBindingObserver {
       _startPolling();
       // Optionally re-subscribe if Supabase connection was lost
       // _subscribeToRealtime();
-    } else if (state == AppLifecycleState.paused) {
+    } else if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.hidden) {
       _stopPolling();
     }
   }

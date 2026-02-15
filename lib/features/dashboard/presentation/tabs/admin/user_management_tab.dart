@@ -3,8 +3,17 @@ import 'package:jobspot_app/core/theme/app_theme.dart';
 import 'package:jobspot_app/features/dashboard/presentation/providers/user_management_provider.dart';
 import 'package:provider/provider.dart';
 
-class UserManagementTab extends StatelessWidget {
+class UserManagementTab extends StatefulWidget {
   const UserManagementTab({super.key});
+
+  @override
+  State<UserManagementTab> createState() => _UserManagementTabState();
+}
+
+class _UserManagementTabState extends State<UserManagementTab>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
 
   String _formatDate(String? dateStr) {
     if (dateStr == null) return '';
@@ -18,6 +27,7 @@ class UserManagementTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     final theme = Theme.of(context);
     final textTheme = theme.textTheme;
 
@@ -183,27 +193,22 @@ class UserManagementTab extends StatelessWidget {
     final isDisabled = user['is_disabled'] ?? false;
     final userId = user['user_id'] ?? '';
 
-    final seeker = user['seekers'] as List?;
-    final employer = user['employers'] as List?;
-
     String name = 'Unknown User';
     String? subtitle;
     String? avatarUrl;
 
-    if (role == 'seeker' && seeker != null && seeker.isNotEmpty) {
-      final seekerData = seeker[0] as Map<String, dynamic>?;
-      name = seekerData?['full_name'] ?? 'Job Seeker';
-      subtitle = seekerData?['city'] != null && seekerData?['state'] != null
-          ? '${seekerData?['city']}, ${seekerData?['state']}'
+    if (role == 'seeker') {
+      name = user['full_name'] ?? 'Job Seeker';
+      subtitle = user['city'] != null && user['state'] != null
+          ? '${user['city']}, ${user['state']}'
           : null;
-      avatarUrl = seekerData?['avatar_url'];
-    } else if (role == 'employer' && employer != null && employer.isNotEmpty) {
-      final employerData = employer[0] as Map<String, dynamic>?;
-      name = employerData?['company_name'] ?? 'Company';
-      subtitle = employerData?['city'] != null && employerData?['state'] != null
-          ? '${employerData?['city']}, ${employerData?['state']}'
+      avatarUrl = user['avatar_url'];
+    } else if (role == 'employer') {
+      name = user['company_name'] ?? 'Company';
+      subtitle = user['city'] != null && user['state'] != null
+          ? '${user['city']}, ${user['state']}'
           : null;
-      avatarUrl = employerData?['logo_url'];
+      avatarUrl = user['logo_url'];
     }
 
     return Card(
