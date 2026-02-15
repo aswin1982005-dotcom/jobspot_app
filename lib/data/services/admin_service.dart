@@ -14,29 +14,15 @@ class AdminService {
     int limit = 50,
     int offset = 0,
   }) async {
-    var query = _supabase.from('user_profiles').select('''
-          user_id,
-          role,
-          profile_completed,
-          is_disabled,
-          disabled_at,
-          disable_reason,
-          created_at,
-          seekers:seeker_profiles(full_name, bio, avatar_url, phone_number, city, state),
-          employers:employer_profiles(company_name, company_bio, logo_url, contact_email, city, state)
-        ''');
-
-    if (roleFilter != null) {
-      query = query.eq('role', roleFilter);
-    }
-
-    if (disabledOnly != null) {
-      query = query.eq('is_disabled', disabledOnly);
-    }
-
-    final response = await query
-        .order('created_at', ascending: false)
-        .range(offset, offset + limit - 1);
+    final response = await _supabase.rpc(
+      'get_admin_users_list',
+      params: {
+        'role_filter': roleFilter,
+        'disabled_only': disabledOnly,
+        'page_limit': limit,
+        'page_offset': offset,
+      },
+    );
     return List<Map<String, dynamic>>.from(response);
   }
 
@@ -89,12 +75,6 @@ class AdminService {
     );
   }
 
-  /// Get user statistics
-  Future<Map<String, dynamic>> getUserStatistics() async {
-    final response = await _supabase.rpc('get_user_statistics');
-    return Map<String, dynamic>.from(response);
-  }
-
   // ============================================================================
   // JOB MANAGEMENT
   // ============================================================================
@@ -109,11 +89,10 @@ class AdminService {
   }) async {
     var query = _supabase.from('job_posts').select('''
           *,
-          employer:employer_profiles!job_posts_posted_by_fkey(
+          employer:employer_profiles!job_posts_employer_id_fkey(
             company_name,
-            logo_url,
-            city,
-            state
+            avatar_url,
+            city
           )
         ''');
 
@@ -196,12 +175,6 @@ class AdminService {
     );
   }
 
-  /// Get job statistics
-  Future<Map<String, dynamic>> getJobStatistics() async {
-    final response = await _supabase.rpc('get_job_statistics');
-    return Map<String, dynamic>.from(response);
-  }
-
   // ============================================================================
   // REPORT MANAGEMENT
   // ============================================================================
@@ -212,29 +185,14 @@ class AdminService {
     int limit = 50,
     int offset = 0,
   }) async {
-    var query = _supabase.from('user_reports').select('''
-          *,
-          reporter:reporter_id(id, email),
-          reported_user:user_profiles!user_reports_reported_user_id_fkey(
-            user_id,
-            role,
-            seekers:seeker_profiles(full_name, avatar_url),
-            employers:employer_profiles(company_name, logo_url)
-          ),
-          resolver:user_profiles!user_reports_resolved_by_fkey(
-            user_id,
-            seekers:seeker_profiles(full_name),
-            employers:employer_profiles(company_name)
-          )
-        ''');
-
-    if (statusFilter != null) {
-      query = query.eq('status', statusFilter);
-    }
-
-    final response = await query
-        .order('created_at', ascending: false)
-        .range(offset, offset + limit - 1);
+    final response = await _supabase.rpc(
+      'get_user_reports',
+      params: {
+        'status_filter': statusFilter,
+        'page_limit': limit,
+        'page_offset': offset,
+      },
+    );
     return List<Map<String, dynamic>>.from(response);
   }
 
@@ -244,32 +202,14 @@ class AdminService {
     int limit = 50,
     int offset = 0,
   }) async {
-    var query = _supabase.from('job_reports').select('''
-          *,
-          reporter:reporter_id(id, email),
-          job:job_posts(
-            id,
-            title,
-            company,
-            city,
-            state,
-            is_active,
-            admin_disabled
-          ),
-          resolver:user_profiles!job_reports_resolved_by_fkey(
-            user_id,
-            seekers:seeker_profiles(full_name),
-            employers:employer_profiles(company_name)
-          )
-        ''');
-
-    if (statusFilter != null) {
-      query = query.eq('status', statusFilter);
-    }
-
-    final response = await query
-        .order('created_at', ascending: false)
-        .range(offset, offset + limit - 1);
+    final response = await _supabase.rpc(
+      'get_job_reports',
+      params: {
+        'status_filter': statusFilter,
+        'page_limit': limit,
+        'page_offset': offset,
+      },
+    );
     return List<Map<String, dynamic>>.from(response);
   }
 
@@ -351,12 +291,6 @@ class AdminService {
         .eq('id', jobId);
   }
 
-  /// Get report statistics
-  Future<Map<String, dynamic>> getReportStatistics() async {
-    final response = await _supabase.rpc('get_report_statistics');
-    return Map<String, dynamic>.from(response);
-  }
-
   // ============================================================================
   // ADMIN ACTIONS (AUDIT LOG)
   // ============================================================================
@@ -366,19 +300,10 @@ class AdminService {
     int limit = 50,
     int offset = 0,
   }) async {
-    final response = await _supabase
-        .from('admin_actions')
-        .select('''
-          *,
-          admin:user_profiles!admin_actions_admin_id_fkey(
-            user_id,
-            seekers:seeker_profiles(full_name),
-            employers:employer_profiles(company_name)
-          )
-        ''')
-        .order('created_at', ascending: false)
-        .range(offset, offset + limit - 1);
-
+    final response = await _supabase.rpc(
+      'get_admin_actions',
+      params: {'page_limit': limit, 'page_offset': offset},
+    );
     return List<Map<String, dynamic>>.from(response);
   }
 
@@ -409,51 +334,21 @@ class AdminService {
 
   /// Fetch dashboard overview data
   Future<Map<String, dynamic>> fetchDashboardOverview() async {
-    final results = await Future.wait([
-      getUserStatistics(),
-      getJobStatistics(),
-      getReportStatistics(),
-    ]);
-
-    return {
-      'user_stats': results[0],
-      'job_stats': results[1],
-      'report_stats': results[2],
-    };
+    try {
+      final response = await _supabase.rpc('get_admin_dashboard_stats');
+      return Map<String, dynamic>.from(response);
+    } catch (e) {
+      return {'user_stats': {}, 'job_stats': {}, 'report_stats': {}};
+    }
   }
 
   /// Fetch recent activity (users and jobs)
   Future<Map<String, dynamic>> fetchRecentActivity() async {
-    final recentUsers = await _supabase
-        .from('user_profiles')
-        .select('''
-          user_id,
-          role,
-          created_at,
-          seekers:seeker_profiles(full_name, avatar_url),
-          employers:employer_profiles(company_name, logo_url)
-        ''')
-        .order('created_at', ascending: false)
-        .limit(5);
-
-    final recentJobs = await _supabase
-        .from('job_posts')
-        .select('''
-          id,
-          title,
-          company,
-          city,
-          state,
-          created_at,
-          is_active,
-          admin_disabled
-        ''')
-        .order('created_at', ascending: false)
-        .limit(5);
-
-    return {
-      'recent_users': List<Map<String, dynamic>>.from(recentUsers),
-      'recent_jobs': List<Map<String, dynamic>>.from(recentJobs),
-    };
+    try {
+      final response = await _supabase.rpc('get_admin_recent_activity');
+      return Map<String, dynamic>.from(response);
+    } catch (e) {
+      return {'recent_users': [], 'recent_jobs': []};
+    }
   }
 }
