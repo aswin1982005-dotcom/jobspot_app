@@ -32,7 +32,7 @@ class MapTab extends StatefulWidget {
 }
 
 class _MapTabState extends State<MapTab> {
-  late GoogleMapController _mapController;
+  GoogleMapController? _mapController;
 
   // State
   Set<Marker> _markers = {};
@@ -45,6 +45,7 @@ class _MapTabState extends State<MapTab> {
     zoom: 10,
   );
   Position? _userPosition;
+  double _lastClusterZoom = 10;
 
   List<Map<String, dynamic>>? _lastJobs;
 
@@ -68,6 +69,7 @@ class _MapTabState extends State<MapTab> {
 
   @override
   void dispose() {
+    _mapController?.dispose();
     _searchController.dispose();
     super.dispose();
   }
@@ -108,14 +110,11 @@ class _MapTabState extends State<MapTab> {
     LocationPermission permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
-    } else {
-      try {
-        final pos = await Geolocator.getCurrentPosition();
-        _userPosition = pos;
-        _getCurrentLocation();
-      } catch (e) {
-        // Handle error or permission denied silently or via snackbar
-      }
+    }
+
+    if (permission == LocationPermission.always ||
+        permission == LocationPermission.whileInUse) {
+      _getCurrentLocation();
     }
   }
 
@@ -193,7 +192,11 @@ class _MapTabState extends State<MapTab> {
     _clusterItems(filtered);
   }
 
+  int _clusterRequestId = 0;
+
   Future<void> _clusterItems(List<JobItem> items) async {
+    final requestId = ++_clusterRequestId;
+
     final clusters = MapClusterer.cluster(items, _currentZoom);
     final markers = <Marker>{};
 
@@ -201,11 +204,11 @@ class _MapTabState extends State<MapTab> {
       markers.add(await _buildMarker(cluster));
     }
 
-    if (mounted) {
-      setState(() {
-        _markers = markers;
-      });
-    }
+    if (!mounted || requestId != _clusterRequestId) return;
+
+    setState(() {
+      _markers = markers;
+    });
   }
 
   // Cluster icon cache
@@ -223,11 +226,15 @@ class _MapTabState extends State<MapTab> {
         _clusterIconCache[count] = icon;
       }
 
+      if (_clusterIconCache.length > 50) {
+        _clusterIconCache.clear();
+      }
+
       return Marker(
         markerId: MarkerId(cluster.getId()),
         position: cluster.location,
         onTap: () {
-          _mapController.animateCamera(
+          _mapController?.animateCamera(
             CameraUpdate.newLatLngZoom(cluster.location, _currentZoom + 2),
           );
         },
@@ -255,13 +262,12 @@ class _MapTabState extends State<MapTab> {
         icon: icon,
         zIndexInt: isSelected ? 10 : 1,
         onTap: () {
-          _mapController.animateCamera(
+          _mapController?.animateCamera(
             CameraUpdate.newLatLngZoom(cluster.location, 16),
           ); // Zoom in on tap
           setState(() {
             _selectedJobId = jobId;
           });
-          _updateFilteredItems();
           _showJobDetails(item.job);
         },
       );
@@ -347,9 +353,12 @@ class _MapTabState extends State<MapTab> {
 
   void _getCurrentLocation() async {
     try {
-      final pos = await Geolocator.getCurrentPosition();
-      _mapController.animateCamera(
-        CameraUpdate.newLatLngZoom(LatLng(pos.latitude, pos.longitude), 14),
+      _userPosition = await Geolocator.getCurrentPosition();
+      _mapController?.animateCamera(
+        CameraUpdate.newLatLngZoom(
+          LatLng(_userPosition!.latitude, _userPosition!.longitude),
+          14,
+        ),
       );
     } catch (e) {
       // Handle error or permission denied silently or via snackbar
@@ -428,7 +437,10 @@ class _MapTabState extends State<MapTab> {
               _currentZoom = position.zoom;
             },
             onCameraIdle: () {
-              _updateFilteredItems();
+              if ((_currentZoom - _lastClusterZoom).abs() > 0.3) {
+                _lastClusterZoom = _currentZoom;
+                _updateFilteredItems();
+              }
             },
             onTap: (_) {
               if (_selectedJobId != null) {

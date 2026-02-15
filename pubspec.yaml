@@ -53,6 +53,8 @@ dependencies:
   video_player: ^2.10.1
   cached_network_image: ^3.4.1
   share_plus: ^12.0.1
+  google_maps_flutter_android: ^2.18.12
+  google_maps_flutter_platform_interface: ^2.14.1
 
 dev_dependencies:
   flutter_test:

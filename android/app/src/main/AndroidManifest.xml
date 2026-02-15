@@ -7,7 +7,12 @@
 
     <application
         android:label="jobspot_app"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:enableOnBackInvokedCallback="true">
+
+        <uses-library
+            android:name="org.apache.http.legacy"
+            android:required="false" />
 
         <meta-data
             android:name="com.google.android.geo.API_KEY"
@@ -38,7 +43,7 @@
 
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <!-- Accepts URIs that begin with "io.supabase.flutterquickstart://login-callback" -->
+
                 <data
                     android:scheme="io.supabase.flutterquickstart"
                     android:host="login-callback" />

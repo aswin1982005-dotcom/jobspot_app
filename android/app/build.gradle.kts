@@ -8,11 +8,10 @@ plugins {
 import java.util.Properties
 import java.io.FileInputStream
 
-// Load .env file for API keys
-val envProperties = Properties()
-val envFile = rootProject.file("../../.env")
-if (envFile.exists()) {
-    envProperties.load(FileInputStream(envFile))
+val localProperties =  Properties()
+val localPropertiesFile = rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    localProperties.load(FileInputStream(localPropertiesFile))
 }
 
 android {
@@ -40,10 +39,9 @@ android {
         targetSdk = 34
         versionCode = flutter.versionCode
         versionName = flutter.versionName
-        manifestPlaceholders["MAPS_API_KEY"] = envProperties.getProperty("GOOGLE_MAPS_API_KEY") ?: ""
-        manifestPlaceholders["ONESIGNAL_APP_ID"] = envProperties.getProperty("ONESIGNAL_APP_ID") ?: ""
+        manifestPlaceholders["MAPS_API_KEY"] = localProperties.getProperty("GOOGLE_MAPS_API_KEY") ?: ""
+        manifestPlaceholders["ONESIGNAL_APP_ID"] = localProperties.getProperty("ONESIGNAL_APP_ID") ?: ""
     }
-
 
     buildTypes {
         release {

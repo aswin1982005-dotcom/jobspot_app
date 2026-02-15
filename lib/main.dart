@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:google_maps_flutter_android/google_maps_flutter_android.dart';
+import 'package:google_maps_flutter_platform_interface/google_maps_flutter_platform_interface.dart';
 import 'package:jobspot_app/core/constants/user_role.dart';
 import 'package:jobspot_app/core/routes/dashboard_router.dart';
 import 'package:jobspot_app/core/theme/app_theme.dart';
@@ -20,6 +22,21 @@ final supabase = Supabase.instance.client;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize map renderer
+  final GoogleMapsFlutterPlatform mapsImplementation =
+      GoogleMapsFlutterPlatform.instance;
+  if (mapsImplementation is GoogleMapsFlutterAndroid) {
+    mapsImplementation.useAndroidViewSurface = true;
+    try {
+      await mapsImplementation.initializeWithRenderer(
+        AndroidMapRenderer.latest,
+      );
+    } catch (e) {
+      debugPrint("Error initializing map renderer: $e");
+    }
+  }
+
   runApp(
     MultiProvider(
       providers: [
@@ -90,23 +107,21 @@ class _RootPageState extends State<RootPage> {
       anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
     );
 
-    // Initialize OneSignal
-    _initOneSignal();
-
     final session = supabase.auth.currentSession;
 
     if (session == null) {
       _updateHome(const LoginScreen());
     } else {
       _handleUser(session.user);
-      // Link OneSignal User
+      _initOneSignal();
       OneSignal.login(session.user.id);
     }
 
-    _authSub = supabase.auth.onAuthStateChange.listen((event) {
+    _authSub = supabase.auth.onAuthStateChange.listen((event) async {
       final user = event.session?.user;
       if (user != null) {
         _handleUser(user);
+        await _initOneSignal();
         OneSignal.login(user.id);
       } else {
         OneSignal.logout();
@@ -123,7 +138,7 @@ class _RootPageState extends State<RootPage> {
     }
 
     try {
-      OneSignal.Debug.setLogLevel(OSLogLevel.verbose);
+      OneSignal.Debug.setLogLevel(OSLogLevel.none);
       OneSignal.initialize(appId);
 
       // Request permission
