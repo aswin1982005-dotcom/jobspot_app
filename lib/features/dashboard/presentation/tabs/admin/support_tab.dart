@@ -77,99 +77,101 @@ class _SupportTabState extends State<SupportTab>
 
     return Consumer<SupportProvider>(
       builder: (context, provider, _) {
-        if (provider.isLoading) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        return RefreshIndicator(
-          onRefresh: provider.refresh,
-          child: Column(
-            children: [
-              // Filter Bar
-              Container(
-                padding: const EdgeInsets.all(16),
-                color: theme.cardColor,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Support & Reports',
-                      style: textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+        return Column(
+          children: [
+            // Filter Bar
+            Container(
+              padding: const EdgeInsets.all(16),
+              color: theme.cardColor,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Support & Reports',
+                    style: textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
                     ),
-                    const SizedBox(height: 12),
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        children: [
-                          _buildFilterChip(
-                            context,
-                            'All',
-                            provider.statusFilter == null,
-                            () => provider.clearFilter(),
-                          ),
-                          const SizedBox(width: 8),
-                          _buildFilterChip(
-                            context,
-                            'Pending',
-                            provider.statusFilter == 'pending',
-                            () => provider.setStatusFilter('pending'),
-                          ),
-                          const SizedBox(width: 8),
-                          _buildFilterChip(
-                            context,
-                            'In Progress',
-                            provider.statusFilter == 'in_progress',
-                            () => provider.setStatusFilter('in_progress'),
-                          ),
-                          const SizedBox(width: 8),
-                          _buildFilterChip(
-                            context,
-                            'Resolved',
-                            provider.statusFilter == 'resolved',
-                            () => provider.setStatusFilter('resolved'),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // Reports List
-              Expanded(
-                child: provider.allReports.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.support_agent,
-                              size: 64,
-                              color: theme.hintColor,
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              'No reports found',
-                              style: textTheme.bodyLarge?.copyWith(
-                                color: theme.hintColor,
-                              ),
-                            ),
-                          ],
+                  ),
+                  const SizedBox(height: 12),
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        _buildFilterChip(
+                          context,
+                          'All',
+                          provider.statusFilter == null,
+                          () => provider.clearFilter(),
                         ),
-                      )
-                    : ListView.builder(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: provider.allReports.length,
-                        itemBuilder: (context, index) {
-                          final report = provider.allReports[index];
-                          return _buildReportCard(context, report, provider);
-                        },
-                      ),
+                        const SizedBox(width: 8),
+                        _buildFilterChip(
+                          context,
+                          'Pending',
+                          provider.statusFilter == 'pending',
+                          () => provider.setStatusFilter('pending'),
+                        ),
+                        const SizedBox(width: 8),
+                        _buildFilterChip(
+                          context,
+                          'In Progress',
+                          provider.statusFilter == 'in_progress',
+                          () => provider.setStatusFilter('in_progress'),
+                        ),
+                        const SizedBox(width: 8),
+                        _buildFilterChip(
+                          context,
+                          'Resolved',
+                          provider.statusFilter == 'resolved',
+                          () => provider.setStatusFilter('resolved'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+
+            // Reports List
+            Expanded(
+              child: provider.isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : RefreshIndicator(
+                      onRefresh: provider.refresh,
+                      child: provider.allReports.isEmpty
+                          ? Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.support_agent,
+                                    size: 64,
+                                    color: theme.hintColor,
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    'No reports found',
+                                    style: textTheme.bodyLarge?.copyWith(
+                                      color: theme.hintColor,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )
+                          : ListView.builder(
+                              padding: const EdgeInsets.all(16),
+                              itemCount: provider.allReports.length,
+                              itemBuilder: (context, index) {
+                                final report = provider.allReports[index];
+                                return _buildReportCard(
+                                  context,
+                                  report,
+                                  provider,
+                                );
+                              },
+                            ),
+                    ),
+            ),
+          ],
         );
       },
     );

@@ -27,40 +27,21 @@ class _HomeTabState extends State<HomeTab> with AutomaticKeepAliveClientMixin {
 
     return Scaffold(
       body: SafeArea(
-        child: Consumer<SeekerHomeProvider>(
-          builder: (context, provider, child) {
-            if (provider.isLoading) {
-              return const Center(child: CircularProgressIndicator());
-            }
-
-            if (provider.error != null) {
-              return Center(child: Text('Error: ${provider.error}'));
-            }
-
-            final savedJobs = provider.savedJobs;
-            final recommendedJobs = provider.recommendedJobs;
-
-            final appliedCount = provider.appliedCount;
-            final interviewCount = provider.interviewCount;
-            final selectedCount = provider.selectedCount;
-
-            final providerProfile = context.watch<ProfileProvider>();
-            final userName =
-                providerProfile.profileData?['full_name'] ?? 'User';
-
-            return RefreshIndicator(
-              onRefresh: provider.refresh,
-              child: SingleChildScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 24,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Header
-                    Row(
+        child: RefreshIndicator(
+          onRefresh: () =>
+              Provider.of<SeekerHomeProvider>(context, listen: false).refresh(),
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header
+                Consumer<ProfileProvider>(
+                  builder: (context, providerProfile, _) {
+                    final userName =
+                        providerProfile.profileData?['full_name'] ?? 'User';
+                    return Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
@@ -121,172 +102,203 @@ class _HomeTabState extends State<HomeTab> with AutomaticKeepAliveClientMixin {
                           ),
                         ),
                       ],
-                    ),
+                    );
+                  },
+                ),
 
-                    const SizedBox(height: 24),
+                const SizedBox(height: 24),
 
-                    // Unified Stats Dashboard
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        vertical: 20,
-                        horizontal: 16,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.darkPurple,
-                        borderRadius: BorderRadius.circular(24),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.purple.withValues(alpha: 0.3),
-                            blurRadius: 20,
-                            offset: const Offset(0, 10),
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: [
-                          _buildStatItem(
-                            'Applied',
-                            appliedCount,
-                            Icons.send_rounded,
-                            AppColors.sky,
-                          ),
-                          _buildDivider(),
-                          _buildStatItem(
-                            'Interviews',
-                            interviewCount,
-                            Icons.videocam_rounded,
-                            AppColors.sunny,
-                          ),
-                          _buildDivider(),
-                          _buildStatItem(
-                            'Selected',
-                            selectedCount,
-                            Icons.check_circle_rounded,
-                            AppColors.teal,
-                          ),
-                        ],
-                      ),
-                    ),
+                // Data Content
+                Consumer<SeekerHomeProvider>(
+                  builder: (context, provider, child) {
+                    if (provider.isLoading) {
+                      return const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 40),
+                        child: Center(child: CircularProgressIndicator()),
+                      );
+                    }
 
-                    const SizedBox(height: 32),
+                    if (provider.error != null) {
+                      return Center(child: Text('Error: ${provider.error}'));
+                    }
 
-                    // Saved Jobs Section (Horizontal)
-                    if (savedJobs.isNotEmpty) ...[
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'Saved Jobs',
-                            style: textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
+                    final savedJobs = provider.savedJobs;
+                    final recommendedJobs = provider.recommendedJobs;
+
+                    final appliedCount = provider.appliedCount;
+                    final interviewCount = provider.interviewCount;
+                    final selectedCount = provider.selectedCount;
+
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Unified Stats Dashboard
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 20,
+                            horizontal: 16,
                           ),
-                          TextButton(
-                            onPressed: () {
-                              final jobsList = savedJobs
-                                  .map(
-                                    (s) =>
-                                        s['job_posts'] as Map<String, dynamic>,
-                                  )
-                                  .toList();
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => JobListScreen(
-                                    title: 'Saved Jobs',
-                                    jobs: jobsList,
-                                    appliedJobIds: provider.appliedJobIds,
-                                    onRefresh: () async => provider.refresh(),
-                                  ),
-                                ),
-                              );
-                            },
-                            child: const Text('See All'),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      SizedBox(
-                        height: 240, // Increased height to prevent overflow
-                        child: ListView.separated(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: savedJobs.length,
-                          separatorBuilder: (_, _) => const SizedBox(width: 16),
-                          itemBuilder: (context, index) {
-                            final job =
-                                savedJobs[index]['job_posts']
-                                    as Map<String, dynamic>;
-                            final jobId = job['id'] as String;
-                            final isApplied = provider.isJobApplied(jobId);
-                            return SizedBox(
-                              width: 300,
-                              child: UnifiedJobCard(
-                                job: job,
-                                role: JobCardRole.seeker,
-                                canApply: !isApplied,
-                                onApplied: provider.refresh,
+                          decoration: BoxDecoration(
+                            color: AppColors.darkPurple,
+                            borderRadius: BorderRadius.circular(24),
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppColors.purple.withValues(alpha: 0.3),
+                                blurRadius: 20,
+                                offset: const Offset(0, 10),
                               ),
-                            );
-                          },
-                        ),
-                      ),
-                      const SizedBox(height: 32),
-                    ],
-
-                    // Recommended Jobs (Vertical Feed)
-                    Text(
-                      'Recommended for you',
-                      style: textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    if (recommendedJobs.isEmpty)
-                      Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(40.0),
-                          child: Column(
+                            ],
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                             children: [
-                              Icon(
-                                Icons.work_outline,
-                                size: 48,
-                                color: theme.dividerColor,
+                              _buildStatItem(
+                                'Applied',
+                                appliedCount,
+                                Icons.send_rounded,
+                                AppColors.sky,
                               ),
-                              const SizedBox(height: 16),
-                              Text(
-                                "No jobs found yet",
-                                style: TextStyle(color: theme.hintColor),
+                              _buildDivider(),
+                              _buildStatItem(
+                                'Interviews',
+                                interviewCount,
+                                Icons.videocam_rounded,
+                                AppColors.sunny,
+                              ),
+                              _buildDivider(),
+                              _buildStatItem(
+                                'Selected',
+                                selectedCount,
+                                Icons.check_circle_rounded,
+                                AppColors.teal,
                               ),
                             ],
                           ),
                         ),
-                      )
-                    else
-                      ListView.separated(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: recommendedJobs.length,
-                        separatorBuilder: (context, index) =>
-                            const SizedBox(height: 16),
-                        itemBuilder: (context, index) {
-                          final job = recommendedJobs[index];
-                          final jobId = job['id'] as String;
-                          final isApplied = provider.isJobApplied(jobId);
-                          return UnifiedJobCard(
-                            job: job,
-                            role: JobCardRole.seeker,
-                            canApply: !isApplied,
-                            onApplied: provider.refresh,
-                          );
-                        },
-                      ),
-                    const SizedBox(height: 80), // Bottom padding
-                  ],
+
+                        const SizedBox(height: 32),
+
+                        // Saved Jobs Section (Horizontal)
+                        if (savedJobs.isNotEmpty) ...[
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Saved Jobs',
+                                style: textTheme.titleLarge?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              TextButton(
+                                onPressed: () {
+                                  final jobsList = savedJobs
+                                      .map(
+                                        (s) =>
+                                            s['job_posts']
+                                                as Map<String, dynamic>,
+                                      )
+                                      .toList();
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => JobListScreen(
+                                        title: 'Saved Jobs',
+                                        jobs: jobsList,
+                                        appliedJobIds: provider.appliedJobIds,
+                                        onRefresh: () async =>
+                                            provider.refresh(),
+                                      ),
+                                    ),
+                                  );
+                                },
+                                child: const Text('See All'),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          SizedBox(
+                            height: 240, // Increased height to prevent overflow
+                            child: ListView.separated(
+                              scrollDirection: Axis.horizontal,
+                              itemCount: savedJobs.length,
+                              separatorBuilder: (_, _) =>
+                                  const SizedBox(width: 16),
+                              itemBuilder: (context, index) {
+                                final job =
+                                    savedJobs[index]['job_posts']
+                                        as Map<String, dynamic>;
+                                final jobId = job['id'] as String;
+                                final isApplied = provider.isJobApplied(jobId);
+                                return SizedBox(
+                                  width: 300,
+                                  child: UnifiedJobCard(
+                                    job: job,
+                                    role: JobCardRole.seeker,
+                                    canApply: !isApplied,
+                                    onApplied: provider.refresh,
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                          const SizedBox(height: 32),
+                        ],
+
+                        // Recommended Jobs (Vertical Feed)
+                        Text(
+                          'Recommended for you',
+                          style: textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        if (recommendedJobs.isEmpty)
+                          Center(
+                            child: Padding(
+                              padding: const EdgeInsets.all(40.0),
+                              child: Column(
+                                children: [
+                                  Icon(
+                                    Icons.work_outline,
+                                    size: 48,
+                                    color: theme.dividerColor,
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    "No jobs found yet",
+                                    style: TextStyle(color: theme.hintColor),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          )
+                        else
+                          ListView.separated(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: recommendedJobs.length,
+                            separatorBuilder: (context, index) =>
+                                const SizedBox(height: 16),
+                            itemBuilder: (context, index) {
+                              final job = recommendedJobs[index];
+                              final jobId = job['id'] as String;
+                              final isApplied = provider.isJobApplied(jobId);
+                              return UnifiedJobCard(
+                                job: job,
+                                role: JobCardRole.seeker,
+                                canApply: !isApplied,
+                                onApplied: provider.refresh,
+                              );
+                            },
+                          ),
+                        const SizedBox(height: 80), // Bottom padding
+                      ],
+                    );
+                  },
                 ),
-              ),
-            );
-          },
+              ],
+            ),
+          ),
         ),
       ),
     );

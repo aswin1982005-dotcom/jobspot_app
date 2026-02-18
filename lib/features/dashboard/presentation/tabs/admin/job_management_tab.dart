@@ -23,122 +23,120 @@ class _JobManagementTabState extends State<JobManagementTab>
 
     return Consumer<JobManagementProvider>(
       builder: (context, provider, _) {
-        if (provider.isLoading) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        return RefreshIndicator(
-          onRefresh: provider.refresh,
-          child: Column(
-            children: [
-              // Filter Bar
-              Container(
-                padding: const EdgeInsets.all(16),
-                color: theme.cardColor,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Job Management',
-                      style: textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
+        return Column(
+          children: [
+            // Filter Bar
+            Container(
+              padding: const EdgeInsets.all(16),
+              color: theme.cardColor,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Job Management',
+                    style: textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildFilterChip(
+                          context,
+                          'All Jobs',
+                          provider.activeFilter == null &&
+                              provider.reportedFilter == null &&
+                              provider.adminDisabledFilter == null,
+                          () => provider.clearFilters(),
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildFilterChip(
-                            context,
-                            'All Jobs',
-                            provider.activeFilter == null &&
-                                provider.reportedFilter == null &&
-                                provider.adminDisabledFilter == null,
-                            () => provider.clearFilters(),
-                          ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _buildFilterChip(
+                          context,
+                          'Active',
+                          provider.activeFilter == true,
+                          () => provider.setActiveFilter(true),
                         ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: _buildFilterChip(
-                            context,
-                            'Active',
-                            provider.activeFilter == true,
-                            () => provider.setActiveFilter(true),
-                          ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _buildFilterChip(
+                          context,
+                          'Inactive',
+                          provider.activeFilter == false,
+                          () => provider.setActiveFilter(false),
                         ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: _buildFilterChip(
-                            context,
-                            'Inactive',
-                            provider.activeFilter == false,
-                            () => provider.setActiveFilter(false),
-                          ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildFilterChip(
+                          context,
+                          'Reported',
+                          provider.reportedFilter == true,
+                          () => provider.setReportedFilter(true),
                         ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildFilterChip(
-                            context,
-                            'Reported',
-                            provider.reportedFilter == true,
-                            () => provider.setReportedFilter(true),
-                          ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _buildFilterChip(
+                          context,
+                          'Disabled by Admin',
+                          provider.adminDisabledFilter == true,
+                          () => provider.setAdminDisabledFilter(true),
                         ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: _buildFilterChip(
-                            context,
-                            'Disabled by Admin',
-                            provider.adminDisabledFilter == true,
-                            () => provider.setAdminDisabledFilter(true),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
+            ),
 
-              // Job List
-              Expanded(
-                child: provider.jobs.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.work_outline,
-                              size: 64,
-                              color: theme.hintColor,
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              'No jobs found',
-                              style: textTheme.bodyLarge?.copyWith(
-                                color: theme.hintColor,
+            // Job List
+            Expanded(
+              child: provider.isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : RefreshIndicator(
+                      onRefresh: provider.refresh,
+                      child: provider.jobs.isEmpty
+                          ? Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.work_outline,
+                                    size: 64,
+                                    color: theme.hintColor,
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    'No jobs found',
+                                    style: textTheme.bodyLarge?.copyWith(
+                                      color: theme.hintColor,
+                                    ),
+                                  ),
+                                ],
                               ),
+                            )
+                          : ListView.builder(
+                              padding: const EdgeInsets.all(16),
+                              itemCount: provider.jobs.length,
+                              itemBuilder: (context, index) {
+                                final job = provider.jobs[index];
+                                return Padding(
+                                  padding: const EdgeInsets.only(bottom: 12),
+                                  child: _buildJobCard(context, job, provider),
+                                );
+                              },
                             ),
-                          ],
-                        ),
-                      )
-                    : ListView.builder(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: provider.jobs.length,
-                        itemBuilder: (context, index) {
-                          final job = provider.jobs[index];
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 12),
-                            child: _buildJobCard(context, job, provider),
-                          );
-                        },
-                      ),
-              ),
-            ],
-          ),
+                    ),
+            ),
+          ],
         );
       },
     );

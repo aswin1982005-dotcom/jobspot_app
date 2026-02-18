@@ -33,117 +33,115 @@ class _UserManagementTabState extends State<UserManagementTab>
 
     return Consumer<UserManagementProvider>(
       builder: (context, provider, _) {
-        if (provider.isLoading) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        return RefreshIndicator(
-          onRefresh: provider.refresh,
-          child: Column(
-            children: [
-              // Filter Bar
-              Container(
-                padding: const EdgeInsets.all(16),
-                color: theme.cardColor,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'User Management',
-                      style: textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
+        return Column(
+          children: [
+            // Filter Bar
+            Container(
+              padding: const EdgeInsets.all(16),
+              color: theme.cardColor,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'User Management',
+                    style: textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildFilterChip(
+                          context,
+                          'All Users',
+                          provider.roleFilter == null,
+                          () => provider.setRoleFilter(null),
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildFilterChip(
-                            context,
-                            'All Users',
-                            provider.roleFilter == null,
-                            () => provider.setRoleFilter(null),
-                          ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _buildFilterChip(
+                          context,
+                          'Seekers',
+                          provider.roleFilter == 'seeker',
+                          () => provider.setRoleFilter('seeker'),
                         ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: _buildFilterChip(
-                            context,
-                            'Seekers',
-                            provider.roleFilter == 'seeker',
-                            () => provider.setRoleFilter('seeker'),
-                          ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _buildFilterChip(
+                          context,
+                          'Employers',
+                          provider.roleFilter == 'employer',
+                          () => provider.setRoleFilter('employer'),
                         ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: _buildFilterChip(
-                            context,
-                            'Employers',
-                            provider.roleFilter == 'employer',
-                            () => provider.setRoleFilter('employer'),
-                          ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildFilterChip(
+                          context,
+                          'Active Only',
+                          provider.disabledFilter == false,
+                          () => provider.setDisabledFilter(false),
                         ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildFilterChip(
-                            context,
-                            'Active Only',
-                            provider.disabledFilter == false,
-                            () => provider.setDisabledFilter(false),
-                          ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _buildFilterChip(
+                          context,
+                          'Disabled Only',
+                          provider.disabledFilter == true,
+                          () => provider.setDisabledFilter(true),
                         ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: _buildFilterChip(
-                            context,
-                            'Disabled Only',
-                            provider.disabledFilter == true,
-                            () => provider.setDisabledFilter(true),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
+            ),
 
-              // User List
-              Expanded(
-                child: provider.users.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.people_outline,
-                              size: 64,
-                              color: theme.hintColor,
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              'No users found',
-                              style: textTheme.bodyLarge?.copyWith(
-                                color: theme.hintColor,
+            // User List
+            Expanded(
+              child: provider.isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : RefreshIndicator(
+                      onRefresh: provider.refresh,
+                      child: provider.users.isEmpty
+                          ? Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.people_outline,
+                                    size: 64,
+                                    color: theme.hintColor,
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    'No users found',
+                                    style: textTheme.bodyLarge?.copyWith(
+                                      color: theme.hintColor,
+                                    ),
+                                  ),
+                                ],
                               ),
+                            )
+                          : ListView.builder(
+                              padding: const EdgeInsets.all(16),
+                              itemCount: provider.users.length,
+                              itemBuilder: (context, index) {
+                                final user = provider.users[index];
+                                return _buildUserCard(context, user, provider);
+                              },
                             ),
-                          ],
-                        ),
-                      )
-                    : ListView.builder(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: provider.users.length,
-                        itemBuilder: (context, index) {
-                          final user = provider.users[index];
-                          return _buildUserCard(context, user, provider);
-                        },
-                      ),
-              ),
-            ],
-          ),
+                    ),
+            ),
+          ],
         );
       },
     );
