@@ -22,7 +22,7 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
     final textTheme = Theme.of(context).textTheme;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -43,14 +43,16 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
                 'Choose Your Role',
                 style: textTheme.headlineLarge?.copyWith(
                   fontWeight: FontWeight.bold,
-                  color: AppColors.darkPurple,
+                  color: Theme.of(context).primaryColor,
                 ),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 12),
               Text(
                 'Are you looking for a job or looking to hire someone?',
-                style: textTheme.bodyLarge?.copyWith(color: Colors.grey[600]),
+                style: textTheme.bodyLarge?.copyWith(
+                  color: Theme.of(context).hintColor,
+                ),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 48),
@@ -85,7 +87,8 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
                             final user = SupabaseService.getCurrentUser();
                             if (user != null) {
                               // 1. Create Initial Profile
-                              await ProfileService.createInitialProfile(
+                              final profileService = ProfileService();
+                              await profileService.createInitialProfile(
                                 user.id,
                                 _selectedRole!,
                               );
@@ -175,11 +178,13 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
           color: isSelected
-              ? AppColors.purple.withValues(alpha: 0.05)
-              : Colors.white,
+              ? Theme.of(context).primaryColor.withValues(alpha: 0.05)
+              : Theme.of(context).cardColor,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: isSelected ? AppColors.purple : Colors.grey.shade200,
+            color: isSelected
+                ? Theme.of(context).primaryColor
+                : Theme.of(context).dividerColor,
             width: 2,
           ),
           boxShadow: isSelected
@@ -197,12 +202,16 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: isSelected ? AppColors.purple : Colors.grey.shade100,
+                color: isSelected
+                    ? Theme.of(context).primaryColor
+                    : Theme.of(context).scaffoldBackgroundColor,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(
                 icon,
-                color: isSelected ? Colors.white : Colors.grey[600],
+                color: isSelected
+                    ? Colors.white
+                    : Theme.of(context).iconTheme.color,
                 size: 32,
               ),
             ),
@@ -221,7 +230,10 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
                   const SizedBox(height: 4),
                   Text(
                     description,
-                    style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Theme.of(context).hintColor,
+                    ),
                   ),
                 ],
               ),

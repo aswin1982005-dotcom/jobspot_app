@@ -70,7 +70,7 @@ class _SplashScreenState extends State<SplashScreen> {
     // Show white background (or brand color) while initializing to avoid glitch
     if (!_isInit) {
       return Scaffold(
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         body: Center(
           child: SizedBox(
             width: 150,
@@ -82,7 +82,7 @@ class _SplashScreenState extends State<SplashScreen> {
     }
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SizedBox.expand(
         child: FittedBox(
           fit: BoxFit.cover,

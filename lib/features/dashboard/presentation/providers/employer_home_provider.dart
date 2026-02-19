@@ -48,4 +48,17 @@ class EmployerHomeProvider extends ChangeNotifier {
   }
 
   Future<void> refresh() => loadData();
+
+  void updateJob(Map<String, dynamic> updatedJob) {
+    final index = _jobs.indexWhere((j) => j['id'] == updatedJob['id']);
+    if (index != -1) {
+      _jobs[index] = updatedJob;
+      notifyListeners();
+    }
+  }
+
+  void addJob(Map<String, dynamic> newJob) {
+    _jobs.insert(0, newJob);
+    notifyListeners();
+  }
 }

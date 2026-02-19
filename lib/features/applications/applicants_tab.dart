@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:jobspot_app/core/utils/global_refresh_manager.dart';
 import 'package:jobspot_app/core/theme/app_theme.dart';
 import 'package:jobspot_app/features/applications/applicant_card.dart';
 import 'package:jobspot_app/features/applications/presentation/applicant_profile_screen.dart';
@@ -162,23 +163,35 @@ class _ApplicantsTabState extends State<ApplicantsTab> {
                           Text('Applicants', style: textTheme.headlineLarge),
                         ],
                       ),
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: theme.cardColor,
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.05),
-                              blurRadius: 10,
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            onPressed: () =>
+                                GlobalRefreshManager.refreshAll(context),
+                            icon: const Icon(Icons.refresh),
+                            tooltip: 'Refresh',
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: theme.cardColor,
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.05),
+                                  blurRadius: 10,
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
-                        child: Icon(
-                          Icons.notifications_outlined,
-                          size: 24,
-                          color: theme.colorScheme.onSurface,
-                        ),
+                            child: Icon(
+                              Icons.notifications_outlined,
+                              size: 24,
+                              color: theme.colorScheme.onSurface,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:jobspot_app/core/utils/global_refresh_manager.dart';
 import 'package:jobspot_app/core/theme/app_theme.dart';
 import 'package:jobspot_app/features/jobs/presentation/unified_job_card.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -225,12 +226,23 @@ class _SearchTabState extends State<SearchTab>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Search Jobs',
-                    style: textTheme.headlineMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.black,
-                    ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Search Jobs',
+                        style: textTheme.headlineMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          // color: AppColors.black, // Removed to use theme default
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () =>
+                            GlobalRefreshManager.refreshAll(context),
+                        icon: const Icon(Icons.refresh),
+                        tooltip: 'Refresh',
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 16),
 
@@ -257,7 +269,7 @@ class _SearchTabState extends State<SearchTab>
                         ),
                         prefixIcon: Icon(
                           Icons.search_rounded,
-                          color: theme.primaryColor,
+                          color: theme.colorScheme.primary,
                         ),
                         border: InputBorder.none,
                         enabledBorder: InputBorder.none,
@@ -354,7 +366,7 @@ class _SearchTabState extends State<SearchTab>
                             child: Icon(
                               Icons.search_off_rounded,
                               size: 48,
-                              color: theme.hintColor,
+                              color: theme.disabledColor,
                             ),
                           ),
                           const SizedBox(height: 16),

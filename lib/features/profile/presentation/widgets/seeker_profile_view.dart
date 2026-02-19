@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:jobspot_app/core/utils/supabase_service.dart';
+import 'package:jobspot_app/core/utils/global_refresh_manager.dart';
 import 'package:jobspot_app/features/profile/presentation/screens/edit_seeker_profile_screen.dart';
 import 'package:jobspot_app/features/profile/presentation/widgets/profile_widgets.dart';
 import 'package:jobspot_app/features/applications/presentation/my_applications_screen.dart';
@@ -39,6 +40,13 @@ class SeekerProfileView extends StatelessWidget {
                 title: profile?['full_name'] ?? 'User',
                 subtitle: SupabaseService.getCurrentUser()?.email ?? '',
                 onEdit: () => _navigateToEditProfile(context, profile),
+                actions: [
+                  IconButton(
+                    onPressed: () => GlobalRefreshManager.refreshAll(context),
+                    icon: const Icon(Icons.refresh, color: Colors.white),
+                    tooltip: 'Refresh',
+                  ),
+                ],
               ),
               const SizedBox(height: 20),
               Padding(

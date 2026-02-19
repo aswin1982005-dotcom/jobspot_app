@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:jobspot_app/core/utils/global_refresh_manager.dart';
 import 'package:jobspot_app/core/theme/app_theme.dart';
 import 'package:jobspot_app/features/jobs/presentation/unified_job_card.dart';
 import 'package:jobspot_app/features/jobs/presentation/create_job_screen.dart';
@@ -30,8 +31,12 @@ class _JobPostingTabState extends State<JobPostingTab> {
       context,
       MaterialPageRoute(builder: (context) => const CreateJobScreen()),
     );
-    if (result == true) {
-      provider.refresh();
+    if (result != null) {
+      if (result is Map<String, dynamic>) {
+        provider.addJob(result);
+      } else {
+        provider.refresh();
+      }
     }
   }
 
@@ -45,7 +50,10 @@ class _JobPostingTabState extends State<JobPostingTab> {
       await JobService().updateJobPost(job['id'], {
         'is_active': !currentStatus,
       });
-      provider.refresh();
+      // Update local state instead of full refresh
+      final updatedJob = Map<String, dynamic>.from(job);
+      updatedJob['is_active'] = !currentStatus;
+      provider.updateJob(updatedJob);
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -167,23 +175,35 @@ class _JobPostingTabState extends State<JobPostingTab> {
                           Text('Job Postings', style: textTheme.headlineLarge),
                         ],
                       ),
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: theme.cardColor,
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.05),
-                              blurRadius: 10,
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            onPressed: () =>
+                                GlobalRefreshManager.refreshAll(context),
+                            icon: const Icon(Icons.refresh),
+                            tooltip: 'Refresh',
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: theme.cardColor,
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.05),
+                                  blurRadius: 10,
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
-                        child: Icon(
-                          Icons.notifications_outlined,
-                          size: 24,
-                          color: colorScheme.onSurface,
-                        ),
+                            child: Icon(
+                              Icons.notifications_outlined,
+                              size: 24,
+                              color: colorScheme.onSurface,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -310,7 +330,9 @@ class _JobPostingTabState extends State<JobPostingTab> {
                             return UnifiedJobCard(
                               job: job,
                               role: JobCardRole.employer,
-                              afterEdit: () {},
+                              afterEdit: (updatedJob) {
+                                provider.updateJob(updatedJob);
+                              },
                               onClose: () => _toggleJobStatus(context, job),
                             );
                           },

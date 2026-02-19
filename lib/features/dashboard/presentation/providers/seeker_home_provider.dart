@@ -68,4 +68,27 @@ class SeekerHomeProvider extends ChangeNotifier {
   bool isJobApplied(String jobId) => _appliedJobIds.contains(jobId);
 
   Future<void> refresh() => loadData();
+
+  void toggleJobSaveLocally(String jobId, Map<String, dynamic> jobData) {
+    final index = _savedJobs.indexWhere((j) => j['job_id'] == jobId);
+    if (index != -1) {
+      _savedJobs.removeAt(index);
+    } else {
+      _savedJobs.insert(0, {
+        'job_id': jobId,
+        'seeker_id': null, // Placeholder as it might not be needed for display
+        'saved_at': DateTime.now().toIso8601String(),
+        'job_posts': jobData,
+      });
+    }
+    notifyListeners();
+  }
+
+  void markJobAsAppliedLocally(String jobId) {
+    if (!_appliedJobIds.contains(jobId)) {
+      _appliedJobIds.add(jobId);
+      // improved: optionally add to _myApplications if you have enough data to construct a placeholder
+      notifyListeners();
+    }
+  }
 }

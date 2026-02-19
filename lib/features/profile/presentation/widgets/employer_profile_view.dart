@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:jobspot_app/core/utils/supabase_service.dart';
+import 'package:jobspot_app/core/utils/global_refresh_manager.dart';
 import 'package:jobspot_app/data/services/profile_service.dart';
 import 'package:jobspot_app/features/profile/presentation/screens/edit_employer_profile_screen.dart';
 import 'package:jobspot_app/features/profile/presentation/widgets/profile_widgets.dart';
@@ -28,7 +29,8 @@ class _EmployerProfileViewState extends State<EmployerProfileView> {
     try {
       final user = SupabaseService.getCurrentUser();
       if (user != null) {
-        _profile = await ProfileService.fetchEmployerProfile(user.id);
+        final profileService = ProfileService();
+        _profile = await profileService.fetchEmployerProfile(user.id);
         if (mounted) {
           setState(() {
             _isLoading = false;
@@ -72,6 +74,13 @@ class _EmployerProfileViewState extends State<EmployerProfileView> {
                 fetchUserProfile();
               }
             },
+            actions: [
+              IconButton(
+                onPressed: () => GlobalRefreshManager.refreshAll(context),
+                icon: const Icon(Icons.refresh, color: Colors.white),
+                tooltip: 'Refresh',
+              ),
+            ],
           ),
 
           const SizedBox(height: 20),

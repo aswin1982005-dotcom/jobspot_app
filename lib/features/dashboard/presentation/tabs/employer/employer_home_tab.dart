@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:jobspot_app/core/utils/global_refresh_manager.dart';
 import 'package:jobspot_app/core/theme/app_theme.dart';
 import 'package:jobspot_app/features/jobs/presentation/unified_job_card.dart';
 import 'package:jobspot_app/features/applications/applicant_card.dart';
@@ -69,59 +70,73 @@ class EmployerHomeTab extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Hello, $companyName 👋',
-                        style: textTheme.headlineMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 24,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Hello, $companyName 👋',
+                          style: textTheme.headlineMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 24,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Manage your hiring pipeline',
-                        style: textTheme.bodyLarge?.copyWith(
-                          color: theme.hintColor,
+                        const SizedBox(height: 4),
+                        Text(
+                          'Manage your hiring pipeline',
+                          style: textTheme.bodyLarge?.copyWith(
+                            color: theme.hintColor,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                  InkWell(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const NotificationsScreen(),
-                        ),
-                      );
-                    },
-                    borderRadius: BorderRadius.circular(12),
-                    child: Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: theme.cardColor,
-                        border: Border.all(
-                          color: theme.dividerColor.withValues(alpha: 0.5),
-                        ),
-                        borderRadius: BorderRadius.circular(12),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        onPressed: () =>
+                            GlobalRefreshManager.refreshAll(context),
+                        icon: const Icon(Icons.refresh),
+                        tooltip: 'Refresh',
                       ),
-                      child: Consumer<NotificationProvider>(
-                        builder: (context, notifProvider, child) {
-                          return Badge(
-                            label: notifProvider.unreadCount > 0
-                                ? Text('${notifProvider.unreadCount}')
-                                : null,
-                            isLabelVisible: notifProvider.unreadCount > 0,
-                            child: Icon(
-                              Icons.notifications_outlined,
-                              color: theme.iconTheme.color,
+                      const SizedBox(width: 8),
+                      InkWell(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const NotificationsScreen(),
                             ),
                           );
                         },
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: theme.cardColor,
+                            border: Border.all(
+                              color: theme.dividerColor.withValues(alpha: 0.5),
+                            ),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Consumer<NotificationProvider>(
+                            builder: (context, notifProvider, child) {
+                              return Badge(
+                                label: notifProvider.unreadCount > 0
+                                    ? Text('${notifProvider.unreadCount}')
+                                    : null,
+                                isLabelVisible: notifProvider.unreadCount > 0,
+                                child: Icon(
+                                  Icons.notifications_outlined,
+                                  color: theme.iconTheme.color,
+                                ),
+                              );
+                            },
+                          ),
+                        ),
                       ),
-                    ),
+                    ],
                   ),
                 ],
               ),
@@ -252,7 +267,7 @@ class EmployerHomeTab extends StatelessWidget {
                     child: UnifiedJobCard(
                       job: job,
                       role: JobCardRole.employer,
-                      afterEdit: provider.refresh,
+                      afterEdit: (_) => provider.refresh(),
                       onClose: provider.refresh,
                     ),
                   ),

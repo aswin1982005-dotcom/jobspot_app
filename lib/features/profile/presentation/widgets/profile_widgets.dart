@@ -8,6 +8,7 @@ class ProfileHeader extends StatelessWidget {
   final String subtitle;
   final VoidCallback onEdit;
   final IconData? fallbackIcon;
+  final List<Widget>? actions;
 
   const ProfileHeader({
     super.key,
@@ -16,6 +17,7 @@ class ProfileHeader extends StatelessWidget {
     required this.subtitle,
     required this.onEdit,
     this.fallbackIcon,
+    this.actions,
   });
 
   @override
@@ -35,6 +37,10 @@ class ProfileHeader extends StatelessWidget {
       ),
       child: Column(
         children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: actions ?? [],
+          ),
           Container(
             padding: const EdgeInsets.all(4),
             decoration: const BoxDecoration(

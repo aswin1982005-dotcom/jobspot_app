@@ -12,6 +12,7 @@ import 'package:google_maps_flutter_platform_interface/google_maps_flutter_platf
 import 'package:jobspot_app/core/theme/app_theme.dart';
 import 'package:jobspot_app/core/theme/map_styles.dart';
 import 'package:jobspot_app/core/utils/map_clustering_helper.dart';
+import 'package:jobspot_app/core/utils/global_refresh_manager.dart';
 import 'package:jobspot_app/features/jobs/presentation/job_details_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:provider/provider.dart';
@@ -303,7 +304,8 @@ class _MapTabState extends State<MapTab> with AutomaticKeepAliveClientMixin {
     final ui.PictureRecorder pictureRecorder = ui.PictureRecorder();
     final Canvas canvas = Canvas(pictureRecorder);
     final Paint paint1 = Paint()..color = AppColors.darkPurple;
-    final Paint paint2 = Paint()..color = Colors.white;
+    final Paint paint2 = Paint()
+      ..color = Colors.white; // Keep white for high contrast on map pins
 
     canvas.drawCircle(Offset(size / 2, size / 2), size / 2.0, paint1);
     canvas.drawCircle(Offset(size / 2, size / 2), size / 2.2, paint2);
@@ -533,10 +535,23 @@ class _MapTabState extends State<MapTab> with AutomaticKeepAliveClientMixin {
             ),
           ),
           Positioned(
+            bottom: 80,
+            right: 16,
+            child: FloatingActionButton(
+              mini: true,
+              heroTag: 'map_refresh_fab',
+              backgroundColor: Theme.of(context).colorScheme.surface,
+              onPressed: () => GlobalRefreshManager.refreshAll(context),
+              tooltip: 'Refresh Jobs',
+              child: const Icon(Icons.refresh, color: AppColors.purple),
+            ),
+          ),
+          Positioned(
             bottom: 24,
             right: 16,
             child: FloatingActionButton(
               mini: true,
+              heroTag: 'map_location_fab',
               backgroundColor: Theme.of(context).colorScheme.surface,
               onPressed: _getCurrentLocation,
               child: const Icon(Icons.my_location, color: AppColors.purple),
@@ -611,7 +626,9 @@ class JobDetailsSheet extends StatelessWidget {
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
+            color: Colors.black.withValues(
+              alpha: 0.1,
+            ), // Shadow is fine as black
             blurRadius: 10,
             offset: const Offset(0, -5),
           ),
@@ -796,23 +813,23 @@ class JobDetailsSheet extends StatelessWidget {
     required IconData icon,
     required Color color,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
+        color: color.withValues(alpha: isDark ? 0.2 : 0.1),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(icon, size: 16, color: color),
-          const SizedBox(width: 6),
+          const SizedBox(width: 4),
           Text(
             label,
-            style: TextStyle(
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
               color: color,
-              fontWeight: FontWeight.w600,
-              fontSize: 12,
+              fontWeight: FontWeight.bold,
             ),
           ),
         ],

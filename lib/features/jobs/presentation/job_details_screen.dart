@@ -6,6 +6,8 @@ import 'package:jobspot_app/features/jobs/presentation/create_job_screen.dart';
 import 'package:jobspot_app/features/reviews/presentation/company_reviews_screen.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:provider/provider.dart';
+import 'package:jobspot_app/features/dashboard/presentation/providers/seeker_home_provider.dart';
 
 class JobDetailsScreen extends StatefulWidget {
   final Map<String, dynamic> job;
@@ -73,11 +75,31 @@ class _JobDetailsScreenState extends State<JobDetailsScreen>
     if (jobId == null) return;
     final previousStatus = _isBookmarked;
     setState(() => _isBookmarked = !previousStatus);
+
+    // Optimistic update for provider
+    if (widget.userRole == 'seeker') {
+      try {
+        context.read<SeekerHomeProvider>().toggleJobSaveLocally(
+          jobId,
+          _currentJob,
+        );
+      } catch (_) {}
+    }
+
     try {
       await _jobService.toggleSaveJob(jobId, previousStatus);
     } catch (e) {
       if (mounted) {
         setState(() => _isBookmarked = previousStatus);
+        // Revert provider
+        if (widget.userRole == 'seeker') {
+          try {
+            context.read<SeekerHomeProvider>().toggleJobSaveLocally(
+              jobId,
+              _currentJob,
+            );
+          } catch (_) {}
+        }
       }
     }
   }
@@ -85,6 +107,17 @@ class _JobDetailsScreenState extends State<JobDetailsScreen>
   Future<void> _applyJob() async {
     if (_isApplying || _hasApplied) return;
     setState(() => _isApplying = true);
+
+    // Optimistic update for provider
+    if (widget.userRole == 'seeker') {
+      try {
+        // We might not have full provider here if pushed from a place without it, but usually yes
+        context.read<SeekerHomeProvider>().markJobAsAppliedLocally(
+          _currentJob['id'],
+        );
+      } catch (_) {}
+    }
+
     try {
       await _applicationService.fastApply(
         jobPostId: _currentJob['id'],
@@ -575,6 +608,12 @@ class _JobDetailsScreenState extends State<JobDetailsScreen>
             ),
           ),
           const SizedBox(height: 16),
+          // Call Button
+          SizedBox(
+            width: double.infinity,
+            child: _buildCallButton(context, isSeeker),
+          ),
+          const SizedBox(height: 16),
           // Directions Button
           SizedBox(
             width: double.infinity,
@@ -756,6 +795,54 @@ class _JobDetailsScreenState extends State<JobDetailsScreen>
               ),
             ],
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCallButton(BuildContext context, bool isSeeker) {
+    if (!isSeeker) return const SizedBox.shrink();
+
+    final employerProfile =
+        _currentJob['employer_profiles'] as Map<String, dynamic>?;
+    final contactMobile = employerProfile?['contact_mobile'] as String?;
+    final hasPhone = contactMobile != null && contactMobile.isNotEmpty;
+
+    return Tooltip(
+      message: hasPhone ? 'Call Employer' : 'No mobile number provided',
+      child: OutlinedButton.icon(
+        onPressed: hasPhone
+            ? () async {
+                final uri = Uri.parse('tel:$contactMobile');
+                if (await canLaunchUrl(uri)) {
+                  await launchUrl(uri);
+                } else {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Could not launch dialer')),
+                    );
+                  }
+                }
+              }
+            : null,
+        icon: Icon(
+          Icons.phone,
+          color: hasPhone ? Theme.of(context).primaryColor : Colors.grey,
+        ),
+        label: Text(
+          "Call Employer",
+          style: TextStyle(
+            color: hasPhone ? Theme.of(context).primaryColor : Colors.grey,
+          ),
+        ),
+        style: OutlinedButton.styleFrom(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          side: BorderSide(
+            color: hasPhone ? Theme.of(context).primaryColor : Colors.grey,
+          ),
         ),
       ),
     );

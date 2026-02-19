@@ -6,6 +6,8 @@ import 'package:jobspot_app/features/jobs/presentation/create_job_screen.dart';
 import 'package:jobspot_app/features/jobs/presentation/widgets/job_card_header.dart';
 
 import 'package:jobspot_app/features/jobs/presentation/widgets/job_card_salary_info.dart';
+import 'package:provider/provider.dart';
+import 'package:jobspot_app/features/dashboard/presentation/providers/seeker_home_provider.dart';
 
 enum JobCardRole { seeker, employer }
 
@@ -18,7 +20,7 @@ class UnifiedJobCard extends StatefulWidget {
   final VoidCallback? onApplied;
 
   // Employer specific
-  final VoidCallback? afterEdit;
+  final void Function(Map<String, dynamic>)? afterEdit;
   final VoidCallback? onClose;
 
   const UnifiedJobCard({
@@ -64,6 +66,18 @@ class _UnifiedJobCardState extends State<UnifiedJobCard> {
     setState(() => _isBookmarked = !previousStatus);
 
     try {
+      if (widget.role == JobCardRole.seeker) {
+        // Try to update provider locally
+        try {
+          context.read<SeekerHomeProvider>().toggleJobSaveLocally(
+            jobId,
+            widget.job,
+          );
+        } catch (_) {
+          // Provider might not be available in all contexts, ignore
+        }
+      }
+
       await _jobService.toggleSaveJob(jobId, previousStatus);
     } catch (e) {
       if (mounted) {
@@ -71,6 +85,16 @@ class _UnifiedJobCardState extends State<UnifiedJobCard> {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('Error saving job: $e')));
+
+        // Revert provider if it was updated (optional, but good practice)
+        if (widget.role == JobCardRole.seeker) {
+          try {
+            context.read<SeekerHomeProvider>().toggleJobSaveLocally(
+              jobId,
+              widget.job,
+            );
+          } catch (_) {}
+        }
       }
     }
   }
@@ -82,6 +106,15 @@ class _UnifiedJobCardState extends State<UnifiedJobCard> {
         jobPostId: widget.job['id'],
         message: "hello",
       );
+
+      if (widget.role == JobCardRole.seeker) {
+        try {
+          context.read<SeekerHomeProvider>().markJobAsAppliedLocally(
+            widget.job['id'],
+          );
+        } catch (_) {}
+      }
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Application sent successfully!')),
@@ -104,8 +137,8 @@ class _UnifiedJobCardState extends State<UnifiedJobCard> {
       context,
       MaterialPageRoute(builder: (context) => CreateJobScreen(job: widget.job)),
     );
-    if (result == true) {
-      widget.afterEdit?.call();
+    if (result != null && result is Map<String, dynamic>) {
+      widget.afterEdit?.call(result);
     }
   }
 
