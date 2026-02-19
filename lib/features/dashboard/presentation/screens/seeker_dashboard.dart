@@ -4,6 +4,7 @@ import 'package:jobspot_app/features/profile/presentation/profile_tab.dart';
 import 'package:jobspot_app/features/dashboard/presentation/tabs/seeker/home_tab.dart';
 import 'package:jobspot_app/features/dashboard/presentation/tabs/seeker/map_tab.dart';
 import 'package:jobspot_app/features/dashboard/presentation/tabs/seeker/search_tab.dart';
+import 'package:jobspot_app/features/applications/presentation/my_applications_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:jobspot_app/features/dashboard/presentation/providers/seeker_home_provider.dart';
 import 'package:jobspot_app/core/utils/profile_completion_manager.dart';
@@ -38,6 +39,7 @@ class _SeekerDashboardState extends State<SeekerDashboard> {
             const HomeTab(),
             const SearchTab(),
             const MapTab(),
+            const MyApplicationsScreen(),
             const ProfileTab(role: 'seeker'),
           ],
           destinations: const [
@@ -55,6 +57,11 @@ class _SeekerDashboardState extends State<SeekerDashboard> {
               icon: Icon(Icons.pin_drop_outlined),
               selectedIcon: Icon(Icons.pin_drop_rounded),
               label: 'Job Map',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.description_outlined),
+              selectedIcon: Icon(Icons.description),
+              label: 'Applications',
             ),
             NavigationDestination(
               icon: Icon(Icons.person_outline),

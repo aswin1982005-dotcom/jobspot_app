@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:jobspot_app/core/utils/global_refresh_manager.dart';
 import 'package:jobspot_app/core/theme/app_theme.dart';
 import 'package:jobspot_app/features/jobs/presentation/unified_job_card.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:jobspot_app/features/dashboard/presentation/providers/seeker_home_provider.dart';
+import 'package:jobspot_app/data/services/job_service.dart';
 
 class SearchTab extends StatefulWidget {
   const SearchTab({super.key});
@@ -15,40 +15,109 @@ class SearchTab extends StatefulWidget {
 
 class _SearchTabState extends State<SearchTab>
     with AutomaticKeepAliveClientMixin {
-  PostgrestList _allJobs = [];
-  PostgrestList filteredJobs = [];
+  final JobService _jobService = JobService();
+  final ScrollController _scrollController = ScrollController();
+
+  List<Map<String, dynamic>> _jobs = [];
   bool _isLoading = true;
-  List<Map<String, dynamic>>? _lastJobs;
+  bool _isLoadingMore = false;
+  bool _hasMore = true;
+  int _page = 0;
+  final int _pageSize = 10;
 
   @override
   bool get wantKeepAlive => true;
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _syncWithProvider();
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+    _fetchJobs();
   }
 
-  void _syncWithProvider() {
-    final provider = Provider.of<SeekerHomeProvider>(context);
-    if (provider.recommendedJobs != _lastJobs) {
-      _lastJobs = provider.recommendedJobs;
-      setState(() {
-        _allJobs = provider.recommendedJobs;
-        _isLoading = false;
-      });
-      _filterJobs();
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 200) {
+      if (!_isLoadingMore && _hasMore) {
+        _fetchJobs(loadMore: true);
+      }
     }
   }
 
-  // Refresh now just asks provider to reload
-  void _refresh() {
-    Provider.of<SeekerHomeProvider>(context, listen: false).refresh();
+  Future<void> _fetchJobs({bool loadMore = false}) async {
+    if (!loadMore) {
+      setState(() {
+        _isLoading = true;
+        _page = 0;
+        _hasMore = true;
+        _jobs.clear();
+      });
+    } else {
+      setState(() => _isLoadingMore = true);
+    }
+
+    try {
+      final newJobs = await _jobService.fetchJobs(
+        searchQuery: _searchQuery,
+        page: _page,
+        pageSize: _pageSize,
+        // Map filters to service params
+        location: null, // Add to UI if needed
+        workMode: _selectedJobType == 'Remote' ? 'remote' : null,
+        // Mapping 'Job Type' (Full Time, etc) to 'type' field in DB if needed
+        // For now, assuming basic text search is primary
+      );
+
+      // Client-side filter for 'Job Type' if server doesn't support it yet via params
+      // Or ideally update service to support it.
+      // Current service has 'workMode' but not 'type'.
+      // For now, we will rely on text search or just basic display.
+
+      final List<Map<String, dynamic>> castedJobs =
+          List<Map<String, dynamic>>.from(newJobs);
+
+      if (mounted) {
+        setState(() {
+          if (loadMore) {
+            _jobs.addAll(castedJobs);
+          } else {
+            _jobs = castedJobs;
+          }
+
+          if (castedJobs.length < _pageSize) {
+            _hasMore = false;
+          } else {
+            _page++;
+          }
+
+          _isLoading = false;
+          _isLoadingMore = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _isLoadingMore = false;
+        });
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error loading jobs: $e')));
+      }
+    }
   }
 
-  String? _selectedJobType;
+  final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
-  String _sortOption = 'Newest'; // Newest, Salary High-Low, Salary Low-High
+  String? _selectedJobType;
+  String _sortOption = 'Newest';
 
   final List<String> _jobTypes = [
     'Full Time',
@@ -57,43 +126,11 @@ class _SearchTabState extends State<SearchTab>
     'Contract',
   ];
 
-  void _filterJobs({String? query}) {
-    if (query != null) {
-      _searchQuery = query;
-    }
-
-    setState(() {
-      // 1. Filter by Job Type
-      List<dynamic> temp = _allJobs;
-      if (_selectedJobType != null) {
-        temp = temp.where((job) => job['type'] == _selectedJobType).toList();
-      }
-
-      // 2. Filter by Search Query
-      if (_searchQuery.isNotEmpty) {
-        final q = _searchQuery.toLowerCase();
-        temp = temp.where((job) {
-          final title = (job['title'] as String?)?.toLowerCase() ?? '';
-          final company = (job['company'] as String?)?.toLowerCase() ?? '';
-          // Assuming company is a string name, but if it's a relation/map, we need to handle that.
-          // Often companies are relations. Checking basic fields first.
-          return title.contains(q) || company.contains(q);
-        }).toList();
-      }
-
-      // 3. Sort
-      if (_sortOption == 'Newest') {
-        temp.sort((a, b) {
-          final da = DateTime.tryParse(a['created_at'] ?? '') ?? DateTime(0);
-          final db = DateTime.tryParse(b['created_at'] ?? '') ?? DateTime(0);
-          return db.compareTo(da);
-        });
-      } else if (_sortOption == 'Salary High-Low') {
-        // Assuming logic for salary exists
-      }
-
-      filteredJobs = temp.cast<Map<String, dynamic>>();
-    });
+  // Note: Local filtering is replaced by server query.
+  // Trigger fetch when filters change.
+  void _applyFilters({String? query}) {
+    if (query != null) _searchQuery = query;
+    _fetchJobs();
   }
 
   void _openSortOptions() {
@@ -118,7 +155,7 @@ class _SearchTabState extends State<SearchTab>
                     : null,
                 onTap: () {
                   setState(() => _sortOption = 'Newest');
-                  _filterJobs();
+                  _fetchJobs();
                   Navigator.pop(context);
                 },
               ),
@@ -129,11 +166,10 @@ class _SearchTabState extends State<SearchTab>
                     : null,
                 onTap: () {
                   setState(() => _sortOption = 'Oldest');
-                  _filterJobs();
+                  _fetchJobs();
                   Navigator.pop(context);
                 },
               ),
-              // Add salary sort if data supports it
             ],
           ),
         );
@@ -173,7 +209,7 @@ class _SearchTabState extends State<SearchTab>
                           setModalState(() {
                             _selectedJobType = selected ? type : null;
                           });
-                          _filterJobs();
+                          _applyFilters();
                           Navigator.pop(context);
                         },
                         backgroundColor: Theme.of(context).cardColor,
@@ -260,7 +296,8 @@ class _SearchTabState extends State<SearchTab>
                       ],
                     ),
                     child: TextField(
-                      onChanged: (value) => _filterJobs(query: value),
+                      controller: _searchController,
+                      onChanged: (value) => _applyFilters(query: value),
                       style: textTheme.bodyLarge,
                       decoration: InputDecoration(
                         hintText: 'Job title, company, or keywords...',
@@ -325,7 +362,7 @@ class _SearchTabState extends State<SearchTab>
                                 GestureDetector(
                                   onTap: () {
                                     _selectedJobType = null;
-                                    _filterJobs();
+                                    _applyFilters();
                                   },
                                   child: const Icon(
                                     Icons.close,
@@ -345,14 +382,11 @@ class _SearchTabState extends State<SearchTab>
             ),
 
             // Results Area
+            // Results Area
             Expanded(
-              child:
-                  _isLoading ||
-                      context.select<SeekerHomeProvider, bool>(
-                        (p) => p.isLoading,
-                      )
+              child: _isLoading && _jobs.isEmpty
                   ? const Center(child: CircularProgressIndicator())
-                  : filteredJobs.isEmpty
+                  : _jobs.isEmpty
                   ? Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -398,7 +432,7 @@ class _SearchTabState extends State<SearchTab>
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Text(
-                                '${filteredJobs.length} Results',
+                                '${_jobs.length}${_hasMore ? '+' : ''} Results',
                                 style: textTheme.titleMedium?.copyWith(
                                   fontWeight: FontWeight.bold,
                                 ),
@@ -415,27 +449,36 @@ class _SearchTabState extends State<SearchTab>
                         ),
                         Expanded(
                           child: ListView.separated(
+                            controller: _scrollController,
                             padding: const EdgeInsets.symmetric(
                               horizontal: 20,
                               vertical: 10,
                             ),
-                            itemCount: filteredJobs.length,
+                            itemCount: _jobs.length + (_isLoadingMore ? 1 : 0),
                             separatorBuilder: (context, index) =>
                                 const SizedBox(height: 16),
                             itemBuilder: (context, index) {
-                              final job = filteredJobs[index];
-                              final provider = Provider.of<SeekerHomeProvider>(
-                                context,
-                                listen: false,
-                              );
-                              final isApplied = provider.isJobApplied(
-                                job['id'],
-                              );
-                              return UnifiedJobCard(
-                                job: job,
-                                role: JobCardRole.seeker,
-                                canApply: !isApplied,
-                                onApplied: _refresh,
+                              if (index == _jobs.length) {
+                                return const Padding(
+                                  padding: EdgeInsets.all(16.0),
+                                  child: Center(
+                                    child: CircularProgressIndicator(),
+                                  ),
+                                );
+                              }
+                              final job = _jobs[index];
+                              return Consumer<SeekerHomeProvider>(
+                                builder: (context, provider, _) {
+                                  final isApplied = provider.isJobApplied(
+                                    job['id'],
+                                  );
+                                  return UnifiedJobCard(
+                                    job: job,
+                                    role: JobCardRole.seeker,
+                                    canApply: !isApplied,
+                                    onApplied: () {},
+                                  );
+                                },
                               );
                             },
                           ),

@@ -32,7 +32,9 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
   late String _workMode;
   late String _payType;
   late String _genderPreference;
+  late String _experienceLevel; // New
   late List<String> _selectedDays;
+  late List<String> _selectedAssets; // New
   late TimeOfDay _shiftStart;
   late TimeOfDay _shiftEnd;
   late bool _sameDayPay;
@@ -49,6 +51,13 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
     'Saturday',
     'Sunday',
   ];
+
+  final List<String> _assetOptions = [
+    'Own Bike',
+    'Driving License',
+    'Smartphone',
+    'Laptop',
+  ]; // New
 
   @override
   void initState() {
@@ -82,6 +91,8 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
     _genderPreference = job?['gender_preference'] ?? 'any';
     _selectedDays = List<String>.from(job?['working_days'] ?? []);
     _sameDayPay = job?['same_day_pay'] ?? false;
+    _experienceLevel = job?['experience_years'] ?? '0-1'; // New
+    _selectedAssets = List<String>.from(job?['assets'] ?? []); // New
 
     if (job?['latitude'] != null && job?['longitude'] != null) {
       _selectedAddress = LocationAddress(
@@ -222,6 +233,8 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
             ? int.parse(_maxAgeController.text)
             : null,
         'same_day_pay': _sameDayPay,
+        'experience_years': _experienceLevel, // New
+        'assets': _selectedAssets, // New
       };
 
       final Map<String, dynamic> result;
@@ -450,6 +463,15 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                         ),
                         const SizedBox(height: 16),
                         _buildDropdown(
+                          value: _experienceLevel,
+                          label: 'Experience (Years)',
+                          icon: Icons.timeline,
+                          items: ['0-1', '1-3', '3-5', '5+'],
+                          onChanged: (v) =>
+                              setState(() => _experienceLevel = v!),
+                        ),
+                        const SizedBox(height: 16),
+                        _buildDropdown(
                           value: _genderPreference,
                           label: 'Gender Preference',
                           icon: Icons.person_outline,
@@ -479,6 +501,30 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                             ),
                           ],
                         ),
+                        const SizedBox(height: 16),
+                        const Text(
+                          'Required Assets',
+                          style: TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                        const SizedBox(height: 8),
+                        ..._assetOptions.map((asset) {
+                          return CheckboxListTile(
+                            title: Text(asset),
+                            value: _selectedAssets.contains(asset),
+                            onChanged: (checked) {
+                              setState(() {
+                                if (checked == true) {
+                                  _selectedAssets.add(asset);
+                                } else {
+                                  _selectedAssets.remove(asset);
+                                }
+                              });
+                            },
+                            dense: true,
+                            contentPadding: EdgeInsets.zero,
+                            controlAffinity: ListTileControlAffinity.leading,
+                          );
+                        }),
                       ],
                     ),
                     const SizedBox(height: 32),

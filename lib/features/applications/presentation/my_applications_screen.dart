@@ -10,7 +10,8 @@ class MyApplicationsScreen extends StatefulWidget {
   State<MyApplicationsScreen> createState() => _MyApplicationsScreenState();
 }
 
-class _MyApplicationsScreenState extends State<MyApplicationsScreen> {
+class _MyApplicationsScreenState extends State<MyApplicationsScreen>
+    with AutomaticKeepAliveClientMixin {
   final ApplicationService _applicationService = ApplicationService();
   late Future<List<Map<String, dynamic>>> _applicationsFuture;
   final TextEditingController _searchController = TextEditingController();
@@ -25,6 +26,9 @@ class _MyApplicationsScreenState extends State<MyApplicationsScreen> {
     'Offer',
     'Rejected',
   ];
+
+  @override
+  bool get wantKeepAlive => true;
 
   @override
   void initState() {
@@ -122,6 +126,7 @@ class _MyApplicationsScreenState extends State<MyApplicationsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     final theme = Theme.of(context);
 
     return Scaffold(
@@ -258,6 +263,7 @@ class _MyApplicationsScreenState extends State<MyApplicationsScreen> {
                                 job: job,
                                 role: JobCardRole.seeker,
                                 canApply: false,
+                                showBookmark: false,
                               ),
                               Positioned(
                                 top: 12,
@@ -282,6 +288,7 @@ class _MyApplicationsScreenState extends State<MyApplicationsScreen> {
     Color color;
     switch (status.toLowerCase()) {
       case 'offer':
+      case 'hired':
       case 'accepted':
         color = Colors.green;
         break;
@@ -289,10 +296,14 @@ class _MyApplicationsScreenState extends State<MyApplicationsScreen> {
         color = Colors.red;
         break;
       case 'interview':
-        color = Colors.orange;
+      case 'shortlisted':
+        color = AppColors.purple;
+        break;
+      case 'pending':
+        color = AppColors.orange;
         break;
       default:
-        color = Colors.blue;
+        color = Colors.grey;
     }
 
     return Container(

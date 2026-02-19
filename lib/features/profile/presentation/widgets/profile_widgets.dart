@@ -6,7 +6,7 @@ class ProfileHeader extends StatelessWidget {
   final String? imageUrl;
   final String title;
   final String subtitle;
-  final VoidCallback onEdit;
+  final VoidCallback? onEdit;
   final IconData? fallbackIcon;
   final List<Widget>? actions;
 
@@ -15,7 +15,7 @@ class ProfileHeader extends StatelessWidget {
     this.imageUrl,
     required this.title,
     required this.subtitle,
-    required this.onEdit,
+    this.onEdit,
     this.fallbackIcon,
     this.actions,
   });
@@ -72,20 +72,25 @@ class ProfileHeader extends StatelessWidget {
               color: Colors.white.withValues(alpha: 0.9),
             ),
           ),
-          const SizedBox(height: 16),
-          ElevatedButton.icon(
-            onPressed: onEdit,
-            icon: const Icon(Icons.edit, size: 18),
-            label: const Text('Edit Profile'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.white,
-              foregroundColor: colorScheme.primary,
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
+          if (onEdit != null) ...[
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: onEdit,
+              icon: const Icon(Icons.edit, size: 18),
+              label: const Text('Edit Profile'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: colorScheme.primary,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 12,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
               ),
             ),
-          ),
+          ],
         ],
       ),
     );

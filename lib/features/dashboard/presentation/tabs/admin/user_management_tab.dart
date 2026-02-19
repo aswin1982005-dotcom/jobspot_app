@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:jobspot_app/core/theme/app_theme.dart';
 import 'package:jobspot_app/features/dashboard/presentation/providers/user_management_provider.dart';
 import 'package:provider/provider.dart';
+import 'package:jobspot_app/features/profile/presentation/widgets/seeker_profile_view.dart';
+import 'package:jobspot_app/features/profile/presentation/widgets/employer_profile_view.dart';
 
 class UserManagementTab extends StatefulWidget {
   const UserManagementTab({super.key});
@@ -384,10 +386,39 @@ class _UserManagementTabState extends State<UserManagementTab>
               title: const Text('View Profile'),
               onTap: () {
                 Navigator.pop(context);
-                // TODO: Navigate to user profile view
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Profile view coming soon')),
-                );
+                final role = user['role'];
+                if (role == 'seeker' && user['seeker_profile'] != null) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => Scaffold(
+                        appBar: AppBar(title: const Text('Seeker Profile')),
+                        body: SeekerProfileView(
+                          profileData: user['seeker_profile'],
+                          isAdminView: true,
+                        ),
+                      ),
+                    ),
+                  );
+                } else if (role == 'employer' &&
+                    user['employer_profile'] != null) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => Scaffold(
+                        appBar: AppBar(title: const Text('Employer Profile')),
+                        body: EmployerProfileView(
+                          profileData: user['employer_profile'],
+                          isAdminView: true,
+                        ),
+                      ),
+                    ),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Profile not available')),
+                  );
+                }
               },
             ),
             ListTile(

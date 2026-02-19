@@ -4,17 +4,26 @@ class JobService {
   final SupabaseClient _client = Supabase.instance.client;
 
   Future<PostgrestList> fetchJobs({
+    String? searchQuery,
     String? location,
     bool? sameDayPay,
     bool? walkIn,
     String? payType,
     String? workMode,
     List<String>? workingDays,
+    int page = 0,
+    int pageSize = 10,
   }) async {
     var query = _client
         .from('job_posts')
         .select('*, employer_profiles(contact_mobile)')
         .eq('is_active', true);
+
+    if (searchQuery != null && searchQuery.isNotEmpty) {
+      query = query.or(
+        'title.ilike.%$searchQuery%,description.ilike.%$searchQuery%',
+      );
+    }
 
     if (location != null && location.isNotEmpty) {
       query = query.ilike('location', '%$location%');
@@ -40,7 +49,12 @@ class JobService {
       query = query.contains('working_days', workingDays);
     }
 
-    final response = await query.order('created_at', ascending: false);
+    final start = page * pageSize;
+    final end = start + pageSize - 1;
+
+    final response = await query
+        .order('created_at', ascending: false)
+        .range(start, end);
     return PostgrestList.from(response);
   }
 
@@ -54,6 +68,17 @@ class JobService {
         .order('created_at', ascending: false);
 
     return PostgrestList.from(response);
+  }
+
+  Future<Map<String, dynamic>?> fetchJobById(String jobId) async {
+    final response = await _client
+        .from('job_posts')
+        .select(
+          '*, employer_profiles(company_name, avatar_url, city, contact_mobile)',
+        )
+        .eq('id', jobId)
+        .maybeSingle();
+    return response;
   }
 
   Future<Map<String, dynamic>> createJobPost(PostgrestMap jobData) async {

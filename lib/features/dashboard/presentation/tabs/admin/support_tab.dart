@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:jobspot_app/core/theme/app_theme.dart';
+import 'package:jobspot_app/data/services/job_service.dart';
 import 'package:jobspot_app/features/dashboard/presentation/providers/support_provider.dart';
+import 'package:jobspot_app/features/jobs/presentation/job_details_screen.dart';
+import 'package:jobspot_app/features/profile/presentation/widgets/employer_profile_view.dart';
+import 'package:jobspot_app/features/profile/presentation/widgets/seeker_profile_view.dart';
 import 'package:provider/provider.dart';
 
 class SupportTab extends StatefulWidget {
@@ -364,9 +368,9 @@ class _SupportTabState extends State<SupportTab>
               children: [
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed: () => _showReportDetails(context, report),
+                    onPressed: () => _navigateToReportTarget(context, report),
                     icon: const Icon(Icons.visibility, size: 16),
-                    label: const Text('View'),
+                    label: const Text('View Full Details'),
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 8),
                     ),
@@ -378,7 +382,7 @@ class _SupportTabState extends State<SupportTab>
                     onPressed: () =>
                         _showUpdateStatusDialog(context, report, provider),
                     icon: const Icon(Icons.edit, size: 16),
-                    label: const Text('Update'),
+                    label: const Text('Update Status'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: _getStatusColor(status),
                       foregroundColor: Colors.white,
@@ -394,75 +398,88 @@ class _SupportTabState extends State<SupportTab>
     );
   }
 
-  void _showReportDetails(BuildContext context, Map<String, dynamic> report) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(
-          report['report_category'] == 'user_report'
-              ? 'User Report Details'
-              : 'Job Report Details',
-        ),
-        content: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _buildDetailRow('Type', report['report_type'] ?? ''),
-              _buildDetailRow('Status', report['status'] ?? ''),
-              _buildDetailRow('Created', _formatDate(report['created_at'])),
-              const Divider(),
-              const Text(
-                'Description:',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              Text(report['description'] ?? ''),
-              if (report['admin_notes'] != null) ...[
-                const Divider(),
-                const Text(
-                  'Admin Notes:',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  report['admin_notes'],
-                  style: const TextStyle(
-                    color: Colors.blue,
-                    fontStyle: FontStyle.italic,
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
-          ),
-        ],
-      ),
-    );
-  }
+  Future<void> _navigateToReportTarget(
+    BuildContext context,
+    Map<String, dynamic> report,
+  ) async {
+    final isUserReport = report['report_category'] == 'user_report';
 
-  Widget _buildDetailRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 80,
-            child: Text(
-              '$label:',
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
+    if (isUserReport) {
+      final userId = report['reported_user_id'];
+      final role = report['reported_user_role'];
+
+      if (userId == null) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Error: User ID missing')));
+        return;
+      }
+
+      if (role == 'seeker') {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) =>
+                SeekerProfileView(userId: userId, isAdminView: true),
           ),
-          Expanded(child: Text(value)),
-        ],
-      ),
-    );
+        );
+      } else if (role == 'employer') {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) =>
+                EmployerProfileView(userId: userId, isAdminView: true),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Unknown user role')));
+      }
+    } else {
+      // Job Report
+      final jobId = report['job_id'];
+      if (jobId == null) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Error: Job ID missing')));
+        return;
+      }
+
+      // Show loading
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(child: CircularProgressIndicator()),
+      );
+
+      try {
+        final job = await JobService().fetchJobById(jobId);
+        if (context.mounted) {
+          Navigator.pop(context); // Dismiss loading
+          if (job != null) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) =>
+                    JobDetailsScreen(job: job, userRole: 'admin'),
+              ),
+            );
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Job not found (might be deleted)')),
+            );
+          }
+        }
+      } catch (e) {
+        if (context.mounted) {
+          Navigator.pop(context); // Dismiss loading
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Error fetching job: $e')));
+        }
+      }
+    }
   }
 
   void _showUpdateStatusDialog(

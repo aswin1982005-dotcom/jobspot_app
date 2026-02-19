@@ -108,4 +108,8 @@ class JobManagementProvider extends ChangeNotifier {
 
   /// Refresh jobs list
   Future<void> refresh() => loadJobs();
+
+  /// Fetch reports for a specific job
+  Future<List<Map<String, dynamic>>> fetchJobReports(String jobId) =>
+      _adminService.fetchReportsForJob(jobId);
 }

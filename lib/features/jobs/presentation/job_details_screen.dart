@@ -4,6 +4,8 @@ import 'package:jobspot_app/data/services/application_service.dart';
 import 'package:jobspot_app/data/services/job_service.dart';
 import 'package:jobspot_app/features/jobs/presentation/create_job_screen.dart';
 import 'package:jobspot_app/features/reviews/presentation/company_reviews_screen.dart';
+import 'package:jobspot_app/data/services/report_service.dart';
+import 'package:jobspot_app/core/utils/report_dialog.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:provider/provider.dart';
@@ -33,6 +35,7 @@ class _JobDetailsScreenState extends State<JobDetailsScreen>
     with SingleTickerProviderStateMixin {
   final JobService _jobService = JobService();
   final ApplicationService _applicationService = ApplicationService();
+  final ReportService _reportService = ReportService();
 
   late TabController _tabController;
   bool _isBookmarked = false;
@@ -218,6 +221,34 @@ class _JobDetailsScreenState extends State<JobDetailsScreen>
     }
   }
 
+  void _showReportDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => ReportDialog(
+        title: 'Report Job',
+        reportTypes: const [
+          'Fake Job',
+          'Scam/Fraud',
+          'Inappropriate Content',
+          'Discriminatory',
+          'Other',
+        ],
+        onSubmit: (type, description) async {
+          await _reportService.reportJob(
+            jobId: _currentJob['id'],
+            reportType: type,
+            description: description,
+          );
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Report submitted successfully')),
+            );
+          }
+        },
+      ),
+    );
+  }
+
   // --- UI Components ---
 
   @override
@@ -259,6 +290,19 @@ class _JobDetailsScreenState extends State<JobDetailsScreen>
                   ),
                   onPressed: _shareJob,
                 ),
+                if (!isEmployer && widget.userRole != 'admin')
+                  IconButton(
+                    icon: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: theme.scaffoldBackgroundColor,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.flag_outlined, color: Colors.red),
+                    ),
+                    onPressed: _showReportDialog,
+                    tooltip: 'Report Job',
+                  ),
                 const SizedBox(width: 8),
               ],
               flexibleSpace: FlexibleSpaceBar(
@@ -462,6 +506,13 @@ class _JobDetailsScreenState extends State<JobDetailsScreen>
                     Icons.location_on_outlined,
                     Colors.blue,
                   ),
+                  _buildOverviewCard(
+                    context,
+                    'Exp.',
+                    _currentJob['experience_years'] ?? '0-1 Yrs',
+                    Icons.timeline,
+                    Colors.teal,
+                  ),
                 ],
               );
             },
@@ -509,6 +560,30 @@ class _JobDetailsScreenState extends State<JobDetailsScreen>
                   ],
                 ),
               ),
+            ),
+          ],
+          if (_currentJob['assets'] != null &&
+              (_currentJob['assets'] as List).isNotEmpty) ...[
+            const SizedBox(height: 32),
+            Text(
+              "Required Assets",
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: (_currentJob['assets'] as List).map((asset) {
+                return Chip(
+                  label: Text(asset.toString()),
+                  avatar: const Icon(Icons.check_circle, size: 16),
+                  backgroundColor: theme.colorScheme.secondary.withValues(
+                    alpha: 0.1,
+                  ),
+                );
+              }).toList(),
             ),
           ],
           const SizedBox(height: 100),
@@ -698,6 +773,9 @@ class _JobDetailsScreenState extends State<JobDetailsScreen>
 
   Widget _buildBottomBar(BuildContext context, bool isEmployer, bool isActive) {
     final theme = Theme.of(context);
+    final isAdmin = widget.userRole == 'admin';
+    final isSeeker = widget.userRole == 'seeker';
+
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -713,7 +791,37 @@ class _JobDetailsScreenState extends State<JobDetailsScreen>
       child: SafeArea(
         child: Row(
           children: [
-            if (!isEmployer) ...[
+            if (isAdmin) ...[
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: Colors.grey.withValues(alpha: 0.5),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.admin_panel_settings,
+                        color: theme.disabledColor,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Admin View (Read Only)',
+                        style: TextStyle(
+                          color: theme.disabledColor,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ] else if (isSeeker) ...[
               Container(
                 decoration: BoxDecoration(
                   color: theme.colorScheme.surface,
@@ -755,42 +863,54 @@ class _JobDetailsScreenState extends State<JobDetailsScreen>
                           ),
                         )
                       : Text(
-                          !isActive
-                              ? "Closed"
-                              : (_hasApplied ? "Applied" : "Apply Now"),
+                          _hasApplied
+                              ? "Applied"
+                              : isActive
+                              ? "Apply Now"
+                              : "Closed",
                           style: const TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
+                            color: Colors.white,
                           ),
                         ),
                 ),
               ),
-            ] else ...[
+            ] else if (isEmployer) ...[
               Expanded(
-                child: OutlinedButton(
-                  onPressed: _toggleJobStatus,
+                child: OutlinedButton.icon(
+                  onPressed: _navigateToEdit,
+                  icon: const Icon(Icons.edit),
+                  label: const Text("Edit Job"),
                   style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 20),
-                    side: BorderSide(
-                      color: isActive ? Colors.red : theme.colorScheme.primary,
-                    ),
-                  ),
-                  child: Text(
-                    isActive ? "Close Job" : "Reopen",
-                    style: TextStyle(
-                      color: isActive ? Colors.red : theme.colorScheme.primary,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
                     ),
                   ),
                 ),
               ),
               const SizedBox(width: 16),
               Expanded(
-                child: ElevatedButton(
-                  onPressed: _navigateToEdit,
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 20),
+                child: ElevatedButton.icon(
+                  onPressed: _toggleJobStatus,
+                  icon: Icon(
+                    isActive ? Icons.close : Icons.check,
+                    color: Colors.white,
                   ),
-                  child: const Text("Edit"),
+                  label: Text(
+                    isActive ? "Close Job" : "Reopen Job",
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: isActive
+                        ? theme.colorScheme.error
+                        : Colors.green,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
                 ),
               ),
             ],

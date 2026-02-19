@@ -9,7 +9,16 @@ import 'package:jobspot_app/features/profile/presentation/screens/help_support_s
 import 'package:jobspot_app/features/reviews/presentation/company_reviews_screen.dart';
 
 class EmployerProfileView extends StatefulWidget {
-  const EmployerProfileView({super.key});
+  final Map<String, dynamic>? profileData;
+  final bool isAdminView;
+  final String? userId;
+
+  const EmployerProfileView({
+    super.key,
+    this.profileData,
+    this.isAdminView = false,
+    this.userId,
+  });
 
   @override
   State<StatefulWidget> createState() => _EmployerProfileViewState();
@@ -22,15 +31,21 @@ class _EmployerProfileViewState extends State<EmployerProfileView> {
   @override
   void initState() {
     super.initState();
-    fetchUserProfile();
+    if (widget.profileData != null) {
+      _profile = widget.profileData;
+      _isLoading = false;
+    } else {
+      fetchUserProfile();
+    }
   }
 
   Future<void> fetchUserProfile() async {
     try {
-      final user = SupabaseService.getCurrentUser();
-      if (user != null) {
+      final userId = widget.userId ?? SupabaseService.getCurrentUser()?.id;
+
+      if (userId != null) {
         final profileService = ProfileService();
-        _profile = await profileService.fetchEmployerProfile(user.id);
+        _profile = await profileService.fetchEmployerProfile(userId);
         if (mounted) {
           setState(() {
             _isLoading = false;
@@ -62,24 +77,27 @@ class _EmployerProfileViewState extends State<EmployerProfileView> {
             subtitle:
                 '${_profile?['industry'] ?? 'Not Provided'} • ${_profile?['city'] ?? 'Not Provided'}',
             fallbackIcon: Icons.business,
-            onEdit: () async {
-              final result = await Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) =>
-                      EditEmployerProfileScreen(profile: _profile),
-                ),
-              );
-              if (result == true) {
-                fetchUserProfile();
-              }
-            },
+            onEdit: widget.isAdminView
+                ? null
+                : () async {
+                    final result = await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            EditEmployerProfileScreen(profile: _profile),
+                      ),
+                    );
+                    if (result == true) {
+                      fetchUserProfile();
+                    }
+                  },
             actions: [
-              IconButton(
-                onPressed: () => GlobalRefreshManager.refreshAll(context),
-                icon: const Icon(Icons.refresh, color: Colors.white),
-                tooltip: 'Refresh',
-              ),
+              if (!widget.isAdminView)
+                IconButton(
+                  onPressed: () => GlobalRefreshManager.refreshAll(context),
+                  icon: const Icon(Icons.refresh, color: Colors.white),
+                  tooltip: 'Refresh',
+                ),
             ],
           ),
 
@@ -115,81 +133,83 @@ class _EmployerProfileViewState extends State<EmployerProfileView> {
 
                 const SizedBox(height: 24),
 
-                // Settings Section
-                const ProfileSectionHeader(title: 'Settings'),
-                const SizedBox(height: 12),
-                const ThemeModeTile(),
-                ProfileMenuTile(
-                  icon: Icons.notifications_none,
-                  title: 'Notification Settings',
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const SettingsScreen(),
-                      ),
-                    );
-                  },
-                ),
-                ProfileMenuTile(
-                  icon: Icons.security_outlined,
-                  title: 'Security & Password',
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const SettingsScreen(),
-                      ),
-                    );
-                  },
-                ),
-                ProfileMenuTile(
-                  icon: Icons.star_outline,
-                  title: 'My Company Reviews',
-                  onTap: () {
-                    if (_profile != null) {
+                if (!widget.isAdminView) ...[
+                  // Settings Section
+                  const ProfileSectionHeader(title: 'Settings'),
+                  const SizedBox(height: 12),
+                  const ThemeModeTile(),
+                  ProfileMenuTile(
+                    icon: Icons.notifications_none,
+                    title: 'Notification Settings',
+                    onTap: () {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => CompanyReviewsScreen(
-                            companyId: SupabaseService.getCurrentUser()!.id,
-                            companyName:
-                                _profile!['company_name'] ?? 'My Company',
-                          ),
+                          builder: (context) => const SettingsScreen(),
                         ),
                       );
-                    }
-                  },
-                ),
-                ProfileMenuTile(
-                  icon: Icons.help_outline,
-                  title: 'Help & Support',
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const HelpSupportScreen(),
-                      ),
-                    );
-                  },
-                ),
-
-                const SizedBox(height: 32),
-
-                // Logout Button
-                LogoutButton(
-                  onLogout: () async {
-                    try {
-                      await SupabaseService.signOut();
-                    } catch (e) {
-                      if (!context.mounted) return;
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Error signing out: $e')),
+                    },
+                  ),
+                  ProfileMenuTile(
+                    icon: Icons.security_outlined,
+                    title: 'Security & Password',
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const SettingsScreen(),
+                        ),
                       );
-                    }
-                  },
-                ),
-                const SizedBox(height: 40),
+                    },
+                  ),
+                  ProfileMenuTile(
+                    icon: Icons.star_outline,
+                    title: 'My Company Reviews',
+                    onTap: () {
+                      if (_profile != null) {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => CompanyReviewsScreen(
+                              companyId: SupabaseService.getCurrentUser()!.id,
+                              companyName:
+                                  _profile!['company_name'] ?? 'My Company',
+                            ),
+                          ),
+                        );
+                      }
+                    },
+                  ),
+                  ProfileMenuTile(
+                    icon: Icons.help_outline,
+                    title: 'Help & Support',
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const HelpSupportScreen(),
+                        ),
+                      );
+                    },
+                  ),
+
+                  const SizedBox(height: 32),
+
+                  // Logout Button
+                  LogoutButton(
+                    onLogout: () async {
+                      try {
+                        await SupabaseService.signOut();
+                      } catch (e) {
+                        if (!context.mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Error signing out: $e')),
+                        );
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 40),
+                ],
               ],
             ),
           ),

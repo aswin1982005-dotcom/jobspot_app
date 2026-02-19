@@ -213,6 +213,16 @@ class AdminService {
     return (response as List).map((e) => Map<String, dynamic>.from(e)).toList();
   }
 
+  /// Fetch reports for a specific job (Direct Query)
+  Future<List<Map<String, dynamic>>> fetchReportsForJob(String jobId) async {
+    final response = await _supabase
+        .from('job_reports')
+        .select()
+        .eq('job_id', jobId)
+        .order('created_at', ascending: false);
+    return (response as List).map((e) => Map<String, dynamic>.from(e)).toList();
+  }
+
   /// Update report status
   Future<void> updateReportStatus({
     required String reportId,

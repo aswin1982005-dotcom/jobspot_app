@@ -5,6 +5,8 @@ import 'package:url_launcher/url_launcher.dart';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:jobspot_app/features/reviews/presentation/seeker_reviews_screen.dart';
+import 'package:jobspot_app/data/services/report_service.dart';
+import 'package:jobspot_app/core/utils/report_dialog.dart';
 
 class ApplicantProfileScreen extends StatefulWidget {
   final Map<String, dynamic> application;
@@ -19,6 +21,7 @@ class _ApplicantProfileScreenState extends State<ApplicantProfileScreen> {
   late String _currentStatus;
   bool _isUpdating = false;
   final ApplicationService _applicationService = ApplicationService();
+  final ReportService _reportService = ReportService();
 
   @override
   void initState() {
@@ -52,6 +55,35 @@ class _ApplicantProfileScreenState extends State<ApplicantProfileScreen> {
     }
   }
 
+  void _showReportDialog() {
+    final applicant = widget.application['applicant'] as Map<String, dynamic>;
+    showDialog(
+      context: context,
+      builder: (context) => ReportDialog(
+        title: 'Report User',
+        reportTypes: const [
+          'Harassment',
+          'Spam',
+          'Fraud',
+          'Inappropriate Content',
+          'Other',
+        ],
+        onSubmit: (type, description) async {
+          await _reportService.reportUser(
+            reportedUserId: applicant['user_id'],
+            reportType: type,
+            description: description,
+          );
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Report submitted successfully')),
+            );
+          }
+        },
+      ),
+    );
+  }
+
   Color _getStatusColor(String status) {
     switch (status.toLowerCase()) {
       case 'pending':
@@ -78,6 +110,11 @@ class _ApplicantProfileScreenState extends State<ApplicantProfileScreen> {
         title: const Text('Applicant Profile'),
         elevation: 0,
         actions: [
+          IconButton(
+            onPressed: _showReportDialog,
+            icon: const Icon(Icons.flag_outlined, color: Colors.red),
+            tooltip: 'Report User',
+          ),
           IconButton(
             onPressed: () {
               Navigator.push(

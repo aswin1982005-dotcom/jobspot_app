@@ -374,7 +374,7 @@ BEGIN
     COALESCE(s.full_name, e.company_name, 'Unknown') as admin_name,
     u.role::text as admin_role
   FROM admin_actions a
-  JOIN user_profiles u ON a.admin_id = u.id
+  JOIN user_profiles u ON a.admin_id = u.user_id
   LEFT JOIN job_seeker_profiles s ON u.user_id = s.user_id AND u.role = 'seeker'
   LEFT JOIN employer_profiles e ON u.user_id = e.user_id AND u.role = 'employer'
   ORDER BY a.created_at DESC
@@ -434,9 +434,9 @@ BEGIN
   JOIN auth.users u_reporter ON r.reporter_id = u_reporter.id
   JOIN job_posts j ON r.job_id = j.id
   LEFT JOIN employer_profiles e ON j.employer_id = e.user_id
-  LEFT JOIN user_profiles res ON r.resolved_by = res.id
-  LEFT JOIN job_seeker_profiles ress ON res.id = ress.user_id AND res.role = 'seeker'
-  LEFT JOIN employer_profiles rese ON res.id = rese.user_id AND res.role = 'employer'
+  LEFT JOIN user_profiles res ON r.resolved_by = res.user_id
+  LEFT JOIN job_seeker_profiles ress ON res.user_id = ress.user_id AND res.role = 'seeker'
+  LEFT JOIN employer_profiles rese ON res.user_id = rese.user_id AND res.role = 'employer'
   WHERE (status_filter IS NULL OR r.status = status_filter)
   ORDER BY r.created_at DESC
   LIMIT page_limit OFFSET page_offset;
@@ -489,12 +489,12 @@ BEGIN
     COALESCE(ress.full_name, rese.company_name, 'Unknown') as resolver_name
   FROM user_reports r
   JOIN auth.users u_reporter ON r.reporter_id = u_reporter.id
-  JOIN user_profiles u_reported ON r.reported_user_id = u_reported.id
-  LEFT JOIN job_seeker_profiles s ON u_reported.id = s.user_id AND u_reported.role = 'seeker'
-  LEFT JOIN employer_profiles e ON u_reported.id = e.user_id AND u_reported.role = 'employer'
-  LEFT JOIN user_profiles res ON r.resolved_by = res.id
-  LEFT JOIN job_seeker_profiles ress ON res.id = ress.user_id AND res.role = 'seeker'
-  LEFT JOIN employer_profiles rese ON res.id = rese.user_id AND res.role = 'employer'
+  JOIN user_profiles u_reported ON r.reported_user_id = u_reported.user_id
+  LEFT JOIN job_seeker_profiles s ON u_reported.user_id = s.user_id AND u_reported.role = 'seeker'
+  LEFT JOIN employer_profiles e ON u_reported.user_id = e.user_id AND u_reported.role = 'employer'
+  LEFT JOIN user_profiles res ON r.resolved_by = res.user_id
+  LEFT JOIN job_seeker_profiles ress ON res.user_id = ress.user_id AND res.role = 'seeker'
+  LEFT JOIN employer_profiles rese ON res.user_id = rese.user_id AND res.role = 'employer'
   WHERE (status_filter IS NULL OR r.status = status_filter)
   ORDER BY r.created_at DESC
   LIMIT page_limit OFFSET page_offset;

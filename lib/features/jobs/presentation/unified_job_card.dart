@@ -15,7 +15,8 @@ class UnifiedJobCard extends StatefulWidget {
   final Map<String, dynamic> job;
   final JobCardRole role;
 
-  // Seeker specific
+  // Job Actions
+  final bool showBookmark;
   final bool canApply;
   final VoidCallback? onApplied;
 
@@ -27,6 +28,7 @@ class UnifiedJobCard extends StatefulWidget {
     super.key,
     required this.job,
     required this.role,
+    this.showBookmark = true,
     this.canApply = true,
     this.onApplied,
     this.afterEdit,
@@ -104,7 +106,8 @@ class _UnifiedJobCardState extends State<UnifiedJobCard> {
     try {
       await ApplicationService().fastApply(
         jobPostId: widget.job['id'],
-        message: "hello",
+        message:
+            "Hi, I am interested in the ${widget.job['title']} position. Please review my profile.",
       );
 
       if (widget.role == JobCardRole.seeker) {
@@ -191,15 +194,19 @@ class _UnifiedJobCardState extends State<UnifiedJobCard> {
                 iconSize: isEmployer ? 32 : 24,
                 trailing: isEmployer
                     ? _buildStatusBadge(isActive)
-                    : IconButton(
-                        icon: Icon(
-                          _isBookmarked
-                              ? Icons.bookmark
-                              : Icons.bookmark_outline,
-                          color: _isBookmarked ? colorScheme.secondary : null,
-                        ),
-                        onPressed: _toggleSave,
-                      ),
+                    : (widget.showBookmark
+                          ? IconButton(
+                              icon: Icon(
+                                _isBookmarked
+                                    ? Icons.bookmark
+                                    : Icons.bookmark_outline,
+                                color: _isBookmarked
+                                    ? colorScheme.secondary
+                                    : null,
+                              ),
+                              onPressed: _toggleSave,
+                            )
+                          : null),
               ),
               const SizedBox(height: 12),
 

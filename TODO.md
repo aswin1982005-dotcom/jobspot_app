@@ -7,7 +7,7 @@
   - *Reference*: `lib/features/notifications/presentation/screens/notifications_screen.dart` (`_handleNavigation`)
 
 ### Admin Dashboard
-- [ ] **User Profile View**: Create a detailed view for inspecting user profiles (seekers/employers) from the admin list.
+- [x] **User Profile View**: Create a detailed view for inspecting user profiles (seekers/employers) from the admin list.
   - *Reference*: `lib/features/dashboard/presentation/tabs/admin/user_management_tab.dart`
 - [ ] **Messaging System**: Implement direct messaging between Admins and Users.
   - *Reference*: `lib/features/dashboard/presentation/tabs/admin/user_management_tab.dart`

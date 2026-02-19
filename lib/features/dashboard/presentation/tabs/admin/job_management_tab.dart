@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:jobspot_app/core/theme/app_theme.dart';
 import 'package:jobspot_app/features/dashboard/presentation/providers/job_management_provider.dart';
 import 'package:provider/provider.dart';
+import 'package:jobspot_app/features/jobs/presentation/job_details_screen.dart';
 
 class JobManagementTab extends StatefulWidget {
   const JobManagementTab({super.key});
@@ -357,8 +358,12 @@ class _JobManagementTabState extends State<JobManagementTab>
               title: const Text('View Full Details'),
               onTap: () {
                 Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Job details view coming soon')),
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) =>
+                        JobDetailsScreen(job: job, userRole: 'admin'),
+                  ),
                 );
               },
             ),
@@ -367,15 +372,148 @@ class _JobManagementTabState extends State<JobManagementTab>
               title: const Text('View Reports'),
               onTap: () {
                 Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Reports view coming soon')),
-                );
+                _showReportsDialog(context, job['id'], provider);
               },
             ),
           ],
         ),
       ),
     );
+  }
+
+  void _showReportsDialog(
+    BuildContext context,
+    String jobId,
+    JobManagementProvider provider,
+  ) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Job Reports'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: FutureBuilder<List<Map<String, dynamic>>>(
+            future: provider.fetchJobReports(jobId),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(
+                  heightFactor: 1,
+                  child: CircularProgressIndicator(),
+                );
+              }
+
+              if (snapshot.hasError) {
+                return Center(
+                  child: Text(
+                    'Error: ${snapshot.error}',
+                    style: const TextStyle(color: Colors.red),
+                  ),
+                );
+              }
+
+              final reports = snapshot.data ?? [];
+
+              if (reports.isEmpty) {
+                return const Center(
+                  heightFactor: 1,
+                  child: Text('No reports found for this job.'),
+                );
+              }
+
+              return ListView.builder(
+                shrinkWrap: true,
+                itemCount: reports.length,
+                itemBuilder: (context, index) {
+                  final report = reports[index];
+                  final date = DateTime.parse(report['created_at']);
+                  return Card(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    child: ListTile(
+                      leading: Icon(
+                        Icons.flag,
+                        color: _getReportColor(report['report_type']),
+                      ),
+                      title: Text(
+                        report['report_type'] ?? 'Report',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(report['description'] ?? 'No description'),
+                          const SizedBox(height: 4),
+                          Text(
+                            '${date.day}/${date.month}/${date.year}',
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ],
+                      ),
+                      trailing: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: _getStatusColor(
+                            report['status'],
+                          ).withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: _getStatusColor(
+                              report['status'],
+                            ).withValues(alpha: 0.5),
+                          ),
+                        ),
+                        child: Text(
+                          (report['status'] ?? 'pending').toUpperCase(),
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: _getStatusColor(report['status']),
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Color _getReportColor(String? type) {
+    switch (type) {
+      case 'scam':
+      case 'fake':
+        return Colors.red;
+      case 'spam':
+        return Colors.orange;
+      case 'inappropriate':
+        return Colors.purple;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  Color _getStatusColor(String? status) {
+    switch (status) {
+      case 'resolved':
+      case 'dismissed':
+        return Colors.green;
+      case 'in_progress':
+        return Colors.blue;
+      default:
+        return Colors.orange;
+    }
   }
 
   void _showAddNotesDialog(

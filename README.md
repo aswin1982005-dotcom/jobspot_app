@@ -23,10 +23,18 @@ JobSpot is a Flutter-based mobile application designed to bridge the gap between
 - **Seeker Ratings**: Rate employees to build a trusted community.
 
 ### For Admins
-- **Dashboard Overview**: View key metrics (Total Users, Active Jobs, Reports).
-- **User Management**: Disable/Enable users, view user details.
-- **Job Management**: Monitor and moderate job postings.
-- **Content Moderation**: Review and resolve user/job reports.
+- **Dashboard Overview**: View key metrics (Total Users, Active Jobs, Reports) at a glance.
+- **User Management**:
+  - View full, read-only profiles of Seekers and Employers.
+  - Disable/Enable users to moderate access.
+- **Job Management**:
+  - Monitor job postings with deep links to full Job Details.
+  - View and manage reports specific to each job.
+  - Disable/Enable jobs directly from the list.
+- **Support & Content Moderation**:
+  - Centralized view of all user and job reports.
+  - **Deep Linking**: Navigate directly from a report to the full context (Job Details or User Profile) for investigation.
+  - **Status Workflow**: Track resolution progress (Pending, In Progress, Resolved, Dismissed) with admin notes.
 
 ### General
 - **Notifications**: Real-time updates for job applications and status changes.
