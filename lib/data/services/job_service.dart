@@ -11,7 +11,10 @@ class JobService {
     String? workMode,
     List<String>? workingDays,
   }) async {
-    var query = _client.from('job_posts').select().eq('is_active', true);
+    var query = _client
+        .from('job_posts')
+        .select('*, employer_profiles(contact_mobile)')
+        .eq('is_active', true);
 
     if (location != null && location.isNotEmpty) {
       query = query.ilike('location', '%$location%');
@@ -53,13 +56,21 @@ class JobService {
     return PostgrestList.from(response);
   }
 
-  Future<void> createJobPost(PostgrestMap jobData) async {
-    await _client.from('job_posts').insert(jobData);
+  Future<Map<String, dynamic>> createJobPost(PostgrestMap jobData) async {
+    return await _client.from('job_posts').insert(jobData).select().single();
   }
 
   /// Updates an existing job post with the provided [jobId] and [jobData].
-  Future<void> updateJobPost(String jobId, PostgrestMap jobData) async {
-    await _client.from('job_posts').update(jobData).eq('id', jobId);
+  Future<Map<String, dynamic>> updateJobPost(
+    String jobId,
+    PostgrestMap jobData,
+  ) async {
+    return await _client
+        .from('job_posts')
+        .update(jobData)
+        .eq('id', jobId)
+        .select()
+        .single();
   }
 
   // --- Saved Jobs Methods ---
@@ -68,7 +79,9 @@ class JobService {
     final userId = _client.auth.currentUser!.id;
     final response = await _client
         .from('saved_jobs')
-        .select('*, job_posts(*)')
+        .select(
+          '*, job_posts(*, employer_profiles(contact_mobile))',
+        ) // Nested fetch
         .eq('seeker_id', userId)
         .order('saved_at', ascending: false);
     return (response as List).map((e) => Map<String, dynamic>.from(e)).toList();

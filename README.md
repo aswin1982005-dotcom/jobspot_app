@@ -22,6 +22,15 @@ JobSpot is a Flutter-based mobile application designed to bridge the gap between
 - **Hyperlocal Reach**: Target candidates in your specific neighborhood.
 - **Seeker Ratings**: Rate employees to build a trusted community.
 
+### For Admins
+- **Dashboard Overview**: View key metrics (Total Users, Active Jobs, Reports).
+- **User Management**: Disable/Enable users, view user details.
+- **Job Management**: Monitor and moderate job postings.
+- **Content Moderation**: Review and resolve user/job reports.
+
+### General
+- **Notifications**: Real-time updates for job applications and status changes.
+
 ---
 
 ## 🛠️ Tech Stack

@@ -197,104 +197,307 @@ CREATE POLICY "Admins can update job reports"
 -- 4. DATABASE FUNCTIONS
 -- ============================================================================
 
--- Function to get user statistics
-CREATE OR REPLACE FUNCTION get_user_statistics()
-RETURNS JSON
+-- Function to get admin users list
+CREATE OR REPLACE FUNCTION get_admin_users_list(
+  role_filter TEXT DEFAULT NULL,
+  disabled_only BOOLEAN DEFAULT NULL,
+  page_limit INTEGER DEFAULT 50,
+  page_offset INTEGER DEFAULT 0
+)
+RETURNS TABLE (
+  user_id UUID,
+  role TEXT,
+  profile_completed BOOLEAN,
+  is_disabled BOOLEAN,
+  disabled_at TIMESTAMPTZ,
+  disable_reason TEXT,
+  created_at TIMESTAMPTZ,
+  seeker_profile JSONB,
+  employer_profile JSONB
+)
 LANGUAGE plpgsql
 SECURITY DEFINER
 AS $$
-DECLARE
-  result JSON;
 BEGIN
-  -- Check if caller is admin
-  IF NOT EXISTS (
-    SELECT 1 FROM user_profiles 
-    WHERE user_id = auth.uid() AND role = 'admin'
-  ) THEN
-    RAISE EXCEPTION 'Access denied. Admin role required.';
-  END IF;
-
-  SELECT json_build_object(
-    'total_users', (SELECT COUNT(*) FROM user_profiles),
-    'total_seekers', (SELECT COUNT(*) FROM user_profiles WHERE role = 'seeker'),
-    'total_employers', (SELECT COUNT(*) FROM user_profiles WHERE role = 'employer'),
-    'total_admins', (SELECT COUNT(*) FROM user_profiles WHERE role = 'admin'),
-    'disabled_users', (SELECT COUNT(*) FROM user_profiles WHERE is_disabled = true),
-    'recent_signups', (
-      SELECT COUNT(*) FROM user_profiles 
-      WHERE created_at >= NOW() - INTERVAL '7 days'
-    )
-  ) INTO result;
-
-  RETURN result;
+  RETURN QUERY
+  SELECT 
+    u.user_id as user_id,
+    u.role::text,
+    u.profile_completed,
+    u.is_disabled,
+    u.disabled_at,
+    u.disable_reason,
+    u.created_at,
+    CASE
+      WHEN u.role = 'seeker' THEN to_jsonb(s)
+      ELSE NULL
+    END as seeker_profile,
+    CASE
+      WHEN u.role = 'employer' THEN to_jsonb(e)
+      ELSE NULL
+    END as employer_profile
+  FROM user_profiles u
+  LEFT JOIN job_seeker_profiles s ON u.user_id = s.user_id
+  LEFT JOIN employer_profiles e ON u.user_id = e.user_id
+  WHERE
+    (role_filter IS NULL OR u.role::text = role_filter) AND
+    (disabled_only IS NULL OR u.is_disabled = disabled_only)
+  ORDER BY u.created_at DESC
+  LIMIT page_limit OFFSET page_offset;
 END;
 $$;
 
--- Function to get job statistics
-CREATE OR REPLACE FUNCTION get_job_statistics()
-RETURNS JSON
+-- Function to get admin dashboard stats
+CREATE OR REPLACE FUNCTION get_admin_dashboard_stats()
+RETURNS JSONB
 LANGUAGE plpgsql
 SECURITY DEFINER
 AS $$
 DECLARE
-  result JSON;
+  user_stats JSONB;
+  job_stats JSONB;
+  report_stats JSONB;
 BEGIN
-  -- Check if caller is admin
-  IF NOT EXISTS (
-    SELECT 1 FROM user_profiles 
-    WHERE user_id = auth.uid() AND role = 'admin'
-  ) THEN
-    RAISE EXCEPTION 'Access denied. Admin role required.';
-  END IF;
+  -- User Stats
+  SELECT jsonb_build_object(
+    'total_users', COUNT(*),
+    'seekers', COUNT(*) FILTER (WHERE role = 'seeker'),
+    'employers', COUNT(*) FILTER (WHERE role = 'employer'),
+    'disabled', COUNT(*) FILTER (WHERE is_disabled = true)
+  ) INTO user_stats FROM user_profiles;
 
-  SELECT json_build_object(
-    'total_jobs', (SELECT COUNT(*) FROM job_posts),
-    'active_jobs', (SELECT COUNT(*) FROM job_posts WHERE is_active = true AND admin_disabled = false),
-    'closed_jobs', (SELECT COUNT(*) FROM job_posts WHERE is_active = false),
-    'reported_jobs', (SELECT COUNT(*) FROM job_posts WHERE is_reported = true),
-    'admin_disabled_jobs', (SELECT COUNT(*) FROM job_posts WHERE admin_disabled = true),
-    'recent_posts', (
-      SELECT COUNT(*) FROM job_posts 
-      WHERE created_at >= NOW() - INTERVAL '7 days'
-    )
-  ) INTO result;
+  -- Job Stats
+  SELECT jsonb_build_object(
+    'total_jobs', COUNT(*),
+    'active', COUNT(*) FILTER (WHERE is_active = true),
+    'reported', COUNT(*) FILTER (WHERE is_reported = true),
+    'disabled', COUNT(*) FILTER (WHERE admin_disabled = true)
+  ) INTO job_stats FROM job_posts;
 
-  RETURN result;
+  -- Report Stats
+  SELECT jsonb_build_object(
+    'total_reports', (SELECT COUNT(*) FROM user_reports) + (SELECT COUNT(*) FROM job_reports),
+    'pending', (SELECT COUNT(*) FROM user_reports WHERE status = 'pending') + (SELECT COUNT(*) FROM job_reports WHERE status = 'pending'),
+    'resolved', (SELECT COUNT(*) FROM user_reports WHERE status = 'resolved') + (SELECT COUNT(*) FROM job_reports WHERE status = 'resolved')
+  ) INTO report_stats;
+
+  RETURN jsonb_build_object(
+    'user_stats', user_stats,
+    'job_stats', job_stats,
+    'report_stats', report_stats
+  );
 END;
 $$;
 
--- Function to get report statistics
-CREATE OR REPLACE FUNCTION get_report_statistics()
-RETURNS JSON
+-- Function to get admin recent activity
+CREATE OR REPLACE FUNCTION get_admin_recent_activity()
+RETURNS JSONB
 LANGUAGE plpgsql
 SECURITY DEFINER
 AS $$
 DECLARE
-  result JSON;
+  recent_users JSONB;
+  recent_jobs JSONB;
 BEGIN
-  -- Check if caller is admin
-  IF NOT EXISTS (
-    SELECT 1 FROM user_profiles 
-    WHERE user_id = auth.uid() AND role = 'admin'
-  ) THEN
-    RAISE EXCEPTION 'Access denied. Admin role required.';
-  END IF;
+  -- Recent Users
+  SELECT jsonb_agg(t) INTO recent_users FROM (
+    SELECT
+      u.user_id,
+      u.role,
+      u.created_at,
+      s.full_name as seeker_name,
+      s.avatar_url as seeker_avatar,
+      e.company_name as employer_name,
+      e.avatar_url as employer_avatar
+    FROM user_profiles u
+    LEFT JOIN job_seeker_profiles s ON u.user_id = s.user_id AND u.role = 'seeker'
+    LEFT JOIN employer_profiles e ON u.user_id = e.user_id AND u.role = 'employer'
+    ORDER BY u.created_at DESC
+    LIMIT 5
+  ) t;
 
-  SELECT json_build_object(
-    'total_user_reports', (SELECT COUNT(*) FROM user_reports),
-    'pending_user_reports', (SELECT COUNT(*) FROM user_reports WHERE status = 'pending'),
-    'total_job_reports', (SELECT COUNT(*) FROM job_reports),
-    'pending_job_reports', (SELECT COUNT(*) FROM job_reports WHERE status = 'pending'),
-    'resolved_reports', (
-      SELECT COUNT(*) FROM (
-        SELECT id FROM user_reports WHERE status = 'resolved'
-        UNION ALL
-        SELECT id FROM job_reports WHERE status = 'resolved'
-      ) AS combined
-    )
-  ) INTO result;
+  -- Recent Jobs
+  SELECT jsonb_agg(t) INTO recent_jobs FROM (
+    SELECT
+      j.id,
+      j.title,
+      j.location,
+      j.created_at,
+      j.is_active,
+      j.admin_disabled,
+      e.company_name,
+      e.avatar_url as company_avatar
+    FROM job_posts j
+    LEFT JOIN employer_profiles e ON j.employer_id = e.user_id
+    ORDER BY j.created_at DESC
+    LIMIT 5
+  ) t;
 
-  RETURN result;
+  RETURN jsonb_build_object(
+    'recent_users', COALESCE(recent_users, '[]'::jsonb),
+    'recent_jobs', COALESCE(recent_jobs, '[]'::jsonb)
+  );
+END;
+$$;
+
+-- Function to get admin actions
+CREATE OR REPLACE FUNCTION get_admin_actions(
+  page_limit INTEGER DEFAULT 50,
+  page_offset INTEGER DEFAULT 0
+)
+RETURNS TABLE (
+  id UUID,
+  admin_id UUID,
+  action_type TEXT,
+  target_type TEXT,
+  target_id TEXT,
+  reason TEXT,
+  metadata JSONB,
+  created_at TIMESTAMPTZ,
+  admin_name TEXT,
+  admin_role TEXT
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  RETURN QUERY
+  SELECT
+    a.id,
+    a.admin_id,
+    a.action_type,
+    a.target_type,
+    a.target_id,
+    a.reason,
+    a.metadata,
+    a.created_at,
+    COALESCE(s.full_name, e.company_name, 'Unknown') as admin_name,
+    u.role::text as admin_role
+  FROM admin_actions a
+  JOIN user_profiles u ON a.admin_id = u.id
+  LEFT JOIN job_seeker_profiles s ON u.user_id = s.user_id AND u.role = 'seeker'
+  LEFT JOIN employer_profiles e ON u.user_id = e.user_id AND u.role = 'employer'
+  ORDER BY a.created_at DESC
+  LIMIT page_limit OFFSET page_offset;
+END;
+$$;
+
+-- Function to get job reports
+CREATE OR REPLACE FUNCTION get_job_reports(
+  status_filter TEXT DEFAULT NULL,
+  page_limit INTEGER DEFAULT 50,
+  page_offset INTEGER DEFAULT 0
+)
+RETURNS TABLE (
+  id UUID,
+  reporter_id UUID,
+  job_id UUID,
+  report_type TEXT,
+  description TEXT,
+  status TEXT,
+  admin_notes TEXT,
+  created_at TIMESTAMPTZ,
+  resolved_at TIMESTAMPTZ,
+  resolved_by UUID,
+  reporter_email TEXT,
+  job_title TEXT,
+  job_location TEXT,
+  job_is_active BOOLEAN,
+  job_admin_disabled BOOLEAN,
+  employer_company_name TEXT,
+  resolver_name TEXT
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  RETURN QUERY
+  SELECT 
+    r.id,
+    r.reporter_id,
+    r.job_id,
+    r.report_type,
+    r.description,
+    r.status,
+    r.admin_notes,
+    r.created_at,
+    r.resolved_at,
+    r.resolved_by,
+    u_reporter.email as reporter_email,
+    j.title as job_title,
+    j.location as job_location,
+    j.is_active as job_is_active,
+    j.admin_disabled as job_admin_disabled,
+    e.company_name as employer_company_name,
+    COALESCE(ress.full_name, rese.company_name, 'Unknown') as resolver_name
+  FROM job_reports r
+  JOIN auth.users u_reporter ON r.reporter_id = u_reporter.id
+  JOIN job_posts j ON r.job_id = j.id
+  LEFT JOIN employer_profiles e ON j.employer_id = e.user_id
+  LEFT JOIN user_profiles res ON r.resolved_by = res.id
+  LEFT JOIN job_seeker_profiles ress ON res.id = ress.user_id AND res.role = 'seeker'
+  LEFT JOIN employer_profiles rese ON res.id = rese.user_id AND res.role = 'employer'
+  WHERE (status_filter IS NULL OR r.status = status_filter)
+  ORDER BY r.created_at DESC
+  LIMIT page_limit OFFSET page_offset;
+END;
+$$;
+
+-- Function to get user reports
+CREATE OR REPLACE FUNCTION get_user_reports(
+  status_filter TEXT DEFAULT NULL,
+  page_limit INTEGER DEFAULT 50,
+  page_offset INTEGER DEFAULT 0
+)
+RETURNS TABLE (
+  id UUID,
+  reporter_id UUID,
+  reported_user_id UUID,
+  report_type TEXT,
+  description TEXT,
+  status TEXT,
+  admin_notes TEXT,
+  created_at TIMESTAMPTZ,
+  resolved_at TIMESTAMPTZ,
+  resolved_by UUID,
+  reporter_email TEXT,
+  reported_user_role TEXT,
+  reported_user_name TEXT,
+  reported_user_avatar TEXT,
+  resolver_name TEXT
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  RETURN QUERY
+  SELECT 
+    r.id,
+    r.reporter_id,
+    r.reported_user_id,
+    r.report_type,
+    r.description,
+    r.status,
+    r.admin_notes,
+    r.created_at,
+    r.resolved_at,
+    r.resolved_by,
+    u_reporter.email as reporter_email,
+    u_reported.role::text as reported_user_role,
+    COALESCE(s.full_name, e.company_name) as reported_user_name,
+    COALESCE(s.avatar_url, e.avatar_url) as reported_user_avatar,
+    COALESCE(ress.full_name, rese.company_name, 'Unknown') as resolver_name
+  FROM user_reports r
+  JOIN auth.users u_reporter ON r.reporter_id = u_reporter.id
+  JOIN user_profiles u_reported ON r.reported_user_id = u_reported.id
+  LEFT JOIN job_seeker_profiles s ON u_reported.id = s.user_id AND u_reported.role = 'seeker'
+  LEFT JOIN employer_profiles e ON u_reported.id = e.user_id AND u_reported.role = 'employer'
+  LEFT JOIN user_profiles res ON r.resolved_by = res.id
+  LEFT JOIN job_seeker_profiles ress ON res.id = ress.user_id AND res.role = 'seeker'
+  LEFT JOIN employer_profiles rese ON res.id = rese.user_id AND res.role = 'employer'
+  WHERE (status_filter IS NULL OR r.status = status_filter)
+  ORDER BY r.created_at DESC
+  LIMIT page_limit OFFSET page_offset;
 END;
 $$;
 

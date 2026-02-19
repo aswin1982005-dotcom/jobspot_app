@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:jobspot_app/core/theme/app_theme.dart';
 import 'package:jobspot_app/data/services/application_service.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:jobspot_app/features/reviews/presentation/add_review_screen.dart';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:jobspot_app/features/reviews/presentation/seeker_reviews_screen.dart';
 
@@ -93,22 +93,34 @@ class _ApplicantProfileScreenState extends State<ApplicantProfileScreen> {
               );
             },
             icon: const Icon(Icons.reviews_outlined),
-            tooltip: 'See Reviews',
+            tooltip: 'Reviews & Rating',
           ),
-          IconButton(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => AddReviewScreen(
-                    revieweeId: applicant['user_id'],
-                    revieweeName: applicant['full_name'] ?? 'Candidate',
-                  ),
-                ),
+          // Call Button
+          Builder(
+            builder: (context) {
+              final phone = applicant['phone'];
+              final hasPhone = phone != null && phone.toString().isNotEmpty;
+              return IconButton(
+                onPressed: hasPhone
+                    ? () async {
+                        final uri = Uri.parse('tel:$phone');
+                        if (await canLaunchUrl(uri)) {
+                          await launchUrl(uri);
+                        } else {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Could not launch dialer'),
+                              ),
+                            );
+                          }
+                        }
+                      }
+                    : null,
+                icon: Icon(Icons.phone, color: hasPhone ? null : Colors.grey),
+                tooltip: hasPhone ? 'Call Candidate' : 'No mobile provided',
               );
             },
-            icon: const Icon(Icons.star_rate_rounded),
-            tooltip: 'Rate Candidate',
           ),
         ],
       ),
@@ -275,7 +287,7 @@ class _ApplicantProfileScreenState extends State<ApplicantProfileScreen> {
             ListTile(
               leading: const Icon(Icons.phone_outlined),
               title: const Text('Phone'),
-              subtitle: Text(applicant['phone']!.toString()),
+              subtitle: Text(applicant['phone']?.toString() ?? 'Not provided'),
               contentPadding: EdgeInsets.zero,
               trailing: const Icon(Icons.arrow_forward_ios, size: 16),
               onTap: () async {

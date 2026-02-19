@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:jobspot_app/core/theme/app_theme.dart';
 import 'package:jobspot_app/features/auth/presentation/widgets/social_button.dart';
-import 'package:jobspot_app/core/utils/supabase_service.dart';
+import 'package:jobspot_app/data/services/auth_service.dart';
 import 'package:jobspot_app/features/dashboard/presentation/screens/seeker_dashboard.dart';
 import 'package:jobspot_app/features/dashboard/presentation/screens/employer_dashboard.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -17,6 +17,7 @@ class SignupScreen extends StatefulWidget {
 }
 
 class _SignupScreenState extends State<SignupScreen> {
+  final _authService = AuthService();
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
@@ -31,21 +32,16 @@ class _SignupScreenState extends State<SignupScreen> {
   }
 
   void _setupAuthListener() {
-    Supabase.instance.client.auth.onAuthStateChange.listen((data) async {
+    _authService.onAuthStateChange.listen((data) async {
       final event = data.event;
       if (event == AuthChangeEvent.signedIn) {
         if (!mounted) return;
         final user = data.session?.user;
-        // Make sure we have the role metadata if not present (although usually user might already exist)
-        // If it's a new user, Supabase might not have metadata yet if we didn't send it in signInWithOAuth options?
-        // signInWithOAuth supports scopes and queryparams, but metadata is usually part of user object if stored.
-        // For now, checks if role is missing and updates it.
 
         var currentRole = user?.userMetadata?['role'];
         if (currentRole == null && user != null) {
-          // It's possible this is a new user from OAuth.
           try {
-            await SupabaseService.updateUserMetadata({'role': widget.role});
+            await _authService.updateUserMetadata({'role': widget.role});
             currentRole = widget.role;
           } catch (_) {}
         }
@@ -81,16 +77,25 @@ class _SignupScreenState extends State<SignupScreen> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isLoading = true);
     try {
-      await Supabase.instance.client.auth.signUp(
+      await _authService.signUp(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
         data: {'name': _nameController.text.trim(), 'role': widget.role},
       );
 
-      await Supabase.instance.client.auth.signInWithPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text,
-      );
+      // Explicit sign in might not be needed if signUp returns a session, but keeping original logic flow safest for now.
+      // However, usually signUp with autoConfirm: true (default for Supabase dev) signs in.
+      // If email confirmation is on, it won't.
+      // The original code did explicit signInWithPassword.
+
+      try {
+        await _authService.signInWithEmailPassword(
+          email: _emailController.text.trim(),
+          password: _passwordController.text,
+        );
+      } catch (_) {
+        // Ignore if already signed in or error, the auth listener will handle valid sessions
+      }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -157,12 +162,15 @@ class _SignupScreenState extends State<SignupScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       resizeToAvoidBottomInset: false,
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Color(0xFF2D2D2D)),
+          icon: Icon(
+            Icons.arrow_back,
+            color: Theme.of(context).iconTheme.color,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -177,16 +185,19 @@ class _SignupScreenState extends State<SignupScreen> {
                 // Header
                 Text(
                   'Create ${widget.role == 'employer' ? 'Employer' : 'Seeker'} Account',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 32,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF2D2D2D),
+                    color: Theme.of(context).textTheme.headlineMedium?.color,
                   ),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   'Sign up to get started',
-                  style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Theme.of(context).hintColor,
+                  ),
                 ),
                 const SizedBox(height: 32),
 
@@ -291,7 +302,7 @@ class _SignupScreenState extends State<SignupScreen> {
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: Text(
                         'Or sign up with',
-                        style: TextStyle(color: Colors.grey[600]),
+                        style: TextStyle(color: Theme.of(context).hintColor),
                       ),
                     ),
                     Expanded(child: Divider(color: Colors.grey[300])),
@@ -304,9 +315,8 @@ class _SignupScreenState extends State<SignupScreen> {
                       child: SocialButton(
                         icon: Icons.g_mobiledata,
                         label: 'Google',
-                        onPressed: () => _handleSocialLogin(
-                          SupabaseService.signInWithGoogle,
-                        ),
+                        onPressed: () =>
+                            _handleSocialLogin(_authService.signInWithGoogle),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -315,7 +325,7 @@ class _SignupScreenState extends State<SignupScreen> {
                         icon: Icons.apple,
                         label: 'Apple',
                         onPressed: () =>
-                            _handleSocialLogin(SupabaseService.signInWithApple),
+                            _handleSocialLogin(_authService.signInWithApple),
                       ),
                     ),
                   ],
@@ -326,7 +336,7 @@ class _SignupScreenState extends State<SignupScreen> {
                   children: [
                     Text(
                       'Already have an account? ',
-                      style: TextStyle(color: Colors.grey[600]),
+                      style: TextStyle(color: Theme.of(context).hintColor),
                     ),
                     TextButton(
                       onPressed: () => Navigator.pop(context),

@@ -9,6 +9,8 @@ class ProfileProvider extends ChangeNotifier {
   bool _isProfileCompleted = false;
   String? _role;
 
+  final _profileService = ProfileService();
+
   Map<String, dynamic>? get profileData => _profileData;
 
   bool get isLoading => _isLoading;
@@ -35,9 +37,9 @@ class ProfileProvider extends ChangeNotifier {
 
         // 2. Fetch specific profile data based on role
         if (_role == 'seeker') {
-          _profileData = await ProfileService.fetchSeekerProfile(userId);
+          _profileData = await _profileService.fetchSeekerProfile(userId);
         } else if (_role == 'employer') {
-          _profileData = await ProfileService.fetchEmployerProfile(userId);
+          _profileData = await _profileService.fetchEmployerProfile(userId);
         }
       }
     } catch (e) {

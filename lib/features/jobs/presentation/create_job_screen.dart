@@ -224,14 +224,15 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
         'same_day_pay': _sameDayPay,
       };
 
+      final Map<String, dynamic> result;
       if (widget.job != null) {
-        await _jobService.updateJobPost(widget.job!['id'], jobData);
+        result = await _jobService.updateJobPost(widget.job!['id'], jobData);
       } else {
-        await _jobService.createJobPost(jobData);
+        result = await _jobService.createJobPost(jobData);
       }
 
       if (mounted) {
-        Navigator.pop(context, true);
+        Navigator.pop(context, result);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(widget.job != null ? 'Job updated!' : 'Job posted!'),

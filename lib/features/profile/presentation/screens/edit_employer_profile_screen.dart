@@ -3,6 +3,10 @@ import 'package:jobspot_app/core/theme/app_theme.dart';
 import 'package:jobspot_app/data/services/profile_service.dart';
 import 'package:jobspot_app/features/profile/presentation/screens/profile_loading_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:jobspot_app/core/models/location_address.dart';
+import 'package:jobspot_app/features/jobs/presentation/address_search_page.dart';
+import 'package:jobspot_app/features/jobs/presentation/map_picker_page.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 class EditEmployerProfileScreen extends StatefulWidget {
   final Map<String, dynamic>? profile;
@@ -27,14 +31,21 @@ class _EditEmployerProfileScreenState extends State<EditEmployerProfileScreen> {
 
   bool _useLoginEmail = false;
   bool _isLoading = false;
+  LocationAddress? _selectedAddress;
 
   @override
   void initState() {
     super.initState();
     final profile = widget.profile ?? {};
-    _companyNameController = TextEditingController(
-      text: profile['company_name'] ?? '',
-    );
+
+    // Try to get company name from profile, fallback to Auth Metadata (Name)
+    String initialCompanyName = profile['company_name'] ?? '';
+    if (initialCompanyName.isEmpty) {
+      final user = Supabase.instance.client.auth.currentUser;
+      initialCompanyName = user?.userMetadata?['name'] ?? '';
+    }
+
+    _companyNameController = TextEditingController(text: initialCompanyName);
     _industryController = TextEditingController(
       text: profile['industry'] ?? '',
     );
@@ -51,6 +62,18 @@ class _EditEmployerProfileScreenState extends State<EditEmployerProfileScreen> {
       text: profile['company_description'] ?? '',
     );
     _checkIfUsingLoginEmail();
+
+    if (profile['latitude'] != null && profile['longitude'] != null) {
+      _selectedAddress = LocationAddress(
+        addressLine: profile['address'] ?? '',
+        city: profile['city'] ?? '',
+        state: '',
+        country: '',
+        postalCode: '',
+        latitude: profile['latitude'],
+        longitude: profile['longitude'],
+      );
+    }
   }
 
   @override
@@ -85,6 +108,36 @@ class _EditEmployerProfileScreenState extends State<EditEmployerProfileScreen> {
     });
   }
 
+  Future<void> _pickLocationFromSearch() async {
+    final result = await Navigator.push<LocationAddress>(
+      context,
+      MaterialPageRoute(builder: (context) => const AddressSearchPage()),
+    );
+    if (result != null) _updateAddress(result);
+  }
+
+  Future<void> _pickLocationFromMap() async {
+    final initialPos = _selectedAddress != null
+        ? LatLng(_selectedAddress!.latitude, _selectedAddress!.longitude)
+        : const LatLng(19.0760, 72.8777); // Default to Mumbai
+
+    final result = await Navigator.push<LocationAddress>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => MapPickerPage(initialPosition: initialPos),
+      ),
+    );
+    if (result != null) _updateAddress(result);
+  }
+
+  void _updateAddress(LocationAddress result) {
+    setState(() {
+      _selectedAddress = result;
+      _cityController.text = result.city;
+      _addressController.text = result.addressLine;
+    });
+  }
+
   Future<void> _saveProfile() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -101,15 +154,17 @@ class _EditEmployerProfileScreenState extends State<EditEmployerProfileScreen> {
         'official_email': _contactEmailController.text.trim(),
         'contact_mobile': _contactMobileController.text.trim(),
         'company_description': _descriptionController.text.trim(),
+        'latitude': _selectedAddress?.latitude,
+        'longitude': _selectedAddress?.longitude,
       };
+      updates['user_id'] = userId;
 
-      // Check for completion (Basic info)
-      if (_companyNameController.text.trim().isNotEmpty &&
-          _cityController.text.trim().isNotEmpty) {
-        updates['profile_completed'] = 'True';
-      }
-
-      await ProfileService.updateEmployerProfile(userId, updates);
+      final profileService = ProfileService();
+      await profileService.updateEmployerProfile(
+        userId,
+        updates,
+        complete: true,
+      );
 
       if (mounted) {
         if (widget.profile == null) {
@@ -139,9 +194,21 @@ class _EditEmployerProfileScreenState extends State<EditEmployerProfileScreen> {
     }
   }
 
-  InputDecoration _buildInputDecoration(String label, IconData icon) {
+  InputDecoration _buildInputDecoration(
+    String label,
+    IconData icon, {
+    bool isRequired = false,
+  }) {
     return InputDecoration(
-      labelText: label,
+      label: isRequired
+          ? Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(label),
+                const Text(' *', style: TextStyle(color: Colors.red)),
+              ],
+            )
+          : Text(label),
       prefixIcon: Icon(icon, color: Colors.grey),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
@@ -156,7 +223,7 @@ class _EditEmployerProfileScreenState extends State<EditEmployerProfileScreen> {
         borderSide: const BorderSide(color: AppColors.purple, width: 2),
       ),
       filled: true,
-      fillColor: Colors.white,
+      fillColor: Theme.of(context).cardColor,
     );
   }
 
@@ -165,8 +232,6 @@ class _EditEmployerProfileScreenState extends State<EditEmployerProfileScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Edit Company Profile'),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
         elevation: 0,
         actions: [
           TextButton(
@@ -177,12 +242,12 @@ class _EditEmployerProfileScreenState extends State<EditEmployerProfileScreen> {
                     height: 20,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : const Text(
+                : Text(
                     'Save',
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
-                      color: AppColors.purple,
+                      color: Theme.of(context).primaryColor,
                     ),
                   ),
           ),
@@ -203,13 +268,24 @@ class _EditEmployerProfileScreenState extends State<EditEmployerProfileScreen> {
             const SizedBox(height: 16),
             TextFormField(
               controller: _companyNameController,
-              decoration: _buildInputDecoration('Company Name', Icons.business),
-              validator: (value) => value?.isEmpty == true ? 'Required' : null,
+              decoration: _buildInputDecoration(
+                'Company Name',
+                Icons.business,
+                isRequired: true,
+              ),
+              validator: (value) =>
+                  value?.isEmpty == true ? 'Company Name is required' : null,
             ),
             const SizedBox(height: 16),
             TextFormField(
               controller: _industryController,
-              decoration: _buildInputDecoration('Industry', Icons.category),
+              decoration: _buildInputDecoration(
+                'Industry',
+                Icons.category,
+                isRequired: true,
+              ),
+              validator: (value) =>
+                  value?.isEmpty == true ? 'Industry is required' : null,
             ),
             const SizedBox(height: 16),
             TextFormField(
@@ -235,7 +311,13 @@ class _EditEmployerProfileScreenState extends State<EditEmployerProfileScreen> {
               controller: _contactEmailController,
               keyboardType: TextInputType.emailAddress,
               readOnly: _useLoginEmail,
-              decoration: _buildInputDecoration('Official Email', Icons.email),
+              decoration: _buildInputDecoration(
+                'Official Email',
+                Icons.email,
+                isRequired: true,
+              ),
+              validator: (value) =>
+                  value?.isEmpty == true ? 'Email is required' : null,
             ),
             CheckboxListTile(
               contentPadding: EdgeInsets.zero,
@@ -252,7 +334,13 @@ class _EditEmployerProfileScreenState extends State<EditEmployerProfileScreen> {
             TextFormField(
               controller: _contactMobileController,
               keyboardType: TextInputType.phone,
-              decoration: _buildInputDecoration('Mobile Number', Icons.phone),
+              decoration: _buildInputDecoration(
+                'Mobile Number',
+                Icons.phone,
+                isRequired: true,
+              ),
+              validator: (value) =>
+                  value?.isEmpty == true ? 'Mobile Number is required' : null,
             ),
             const SizedBox(height: 16),
             TextFormField(
@@ -263,17 +351,39 @@ class _EditEmployerProfileScreenState extends State<EditEmployerProfileScreen> {
 
             const SizedBox(height: 24),
 
-            // Location
-            Text(
-              'Location',
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+            // Location Picker
+            Row(
+              children: [
+                Text(
+                  'Location',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const Text(' *', style: TextStyle(color: Colors.red)),
+              ],
             ),
             const SizedBox(height: 16),
-            TextFormField(
-              controller: _cityController,
-              decoration: _buildInputDecoration('City', Icons.location_city),
+            InkWell(
+              onTap: _pickLocationFromSearch,
+              child: IgnorePointer(
+                child: TextFormField(
+                  controller: _cityController,
+                  decoration: _buildInputDecoration(
+                    'Location on Map',
+                    Icons.location_city,
+                    isRequired: true,
+                  ),
+                  validator: (value) =>
+                      value?.isEmpty == true ? 'Location is required' : null,
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              onPressed: _pickLocationFromMap,
+              icon: const Icon(Icons.map),
+              label: const Text('Pick on Map'),
             ),
             const SizedBox(height: 16),
             TextFormField(
@@ -283,6 +393,7 @@ class _EditEmployerProfileScreenState extends State<EditEmployerProfileScreen> {
                 'Full Address',
                 Icons.location_on,
               ).copyWith(alignLabelWithHint: true),
+              readOnly: true, // Auto-filled from map/search
             ),
           ],
         ),

@@ -3,6 +3,7 @@ import 'package:jobspot_app/core/theme/app_theme.dart';
 import 'package:jobspot_app/data/services/profile_service.dart';
 import 'package:jobspot_app/core/utils/supabase_service.dart';
 import 'package:jobspot_app/features/profile/presentation/screens/profile_loading_screen.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:jobspot_app/core/models/location_address.dart';
 import 'package:jobspot_app/features/jobs/presentation/address_search_page.dart';
 import 'package:jobspot_app/features/jobs/presentation/map_picker_page.dart';
@@ -71,7 +72,15 @@ class _EditSeekerProfileScreenState extends State<EditSeekerProfileScreen> {
   void initState() {
     super.initState();
     final profile = widget.profile;
-    _nameController = TextEditingController(text: profile?['full_name'] ?? '');
+
+    // Try to get name from profile, fallback to Auth Metadata
+    String initialName = profile?['full_name'] ?? '';
+    if (initialName.isEmpty) {
+      final user = Supabase.instance.client.auth.currentUser;
+      initialName = user?.userMetadata?['name'] ?? '';
+    }
+
+    _nameController = TextEditingController(text: initialName);
     _cityController = TextEditingController(text: profile?['city'] ?? '');
     _phoneController = TextEditingController(
       text: profile?['phone'].toString() ?? '',
@@ -217,7 +226,8 @@ class _EditSeekerProfileScreenState extends State<EditSeekerProfileScreen> {
         'address_line': _selectedAddress?.addressLine,
       };
 
-      await ProfileService.updateSeekerProfile(
+      final profileService = ProfileService();
+      await profileService.updateSeekerProfile(
         userId,
         updateData,
         complete: true,
@@ -315,7 +325,13 @@ class _EditSeekerProfileScreenState extends State<EditSeekerProfileScreen> {
               TextFormField(
                 controller: _nameController,
                 decoration: const InputDecoration(
-                  labelText: 'Full Name',
+                  label: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text('Full Name'),
+                      Text(' *', style: TextStyle(color: Colors.red)),
+                    ],
+                  ),
                   prefixIcon: Icon(Icons.person_outline),
                   filled: true,
                   border: OutlineInputBorder(
@@ -323,7 +339,8 @@ class _EditSeekerProfileScreenState extends State<EditSeekerProfileScreen> {
                     borderSide: BorderSide.none,
                   ),
                 ),
-                validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
+                validator: (v) =>
+                    v?.trim().isEmpty ?? true ? 'Name is required' : null,
               ),
               const SizedBox(height: 16),
               InkWell(
@@ -354,7 +371,13 @@ class _EditSeekerProfileScreenState extends State<EditSeekerProfileScreen> {
                 controller: _phoneController,
                 keyboardType: TextInputType.phone,
                 decoration: const InputDecoration(
-                  labelText: 'Phone Number',
+                  label: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text('Phone Number'),
+                      Text(' *', style: TextStyle(color: Colors.red)),
+                    ],
+                  ),
                   prefixIcon: Icon(Icons.phone_outlined),
                   filled: true,
                   border: OutlineInputBorder(
@@ -362,9 +385,15 @@ class _EditSeekerProfileScreenState extends State<EditSeekerProfileScreen> {
                     borderSide: BorderSide.none,
                   ),
                 ),
-                validator: (v) => v?.isNotEmpty == true && v!.length < 10
-                    ? 'Enter valid phone'
-                    : null,
+                validator: (v) {
+                  if (v == null || v.trim().isEmpty) {
+                    return 'Phone number is required';
+                  }
+                  if (v.length < 10) {
+                    return 'Enter valid phone number';
+                  }
+                  return null;
+                },
               ),
               const SizedBox(height: 16),
               TextFormField(
@@ -401,7 +430,13 @@ class _EditSeekerProfileScreenState extends State<EditSeekerProfileScreen> {
               DropdownButtonFormField<String>(
                 initialValue: _selectedEducation,
                 decoration: const InputDecoration(
-                  labelText: 'Education Level',
+                  label: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text('Education Level'),
+                      Text(' *', style: TextStyle(color: Colors.red)),
+                    ],
+                  ),
                   prefixIcon: Icon(Icons.school_outlined),
                   filled: true,
                   border: OutlineInputBorder(
@@ -415,14 +450,21 @@ class _EditSeekerProfileScreenState extends State<EditSeekerProfileScreen> {
                 onChanged: _isLoading
                     ? null
                     : (value) => setState(() => _selectedEducation = value),
-                validator: (value) => value == null ? 'Required' : null,
+                validator: (value) =>
+                    value == null ? 'Education level is required' : null,
               ),
               const SizedBox(height: 16),
               TextFormField(
                 controller: _skillsController,
                 maxLines: 2,
                 decoration: const InputDecoration(
-                  labelText: 'Skills (comma separated)',
+                  label: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text('Skills (comma separated)'),
+                      Text(' *', style: TextStyle(color: Colors.red)),
+                    ],
+                  ),
                   prefixIcon: Icon(Icons.bolt_outlined),
                   hintText: 'Flutter, Dart, UI Design...',
                   filled: true,
@@ -431,6 +473,9 @@ class _EditSeekerProfileScreenState extends State<EditSeekerProfileScreen> {
                     borderSide: BorderSide.none,
                   ),
                 ),
+                validator: (value) => value == null || value.trim().isEmpty
+                    ? 'At least one skill is required'
+                    : null,
               ),
               const SizedBox(height: 8),
               DropdownButtonFormField<String>(
@@ -452,7 +497,13 @@ class _EditSeekerProfileScreenState extends State<EditSeekerProfileScreen> {
               DropdownButtonFormField<String>(
                 initialValue: _selectedJobType,
                 decoration: const InputDecoration(
-                  labelText: 'Preferred Job Type',
+                  label: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text('Preferred Job Type'),
+                      Text(' *', style: TextStyle(color: Colors.red)),
+                    ],
+                  ),
                   prefixIcon: Icon(Icons.work_outline),
                   filled: true,
                   border: OutlineInputBorder(

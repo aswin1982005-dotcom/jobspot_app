@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:jobspot_app/features/auth/presentation/screens/role_selection_screen.dart';
 import 'package:jobspot_app/features/auth/presentation/widgets/social_button.dart';
-import 'package:jobspot_app/core/utils/supabase_service.dart';
+import 'package:jobspot_app/data/services/auth_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:jobspot_app/features/auth/presentation/screens/forgot_password_screen.dart';
 import 'package:jobspot_app/features/auth/presentation/screens/otp_login_screen.dart';
@@ -15,6 +15,7 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
+  final _authService = AuthService();
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -32,7 +33,7 @@ class _LoginScreenState extends State<LoginScreen> {
     if (_formKey.currentState!.validate()) {
       setState(() => _isLoading = true);
       try {
-        await Supabase.instance.client.auth.signInWithPassword(
+        await _authService.signInWithEmailPassword(
           email: _emailController.text.trim(),
           password: _passwordController.text,
         );
@@ -244,9 +245,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       child: SocialButton(
                         icon: Icons.g_mobiledata,
                         label: 'Google',
-                        onPressed: () => _handleSocialLogin(
-                          SupabaseService.signInWithGoogle,
-                        ),
+                        onPressed: () =>
+                            _handleSocialLogin(_authService.signInWithGoogle),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -255,7 +255,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         icon: Icons.apple,
                         label: 'Apple',
                         onPressed: () =>
-                            _handleSocialLogin(SupabaseService.signInWithApple),
+                            _handleSocialLogin(_authService.signInWithApple),
                       ),
                     ),
                   ],
