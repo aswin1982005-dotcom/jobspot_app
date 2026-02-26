@@ -38,16 +38,35 @@ JobSpot is a Flutter-based mobile application designed to bridge the gap between
 
 ### General
 - **Notifications**: Real-time updates for job applications and status changes.
+- **Offline & Sync**: Robust data fetching with global refresh capabilities to ensure state consistency across tabs.
 
 ---
 
-## 🛠️ Tech Stack
+## 🏗️ Architecture & How It Works
 
-- **Framework**: [Flutter](https://flutter.dev/) (Dart)
-- **Backend & Auth**: [Supabase](https://supabase.com/) (PostgreSQL)
-- **Maps**: [Google Maps Flutter](https://pub.dev/packages/google_maps_flutter)
-- **State Management**: [Provider](https://pub.dev/packages/provider)
-- **Notifications**: [OneSignal](https://onesignal.com/)
+JobSpot follows a modular, feature-first architecture, loosely based on the **MVVM (Model-View-ViewModel)** pattern. The project is structured to encourage separation of concerns:
+
+- **Frontend Framework**: The app is built with **Flutter**, providing a native-like experience on both iOS and Android from a single codebase.
+- **State Management**: **`Provider`** is heavily utilized for state management across the application. Each major feature has a dedicated provider (e.g., `ProfileProvider`, `SeekerHomeProvider`, `NotificationProvider`) that handles business logic, connects to data services, and updates the UI asynchronously.
+- **Global Refresh Mechanism**: A centralized `GlobalRefreshManager` handles holistic app state updates across disjoint tabs, preventing stale data.
+- **Directory Structure Breakdown**:
+  - `core/`: Contains application-wide configurations, constants, routing logic (`DashboardRouter`), themes (`AppTheme`), and utility functions.
+  - `data/`: Contains strongly-typed Dart **Models** and **Services**. Services abstract all direct communication with the backend.
+  - `features/`: The core application logic. It is split by domain (e.g., `auth`, `dashboard`, `jobs`, `applications`, `profile`, `reviews`, `notifications`). Each feature folder encapsulates its own `presentation/` (screens, tabs, reusable widgets) and `providers/`.
+
+---
+
+## ⚙️ Backend Logic & Infrastructure
+
+JobSpot leverages **Supabase** as its backend-as-a-service (BaaS), providing a robust, scalable, and secure backend infrastructure:
+
+- **Authentication**: Supabase Auth handles secure user registration, login, and session management. Custom metadata is utilized to distinguish user roles (`seeker`, `employer`, `admin`).
+- **PostgreSQL Database**: A relational database serves as the single source of truth. 
+  - **Row Level Security (RLS)** is strictly enforced to ensure users can only access and modify their own data, or public data as defined by the application's rules.
+  - **Custom SQL Functions & Triggers**: Advanced database logic is handled directly in PostgreSQL. Functions calculate admin dashboard statistics, aggregate review scores, and manage complex relational joins (e.g., user reports deep linking).
+- **Realtime Updates & Polling**: Supabase Realtime streams are utilized to push instantaneous updates to the app (e.g., new in-app notifications). The app also employs resilient fallback polling mechanisms to maintain data integrity if streams disconnect.
+- **Storage**: Supabase Storage securely houses user avatars and file uploads.
+- **Push Notifications (OneSignal)**: Integrated with OneSignal to deliver external push notifications. When a notification is tapped, the app captures the intent and refreshes the internal state to reflect the latest changes.
 
 ---
 
@@ -61,25 +80,10 @@ The app uses Supabase (PostgreSQL) with the following relational structure:
 | `user_id` | uuid | Primary Key |
 | `role` | text | 'seeker', 'employer', 'admin' |
 | `profile_completed` | boolean | Status flag |
+| `is_disabled` | boolean | Admin moderation flag |
 
-### `job_seeker_profiles`
-| Column | Type | Description |
-| :--- | :--- | :--- |
-| `user_id` | uuid | PK, FK -> auth.users |
-| `full_name` | text | - |
-| `avatar_url` | text | Profile picture URL |
-| `skills` | text[] | Array of skills |
-| `education_level` | text | - |
-| `resume_url` | text | URL to PDF resume |
-
-### `employer_profiles`
-| Column | Type | Description |
-| :--- | :--- | :--- |
-| `user_id` | uuid | PK, FK -> auth.users |
-| `company_name` | text | - |
-| `avatar_url` | text | Company logo URL |
-| `industry` | text | - |
-| `website` | text | - |
+### `job_seeker_profiles` & `employer_profiles`
+Store specific details such as full name, company name, industry, skills array, avatar URLs, and location coordinates (latitude/longitude) for mapping features.
 
 ### `job_posts`
 | Column | Type | Description |
@@ -87,26 +91,21 @@ The app uses Supabase (PostgreSQL) with the following relational structure:
 | `id` | uuid | Primary Key |
 | `employer_id` | uuid | FK -> auth.users |
 | `title` | text | Job Title |
-| `pay_amount_min` | int | Minimum Salary |
-| `pay_amount_max` | int | Maximum Salary |
 | `is_active` | boolean | Open/Closed status |
+*(Plus compensation, location, description, and requirements)*
 
-### `job_applications`
-| Column | Type | Description |
-| :--- | :--- | :--- |
-| `id` | uuid | Primary Key |
-| `job_post_id` | uuid | FK -> job_posts.id |
-| `applicant_id` | uuid | FK -> auth.users |
-| `status` | text | 'pending', 'shortlisted', 'hired' |
+### `job_applications`, `reviews`, `reports`
+Relational tables linking users to jobs or other users, tracking statuses, ratings, and moderation flags.
 
-### `reviews`
-| Column | Type | Description |
-| :--- | :--- | :--- |
-| `id` | uuid | Primary Key |
-| `reviewer_id` | uuid | FK -> auth.users |
-| `reviewee_id` | uuid | FK -> auth.users |
-| `rating` | int | 1-5 Stars |
-| `comment` | text | Review text |
+---
+
+## 🛠️ Tech Stack
+
+- **Framework**: [Flutter](https://flutter.dev/) (Dart)
+- **Backend & Auth**: [Supabase](https://supabase.com/) (PostgreSQL)
+- **Maps**: [Google Maps Flutter](https://pub.dev/packages/google_maps_flutter)
+- **State Management**: [Provider](https://pub.dev/packages/provider)
+- **Notifications**: [OneSignal](https://onesignal.com/)
 
 ---
 
@@ -118,6 +117,7 @@ The app uses Supabase (PostgreSQL) with the following relational structure:
 - Android Studio / Xcode
 - A Supabase project
 - A Google Maps API Key
+- OneSignal App ID
 
 ### Installation
 
@@ -138,6 +138,7 @@ The app uses Supabase (PostgreSQL) with the following relational structure:
     SUPABASE_URL=your_supabase_url
     SUPABASE_ANON_KEY=your_supabase_anon_key
     GOOGLE_MAPS_API_KEY=your_google_maps_key
+    ONESIGNAL_APP_ID=your_onesignal_app_id
     ```
     *Note: Ensure you enable Maps SDK for Android/iOS in Google Cloud Console.*
 
@@ -148,33 +149,13 @@ The app uses Supabase (PostgreSQL) with the following relational structure:
 
 ---
 
-## 📂 Project Structure
-
-```
-lib/
-├── core/                   # Global utilities, themes, and constants
-│   ├── theme/
-│   └── utils/
-├── data/                   # Data layer (Services, Models)
-│   ├── services/           # Supabase calls (Auth, Job, Profile)
-│   └── models/             # Data models
-├── features/               # Feature-based organization
-│   ├── auth/               # Login, Signup, Onboarding
-│   ├── dashboard/          # Main Shell, Home Tabs, Map Tab
-│   ├── jobs/               # Job Listing, Creation, Details
-│   ├── applications/       # Application management
-│   └── profile/            # User Profile, Settings
-└── main.dart               # App Entry point
-```
-
----
-
 ## 🛡️ Safety & Compliance
 
 JobSpot is designed to meet App Store and Play Store requirements:
 - **Account Deletion**: Users can delete their data via Settings.
 - **Reporting**: Tools to report abusive jobs or employers.
 - **Privacy**: Transparent data usage policies.
+- **Admin Moderation**: Admins can suspend users and take down jobs seamlessly.
 
 ---
 

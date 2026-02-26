@@ -116,7 +116,7 @@ class _MapTabState extends State<MapTab> with AutomaticKeepAliveClientMixin {
       mapsImplementation.useAndroidViewSurface = true;
       try {
         await mapsImplementation.initializeWithRenderer(
-          AndroidMapRenderer.latest,
+          AndroidMapRenderer.legacy,
         );
       } catch (e) {
         debugPrint("Error initializing map renderer: $e");

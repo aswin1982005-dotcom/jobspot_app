@@ -104,7 +104,37 @@ class _JobManagementTabState extends State<JobManagementTab>
                   ? const Center(child: CircularProgressIndicator())
                   : RefreshIndicator(
                       onRefresh: provider.refresh,
-                      child: provider.jobs.isEmpty
+                      child: provider.error != null
+                          ? Center(
+                              child: Padding(
+                                padding: const EdgeInsets.all(32.0),
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Icon(
+                                      Icons.error_outline,
+                                      size: 64,
+                                      color: Colors.red,
+                                    ),
+                                    const SizedBox(height: 16),
+                                    Text(
+                                      'Error Loading Jobs',
+                                      style: textTheme.titleLarge?.copyWith(
+                                        color: Colors.red,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      provider.error!,
+                                      textAlign: TextAlign.center,
+                                      style: textTheme.bodyMedium,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            )
+                          : provider.jobs.isEmpty
                           ? Center(
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,

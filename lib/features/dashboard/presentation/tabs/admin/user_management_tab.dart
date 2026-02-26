@@ -4,6 +4,8 @@ import 'package:jobspot_app/features/dashboard/presentation/providers/user_manag
 import 'package:provider/provider.dart';
 import 'package:jobspot_app/features/profile/presentation/widgets/seeker_profile_view.dart';
 import 'package:jobspot_app/features/profile/presentation/widgets/employer_profile_view.dart';
+import 'package:jobspot_app/features/dashboard/presentation/tabs/admin/widgets/message_user_dialog.dart';
+import 'package:jobspot_app/features/dashboard/presentation/tabs/admin/admin_activity_log_screen.dart';
 
 class UserManagementTab extends StatefulWidget {
   const UserManagementTab({super.key});
@@ -243,6 +245,16 @@ class _UserManagementTabState extends State<UserManagementTab>
                               ),
                             ),
                           ),
+                          if (role == 'employer' &&
+                              user['employer_profile']?['is_verified'] == true)
+                            const Padding(
+                              padding: EdgeInsets.only(left: 4),
+                              child: Icon(
+                                Icons.verified,
+                                color: AppColors.purple,
+                                size: 16,
+                              ),
+                            ),
                           if (isDisabled)
                             Container(
                               padding: const EdgeInsets.symmetric(
@@ -372,6 +384,14 @@ class _UserManagementTabState extends State<UserManagementTab>
     Map<String, dynamic> user,
     UserManagementProvider provider,
   ) {
+    String name = 'User';
+    final role = user['role'] ?? '';
+    if (role == 'seeker' && user['profile_completed'] == true) {
+      name = user['seeker_profile']?['full_name'] ?? 'Job Seeker';
+    } else if (role == 'employer' && user['profile_completed'] == true) {
+      name = user['employer_profile']?['company_name'] ?? 'Company';
+    }
+
     showModalBottomSheet(
       context: context,
       builder: (context) => Container(
@@ -426,10 +446,32 @@ class _UserManagementTabState extends State<UserManagementTab>
               title: const Text('Send Message'),
               onTap: () {
                 Navigator.pop(context);
-                // TODO: Navigate to messaging
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Messaging feature coming soon'),
+                showDialog(
+                  context: context,
+                  builder: (context) => MessageUserDialog(
+                    userName: name,
+                    onSend: (title, body) async {
+                      try {
+                        await provider.sendSystemMessage(
+                          user['user_id'],
+                          title,
+                          body,
+                        );
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Message sent successfully'),
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(
+                            context,
+                          ).showSnackBar(SnackBar(content: Text('Error: $e')));
+                        }
+                      }
+                    },
                   ),
                 );
               },
@@ -439,11 +481,61 @@ class _UserManagementTabState extends State<UserManagementTab>
               title: const Text('View Activity Log'),
               onTap: () {
                 Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Activity log coming soon')),
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) =>
+                        AdminActivityLogScreen(filterUserId: user['user_id']),
+                  ),
                 );
               },
             ),
+            if (user['role'] == 'employer') ...[
+              const Divider(),
+              ListTile(
+                leading: Icon(
+                  (user['employer_profile']?['is_verified'] == true)
+                      ? Icons.verified
+                      : Icons.new_releases,
+                  color: (user['employer_profile']?['is_verified'] == true)
+                      ? AppColors.purple
+                      : null,
+                ),
+                title: Text(
+                  (user['employer_profile']?['is_verified'] == true)
+                      ? 'Revoke Verification'
+                      : 'Verify Employer',
+                ),
+                onTap: () async {
+                  Navigator.pop(context);
+                  final isVerified =
+                      !(user['employer_profile']?['is_verified'] == true);
+                  try {
+                    await provider.toggleEmployerVerification(
+                      user['user_id'],
+                      isVerified,
+                    );
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            isVerified
+                                ? 'Employer verified'
+                                : 'Verification revoked',
+                          ),
+                        ),
+                      );
+                    }
+                  } catch (e) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(
+                        context,
+                      ).showSnackBar(SnackBar(content: Text('Error: $e')));
+                    }
+                  }
+                },
+              ),
+            ],
           ],
         ),
       ),

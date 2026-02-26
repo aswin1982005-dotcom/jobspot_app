@@ -83,6 +83,36 @@ class UserManagementProvider extends ChangeNotifier {
     }
   }
 
+  /// Toggle employer verification status
+  Future<void> toggleEmployerVerification(
+    String userId,
+    bool isVerified,
+  ) async {
+    try {
+      await _adminService.toggleEmployerVerification(userId, isVerified);
+      await loadUsers(); // Refresh list
+    } catch (e) {
+      _error = e.toString();
+      debugPrint('Error toggling verification: $e');
+      notifyListeners();
+      rethrow;
+    }
+  }
+
+  /// Send a system message to a user
+  Future<void> sendSystemMessage(
+    String userId,
+    String title,
+    String body,
+  ) async {
+    try {
+      await _adminService.sendSystemMessage(userId, title, body);
+    } catch (e) {
+      debugPrint('Error sending system message: $e');
+      rethrow;
+    }
+  }
+
   /// Refresh users list
   Future<void> refresh() => loadUsers();
 }

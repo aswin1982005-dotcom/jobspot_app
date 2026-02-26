@@ -75,6 +75,55 @@ class AdminService {
     );
   }
 
+  /// Toggle employer verification status
+  Future<void> toggleEmployerVerification(
+    String userId,
+    bool isVerified,
+  ) async {
+    final adminId = _supabase.auth.currentUser?.id;
+    if (adminId == null) throw Exception('Not authenticated');
+
+    // Update employer profile
+    await _supabase
+        .from('employer_profiles')
+        .update({'is_verified': isVerified})
+        .eq('user_id', userId);
+
+    // Log admin action
+    await _logAdminAction(
+      actionType: isVerified ? 'verify_employer' : 'unverify_employer',
+      targetType: 'user',
+      targetId: userId,
+      metadata: {'is_verified': isVerified},
+    );
+  }
+
+  /// Send a system message to a user
+  Future<void> sendSystemMessage(
+    String userId,
+    String title,
+    String body,
+  ) async {
+    final adminId = _supabase.auth.currentUser?.id;
+    if (adminId == null) throw Exception('Not authenticated');
+
+    await _supabase.from('notifications').insert({
+      'user_id': userId,
+      'title': title,
+      'body': body,
+      'type': 'system_message',
+      'is_read': false,
+    });
+
+    // Log admin action
+    await _logAdminAction(
+      actionType: 'send_message',
+      targetType: 'user',
+      targetId: userId,
+      metadata: {'title': title},
+    );
+  }
+
   // ============================================================================
   // JOB MANAGEMENT
   // ============================================================================

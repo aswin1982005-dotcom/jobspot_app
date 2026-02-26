@@ -3,6 +3,7 @@ import 'package:jobspot_app/core/theme/app_theme.dart';
 import 'package:jobspot_app/features/dashboard/presentation/providers/admin_home_provider.dart';
 import 'package:jobspot_app/features/notifications/presentation/providers/notification_provider.dart';
 import 'package:jobspot_app/features/notifications/presentation/screens/notifications_screen.dart';
+import 'package:jobspot_app/features/dashboard/presentation/tabs/admin/admin_activity_log_screen.dart';
 import 'package:provider/provider.dart';
 
 class AdminHomeTab extends StatefulWidget {
@@ -56,59 +57,88 @@ class _AdminHomeTabState extends State<AdminHomeTab>
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Admin Dashboard 🛡️',
-                    style: textTheme.headlineMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 24,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Admin Dashboard 🛡️',
+                      style: textTheme.headlineMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 24,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Platform management overview',
-                    style: textTheme.bodyLarge?.copyWith(
-                      color: theme.hintColor,
+                    const SizedBox(height: 4),
+                    Text(
+                      'Platform management overview',
+                      style: textTheme.bodyLarge?.copyWith(
+                        color: theme.hintColor,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-              InkWell(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const NotificationsScreen(),
-                    ),
-                  );
-                },
-                borderRadius: BorderRadius.circular(12),
-                child: Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: theme.cardColor,
-                    border: Border.all(
-                      color: theme.dividerColor.withValues(alpha: 0.5),
-                    ),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Consumer<NotificationProvider>(
-                    builder: (context, notifProvider, child) {
-                      return Badge(
-                        label: notifProvider.unreadCount > 0
-                            ? Text('${notifProvider.unreadCount}')
-                            : null,
-                        isLabelVisible: notifProvider.unreadCount > 0,
-                        child: Icon(
-                          Icons.notifications_outlined,
-                          color: theme.iconTheme.color,
+              Row(
+                children: [
+                  InkWell(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const AdminActivityLogScreen(),
                         ),
                       );
                     },
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: theme.cardColor,
+                        border: Border.all(
+                          color: theme.dividerColor.withValues(alpha: 0.5),
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(Icons.history, color: theme.iconTheme.color),
+                    ),
                   ),
-                ),
+                  const SizedBox(width: 8),
+                  InkWell(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const NotificationsScreen(),
+                        ),
+                      );
+                    },
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: theme.cardColor,
+                        border: Border.all(
+                          color: theme.dividerColor.withValues(alpha: 0.5),
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Consumer<NotificationProvider>(
+                        builder: (context, notifProvider, child) {
+                          return Badge(
+                            label: notifProvider.unreadCount > 0
+                                ? Text('${notifProvider.unreadCount}')
+                                : null,
+                            isLabelVisible: notifProvider.unreadCount > 0,
+                            child: Icon(
+                              Icons.notifications_outlined,
+                              color: theme.iconTheme.color,
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),

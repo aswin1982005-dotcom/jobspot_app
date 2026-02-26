@@ -29,19 +29,19 @@ class AdminHomeProvider extends ChangeNotifier {
 
   // Computed values for UI
   int get totalUsers => _userStats['total_users'] ?? 0;
-  int get totalSeekers => _userStats['total_seekers'] ?? 0;
-  int get totalEmployers => _userStats['total_employers'] ?? 0;
-  int get disabledUsers => _userStats['disabled_users'] ?? 0;
+  int get totalSeekers => _userStats['seekers'] ?? 0;
+  int get totalEmployers => _userStats['employers'] ?? 0;
+  int get disabledUsers => _userStats['disabled'] ?? 0;
   int get recentSignups => _userStats['recent_signups'] ?? 0;
 
   int get totalJobs => _jobStats['total_jobs'] ?? 0;
-  int get activeJobs => _jobStats['active_jobs'] ?? 0;
-  int get reportedJobs => _jobStats['reported_jobs'] ?? 0;
-  int get adminDisabledJobs => _jobStats['admin_disabled_jobs'] ?? 0;
+  int get activeJobs => _jobStats['active'] ?? 0;
+  int get reportedJobs => _jobStats['reported'] ?? 0;
+  int get adminDisabledJobs => _jobStats['disabled'] ?? 0;
 
-  int get pendingUserReports => _reportStats['pending_user_reports'] ?? 0;
-  int get pendingJobReports => _reportStats['pending_job_reports'] ?? 0;
-  int get totalPendingReports => pendingUserReports + pendingJobReports;
+  int get pendingUserReports => _reportStats['pending'] ?? 0;
+  int get pendingJobReports => 0; // Not split in report_stats currently
+  int get totalPendingReports => _reportStats['pending'] ?? 0;
 
   /// Load all dashboard data
   Future<void> loadData() async {
