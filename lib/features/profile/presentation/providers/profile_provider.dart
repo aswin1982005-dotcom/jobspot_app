@@ -1,7 +1,10 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:jobspot_app/core/utils/supabase_service.dart';
 import 'package:jobspot_app/data/services/profile_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:image_cropper/image_cropper.dart';
 
 class ProfileProvider extends ChangeNotifier {
   Map<String, dynamic>? _profileData;
@@ -67,6 +70,69 @@ class ProfileProvider extends ChangeNotifier {
     final user = SupabaseService.getCurrentUser();
     if (user != null) {
       await fetchProfile(user.id);
+    }
+  }
+
+  Future<bool> uploadProfilePicture() async {
+    try {
+      final picker = ImagePicker();
+      final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+
+      if (pickedFile == null) return false;
+
+      // Crop image
+      final croppedFile = await ImageCropper().cropImage(
+        sourcePath: pickedFile.path,
+        aspectRatio: const CropAspectRatio(ratioX: 1, ratioY: 1),
+        uiSettings: [
+          AndroidUiSettings(
+            toolbarTitle: 'Crop Profile Picture',
+            toolbarColor: Colors.blueAccent,
+            toolbarWidgetColor: Colors.white,
+            initAspectRatio: CropAspectRatioPreset.square,
+            lockAspectRatio: true,
+          ),
+          IOSUiSettings(
+            title: 'Crop Profile Picture',
+            aspectRatioLockEnabled: true,
+          ),
+        ],
+      );
+
+      if (croppedFile == null) return false;
+
+      _isLoading = true;
+      notifyListeners();
+
+      final userId = SupabaseService.getCurrentUser()?.id;
+      if (userId == null) return false;
+
+      final imageUrl = await _profileService.uploadProfileImage(
+        userId,
+        File(croppedFile.path),
+      );
+
+      // Update Database
+      if (_role == 'seeker') {
+        await _profileService.updateSeekerProfile(userId, {
+          'avatar_url': imageUrl,
+        });
+      } else if (_role == 'employer') {
+        await _profileService.updateEmployerProfile(userId, {
+          'avatar_url': imageUrl,
+        });
+      }
+
+      // Update local state
+      updateProfileData({'avatar_url': imageUrl});
+
+      return true;
+    } catch (e) {
+      debugPrint('Error uploading profile picture: $e');
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
     }
   }
 }

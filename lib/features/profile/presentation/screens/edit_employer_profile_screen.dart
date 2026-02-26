@@ -7,6 +7,9 @@ import 'package:jobspot_app/core/models/location_address.dart';
 import 'package:jobspot_app/features/jobs/presentation/address_search_page.dart';
 import 'package:jobspot_app/features/jobs/presentation/map_picker_page.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:provider/provider.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:jobspot_app/features/profile/presentation/providers/profile_provider.dart';
 
 class EditEmployerProfileScreen extends StatefulWidget {
   final Map<String, dynamic>? profile;
@@ -259,6 +262,73 @@ class _EditEmployerProfileScreenState extends State<EditEmployerProfileScreen> {
           padding: const EdgeInsets.all(20),
           children: [
             // Basic Info
+            Center(
+              child: Consumer<ProfileProvider>(
+                builder: (context, provider, _) {
+                  final avatarUrl = provider.profileData?['avatar_url'];
+                  return Stack(
+                    children: [
+                      CircleAvatar(
+                        radius: 50,
+                        backgroundColor: Colors.grey[200],
+                        backgroundImage: avatarUrl != null
+                            ? CachedNetworkImageProvider(avatarUrl)
+                            : null,
+                        child: avatarUrl == null
+                            ? Icon(
+                                Icons.business,
+                                size: 50,
+                                color: Colors.grey[400],
+                              )
+                            : null,
+                      ),
+                      Positioned(
+                        bottom: 0,
+                        right: 0,
+                        child: GestureDetector(
+                          onTap: () async {
+                            final success = await provider
+                                .uploadProfilePicture();
+                            if (success && context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Company logo updated successfully',
+                                  ),
+                                ),
+                              );
+                            }
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).primaryColor,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white, width: 2),
+                            ),
+                            child: provider.isLoading
+                                ? const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                      color: Colors.white,
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Icon(
+                                    Icons.camera_alt,
+                                    color: Colors.white,
+                                    size: 16,
+                                  ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 24),
             Text(
               'Company Details',
               style: Theme.of(
