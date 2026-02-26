@@ -150,18 +150,20 @@ class _ApplicantsTabState extends State<ApplicantsTab> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Review your',
-                            style: textTheme.bodyMedium?.copyWith(
-                              color: theme.hintColor,
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Review your',
+                              style: textTheme.bodyMedium?.copyWith(
+                                color: theme.hintColor,
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text('Applicants', style: textTheme.headlineLarge),
-                        ],
+                            const SizedBox(height: 4),
+                            Text('Applicants', style: textTheme.headlineLarge),
+                          ],
+                        ),
                       ),
                       Row(
                         mainAxisSize: MainAxisSize.min,

@@ -265,11 +265,13 @@ class _SearchTabState extends State<SearchTab>
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        'Search Jobs',
-                        style: textTheme.headlineMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          // color: AppColors.black, // Removed to use theme default
+                      Expanded(
+                        child: Text(
+                          'Search Jobs',
+                          style: textTheme.headlineMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            // color: AppColors.black, // Removed to use theme default
+                          ),
                         ),
                       ),
                       IconButton(

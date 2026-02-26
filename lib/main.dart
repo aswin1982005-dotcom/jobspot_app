@@ -178,7 +178,7 @@ class _RootPageState extends State<RootPage> {
 
       final profile = await supabase
           .from('user_profiles')
-          .select('role, account_disabled, profile_completed')
+          .select('role, is_disabled, profile_completed')
           .eq('user_id', user.id)
           .maybeSingle();
 
@@ -192,7 +192,7 @@ class _RootPageState extends State<RootPage> {
         return;
       }
 
-      if (profile['account_disabled'] == true) {
+      if (profile['is_disabled'] == true) {
         _updateHome(UnableAccountPage(userProfile: profile));
         return;
       }

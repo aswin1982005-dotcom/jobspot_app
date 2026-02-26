@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class JobService {
@@ -16,7 +19,7 @@ class JobService {
   }) async {
     var query = _client
         .from('job_posts')
-        .select('*, employer_profiles(contact_mobile)')
+        .select('*, employer_profiles(contact_mobile, is_verified)')
         .eq('is_active', true);
 
     if (searchQuery != null && searchQuery.isNotEmpty) {
@@ -52,22 +55,65 @@ class JobService {
     final start = page * pageSize;
     final end = start + pageSize - 1;
 
-    final response = await query
-        .order('created_at', ascending: false)
-        .range(start, end);
-    return PostgrestList.from(response);
+    final bool isDefaultFeed =
+        page == 0 &&
+        (searchQuery == null || searchQuery.isEmpty) &&
+        (location == null || location.isEmpty) &&
+        sameDayPay == null &&
+        walkIn == null &&
+        payType == null &&
+        workMode == null &&
+        (workingDays == null || workingDays.isEmpty);
+
+    try {
+      final response = await query
+          .order('created_at', ascending: false)
+          .range(start, end);
+
+      if (isDefaultFeed) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('cached_jobs_feed', jsonEncode(response));
+      }
+
+      return PostgrestList.from(response);
+    } catch (e) {
+      if (isDefaultFeed) {
+        final prefs = await SharedPreferences.getInstance();
+        final cachedStr = prefs.getString('cached_jobs_feed');
+        if (cachedStr != null) {
+          debugPrint('Offline: Returning cached default jobs feed.');
+          final List<dynamic> decoded = jsonDecode(cachedStr);
+          return decoded.map((e) => Map<String, dynamic>.from(e)).toList();
+        }
+      }
+      rethrow;
+    }
   }
 
   Future<PostgrestList> fetchEmployerJobs() async {
     final userId = _client.auth.currentUser!.id;
 
-    final response = await _client
-        .from('job_posts')
-        .select()
-        .eq('employer_id', userId)
-        .order('created_at', ascending: false);
+    try {
+      final response = await _client
+          .from('job_posts')
+          .select()
+          .eq('employer_id', userId)
+          .order('created_at', ascending: false);
 
-    return PostgrestList.from(response);
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('cached_employer_jobs', jsonEncode(response));
+
+      return PostgrestList.from(response);
+    } catch (e) {
+      final prefs = await SharedPreferences.getInstance();
+      final cachedStr = prefs.getString('cached_employer_jobs');
+      if (cachedStr != null) {
+        debugPrint('Offline: Returning cached employer jobs.');
+        final List<dynamic> decoded = jsonDecode(cachedStr);
+        return decoded.map((e) => Map<String, dynamic>.from(e)).toList();
+      }
+      rethrow;
+    }
   }
 
   Future<Map<String, dynamic>?> fetchJobById(String jobId) async {

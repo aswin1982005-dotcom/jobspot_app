@@ -4,6 +4,7 @@ import 'package:jobspot_app/data/services/job_service.dart';
 import 'package:jobspot_app/features/jobs/presentation/job_details_screen.dart';
 import 'package:jobspot_app/features/jobs/presentation/create_job_screen.dart';
 import 'package:jobspot_app/features/jobs/presentation/widgets/job_card_header.dart';
+import 'package:jobspot_app/features/jobs/presentation/widgets/screening_dialog.dart';
 
 import 'package:jobspot_app/features/jobs/presentation/widgets/job_card_salary_info.dart';
 import 'package:provider/provider.dart';
@@ -102,12 +103,34 @@ class _UnifiedJobCardState extends State<UnifiedJobCard> {
   }
 
   Future<void> _applyJob() async {
+    List<String> questions = [];
+    if (widget.job['screening_questions'] != null) {
+      questions = List<String>.from(widget.job['screening_questions']);
+    }
+
+    String message =
+        "Hi, I am interested in the ${widget.job['title'] ?? 'this'} position. Please review my profile.";
+
+    if (questions.isNotEmpty) {
+      final result = await showDialog<String>(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => ScreeningDialog(
+          questions: questions,
+          jobTitle: widget.job['title'] ?? 'this',
+        ),
+      );
+      if (result == null) {
+        return; // User cancelled
+      }
+      message = result;
+    }
+
     setState(() => _isApplying = true);
     try {
       await ApplicationService().fastApply(
         jobPostId: widget.job['id'],
-        message:
-            "Hi, I am interested in the ${widget.job['title']} position. Please review my profile.",
+        message: message,
       );
 
       if (widget.role == JobCardRole.seeker) {
@@ -126,9 +149,21 @@ class _UnifiedJobCardState extends State<UnifiedJobCard> {
       widget.onApplied?.call();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error applying for job: $e')));
+        if (e.toString().contains('offline_queued')) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'You are offline. Application queued and will be sent when connected!',
+              ),
+            ),
+          );
+          // Still call onApplied so UI updates as if sent
+          widget.onApplied?.call();
+        } else {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Error applying for job: $e')));
+        }
       }
     } finally {
       if (mounted) setState(() => _isApplying = false);

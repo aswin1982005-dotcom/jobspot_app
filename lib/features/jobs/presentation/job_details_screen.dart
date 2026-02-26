@@ -8,6 +8,7 @@ import 'package:jobspot_app/data/services/report_service.dart';
 import 'package:jobspot_app/core/utils/report_dialog.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:jobspot_app/features/jobs/presentation/widgets/screening_dialog.dart';
 import 'package:provider/provider.dart';
 import 'package:jobspot_app/features/dashboard/presentation/providers/seeker_home_provider.dart';
 
@@ -109,6 +110,30 @@ class _JobDetailsScreenState extends State<JobDetailsScreen>
 
   Future<void> _applyJob() async {
     if (_isApplying || _hasApplied) return;
+
+    List<String> questions = [];
+    if (_currentJob['screening_questions'] != null) {
+      questions = List<String>.from(_currentJob['screening_questions']);
+    }
+
+    String message =
+        "Hi, I am interested in the ${_currentJob['title'] ?? 'this'} position. Please review my profile.";
+
+    if (questions.isNotEmpty) {
+      final result = await showDialog<String>(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => ScreeningDialog(
+          questions: questions,
+          jobTitle: _currentJob['title'] ?? 'this',
+        ),
+      );
+      if (result == null) {
+        return; // dialog cancelled
+      }
+      message = result;
+    }
+
     setState(() => _isApplying = true);
 
     // Optimistic update for provider
@@ -124,7 +149,7 @@ class _JobDetailsScreenState extends State<JobDetailsScreen>
     try {
       await _applicationService.fastApply(
         jobPostId: _currentJob['id'],
-        message: "Applied from Job Details Screen",
+        message: message,
       );
       if (mounted) {
         setState(() => _hasApplied = true);
@@ -135,9 +160,21 @@ class _JobDetailsScreenState extends State<JobDetailsScreen>
       widget.onApplied?.call();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error applying for job: $e')));
+        if (e.toString().contains('offline_queued')) {
+          setState(() => _hasApplied = true);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'You are offline. Application queued and will be sent when connected!',
+              ),
+            ),
+          );
+          widget.onApplied?.call();
+        } else {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Error applying for job: $e')));
+        }
       }
     } finally {
       if (mounted) setState(() => _isApplying = false);
@@ -390,11 +427,27 @@ class _JobDetailsScreenState extends State<JobDetailsScreen>
               overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: 8),
-            Text(
-              _currentJob['company_name'] ?? 'Company Name',
-              style: theme.textTheme.bodyLarge?.copyWith(
-                color: theme.hintColor,
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Flexible(
+                  child: Text(
+                    _currentJob['company_name'] ??
+                        _currentJob['employer_profiles']?['company_name'] ??
+                        _currentJob['employer']?['company_name'] ??
+                        'Company Name',
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      color: theme.hintColor,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                if (_currentJob['employer_profiles']?['is_verified'] == true ||
+                    _currentJob['employer']?['is_verified'] == true) ...[
+                  const SizedBox(width: 6),
+                  const Icon(Icons.verified, color: Colors.blue, size: 20),
+                ],
+              ],
             ),
             const SizedBox(height: 16),
             SingleChildScrollView(

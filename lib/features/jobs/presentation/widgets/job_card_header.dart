@@ -45,11 +45,32 @@ class JobCardHeader extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 4),
+              Row(
+                children: [
+                  Flexible(
+                    child: Text(
+                      job['company_name'] ??
+                          job['employer_profiles']?['company_name'] ??
+                          job['employer']?['company_name'] ??
+                          'Company Name',
+                      style: textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w500,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  if (job['employer_profiles']?['is_verified'] == true ||
+                      job['employer']?['is_verified'] == true) ...[
+                    const SizedBox(width: 4),
+                    const Icon(Icons.verified, color: Colors.blue, size: 16),
+                  ],
+                ],
+              ),
+              const SizedBox(height: 4),
               Text(
                 '${job['work_mode']?.toString().toUpperCase() ?? ''} • ${job['location'] ?? 'Remote'}',
-                style: textTheme.bodyMedium?.copyWith(
-                  color: theme.hintColor,
-                ),
+                style: textTheme.bodyMedium?.copyWith(color: theme.hintColor),
               ),
             ],
           ),

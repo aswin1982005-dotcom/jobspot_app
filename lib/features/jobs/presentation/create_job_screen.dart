@@ -34,7 +34,8 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
   late String _genderPreference;
   late String _experienceLevel; // New
   late List<String> _selectedDays;
-  late List<String> _selectedAssets; // New
+  late List<String> _selectedAssets;
+  final List<TextEditingController> _questionControllers = [];
   late TimeOfDay _shiftStart;
   late TimeOfDay _shiftEnd;
   late bool _sameDayPay;
@@ -91,8 +92,13 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
     _genderPreference = job?['gender_preference'] ?? 'any';
     _selectedDays = List<String>.from(job?['working_days'] ?? []);
     _sameDayPay = job?['same_day_pay'] ?? false;
-    _experienceLevel = job?['experience_years'] ?? '0-1'; // New
-    _selectedAssets = List<String>.from(job?['assets'] ?? []); // New
+    _experienceLevel = job?['experience_years'] ?? '0-1';
+    _selectedAssets = List<String>.from(job?['assets'] ?? []);
+
+    final questions = List<String>.from(job?['screening_questions'] ?? []);
+    for (final q in questions) {
+      _questionControllers.add(TextEditingController(text: q));
+    }
 
     if (job?['latitude'] != null && job?['longitude'] != null) {
       _selectedAddress = LocationAddress(
@@ -137,6 +143,9 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
       _minAgeController,
       _maxAgeController,
     ]) {
+      controller.dispose();
+    }
+    for (final controller in _questionControllers) {
       controller.dispose();
     }
     super.dispose();
@@ -233,8 +242,12 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
             ? int.parse(_maxAgeController.text)
             : null,
         'same_day_pay': _sameDayPay,
-        'experience_years': _experienceLevel, // New
-        'assets': _selectedAssets, // New
+        'experience_years': _experienceLevel,
+        'assets': _selectedAssets,
+        'screening_questions': _questionControllers
+            .map((c) => c.text.trim())
+            .where((text) => text.isNotEmpty)
+            .toList(),
       };
 
       final Map<String, dynamic> result;
@@ -525,6 +538,60 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                             controlAffinity: ListTileControlAffinity.leading,
                           );
                         }),
+                      ],
+                    ),
+                    _buildSectionCard(
+                      title: 'Screening Questions',
+                      icon: Icons.question_answer_outlined,
+                      children: [
+                        const Text(
+                          'Ask applicants a few questions (Optional, max 3)',
+                          style: TextStyle(color: Colors.grey),
+                        ),
+                        const SizedBox(height: 16),
+                        ..._questionControllers.asMap().entries.map((entry) {
+                          final int index = entry.key;
+                          final TextEditingController controller = entry.value;
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 12.0),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(
+                                  child: _buildTextField(
+                                    controller: controller,
+                                    label: 'Question ${index + 1}',
+                                    icon: Icons.help_outline,
+                                  ),
+                                ),
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.remove_circle_outline,
+                                    color: Colors.red,
+                                  ),
+                                  onPressed: () {
+                                    setState(() {
+                                      _questionControllers[index].dispose();
+                                      _questionControllers.removeAt(index);
+                                    });
+                                  },
+                                ),
+                              ],
+                            ),
+                          );
+                        }),
+                        if (_questionControllers.length < 3)
+                          TextButton.icon(
+                            onPressed: () {
+                              setState(() {
+                                _questionControllers.add(
+                                  TextEditingController(),
+                                );
+                              });
+                            },
+                            icon: const Icon(Icons.add),
+                            label: const Text('Add Question'),
+                          ),
                       ],
                     ),
                     const SizedBox(height: 32),

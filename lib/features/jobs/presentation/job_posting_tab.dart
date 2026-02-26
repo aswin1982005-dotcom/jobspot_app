@@ -162,18 +162,23 @@ class _JobPostingTabState extends State<JobPostingTab> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Manage your',
-                            style: textTheme.bodyMedium?.copyWith(
-                              color: theme.hintColor,
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Manage your',
+                              style: textTheme.bodyMedium?.copyWith(
+                                color: theme.hintColor,
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text('Job Postings', style: textTheme.headlineLarge),
-                        ],
+                            const SizedBox(height: 4),
+                            Text(
+                              'Job Postings',
+                              style: textTheme.headlineLarge,
+                            ),
+                          ],
+                        ),
                       ),
                       Row(
                         mainAxisSize: MainAxisSize.min,

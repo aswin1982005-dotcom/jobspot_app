@@ -1,4 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:jobspot_app/core/network/connectivity_service.dart';
+import 'package:jobspot_app/core/sync/sync_service.dart';
 
 class ApplicationService {
   final SupabaseClient _client = Supabase.instance.client;
@@ -82,11 +84,30 @@ class ApplicationService {
     required String message,
   }) async {
     final userId = _client.auth.currentUser!.id;
-    await _client.from('job_applications').insert({
+    final isConnected = await ConnectivityService().checkConnection();
+
+    final payload = {
       'job_post_id': jobPostId,
       'applicant_id': userId,
       'application_type': 'fast_apply',
       'message': message,
-    });
+    };
+
+    if (!isConnected) {
+      await SyncService().queueAction('fast_apply', payload);
+      throw Exception('offline_queued');
+    }
+
+    try {
+      await _client.from('job_applications').insert(payload);
+    } catch (e) {
+      if (e.toString().contains('SocketException') ||
+          e.toString().contains('Failed host lookup') ||
+          e.toString().contains('AuthRetryableFetchException')) {
+        await SyncService().queueAction('fast_apply', payload);
+        throw Exception('offline_queued');
+      }
+      rethrow;
+    }
   }
 }
