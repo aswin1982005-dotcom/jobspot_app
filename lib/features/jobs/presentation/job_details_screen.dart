@@ -113,6 +113,22 @@ class _JobDetailsScreenState extends State<JobDetailsScreen>
   Future<void> _applyJob() async {
     if (_isApplying || _hasApplied) return;
 
+    // Check if profile is complete before allowing application
+    final profileProvider = context.read<ProfileProvider>();
+    if (!profileProvider.isProfileCompleted) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Please complete your profile before applying for jobs.',
+            ),
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+      return;
+    }
+
     List<String> questions = [];
     if (_currentJob['screening_questions'] != null) {
       questions = List<String>.from(_currentJob['screening_questions']);
@@ -289,6 +305,21 @@ class _JobDetailsScreenState extends State<JobDetailsScreen>
   }
 
   // --- UI Components ---
+  Color _getColorForLabel(String label) {
+    final lower = label.toLowerCase();
+    if (lower.contains('remote') || lower.contains('internship')) {
+      return Colors.green;
+    } else if (lower.contains('hybrid') ||
+        lower.contains('part') ||
+        lower.contains('contract')) {
+      return Colors.orange;
+    } else if (lower.contains('freelance') || lower.contains('onsite')) {
+      return Colors.purple;
+    } else if (lower.contains('full')) {
+      return Colors.blue;
+    }
+    return Colors.blue;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -470,13 +501,13 @@ class _JobDetailsScreenState extends State<JobDetailsScreen>
                   _buildTag(
                     context,
                     _currentJob['work_mode'] ?? 'Remote',
-                    Colors.blue,
+                    _getColorForLabel(_currentJob['work_mode'] ?? 'Remote'),
                   ),
                   const SizedBox(width: 8),
                   _buildTag(
                     context,
-                    _currentJob['type'] ?? 'Full Time',
-                    Colors.purple,
+                    _currentJob['job_type'] ?? 'Full Time',
+                    _getColorForLabel(_currentJob['job_type'] ?? 'Full Time'),
                   ),
                   const SizedBox(width: 8),
                   _buildTag(context, salaryStr, Colors.green),
@@ -553,10 +584,14 @@ class _JobDetailsScreenState extends State<JobDetailsScreen>
         : '₹$salaryMin';
     final rate = _currentJob['payment_rate'] ?? 'Month';
 
-    final startTime =
-        _currentJob['shift_start']?.toString().substring(0, 5) ?? '09:00';
-    final endTime =
-        _currentJob['shift_end']?.toString().substring(0, 5) ?? '18:00';
+    final startTimeRaw = _currentJob['shift_start']?.toString() ?? '09:00';
+    final startTime = startTimeRaw.length >= 5
+        ? startTimeRaw.substring(0, 5)
+        : startTimeRaw;
+    final endTimeRaw = _currentJob['shift_end']?.toString() ?? '18:00';
+    final endTime = endTimeRaw.length >= 5
+        ? endTimeRaw.substring(0, 5)
+        : endTimeRaw;
     final shiftStr = '$startTime - $endTime';
 
     return SingleChildScrollView(
@@ -588,23 +623,23 @@ class _JobDetailsScreenState extends State<JobDetailsScreen>
                   _buildOverviewCard(
                     context,
                     'Type',
-                    _currentJob['type'] ?? 'Full Time',
+                    _currentJob['job_type'] ?? 'Full Time',
                     Icons.work_outline_rounded,
-                    Colors.purple,
+                    _getColorForLabel(_currentJob['job_type'] ?? 'Full Time'),
                   ),
                   _buildOverviewCard(
                     context,
                     'Shift',
                     shiftStr,
                     Icons.access_time_rounded,
-                    Colors.orange,
+                    Colors.pink,
                   ),
                   _buildOverviewCard(
                     context,
                     'Mode',
                     _currentJob['work_mode'] ?? 'On Site',
                     Icons.location_on_outlined,
-                    Colors.blue,
+                    _getColorForLabel(_currentJob['work_mode'] ?? 'On Site'),
                   ),
                   _buildOverviewCard(
                     context,
@@ -940,40 +975,48 @@ class _JobDetailsScreenState extends State<JobDetailsScreen>
               ),
               const SizedBox(width: 16),
               Expanded(
-                child: ElevatedButton(
-                  onPressed: (isActive && !_isApplying && !_hasApplied)
-                      ? _applyJob
-                      : null,
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(
-                      vertical: 20,
-                    ), // Taller button
-                    backgroundColor: theme.colorScheme.primary,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                  ),
-                  child: _isApplying
-                      ? const SizedBox(
-                          height: 24,
-                          width: 24,
-                          child: CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 2,
-                          ),
-                        )
-                      : Text(
-                          _hasApplied
-                              ? "Applied"
-                              : isActive
-                              ? "Apply Now"
-                              : "Closed",
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
+                child: Consumer<ProfileProvider>(
+                  builder: (context, profileProvider, _) {
+                    final isProfileComplete =
+                        profileProvider.isProfileCompleted;
+                    return ElevatedButton(
+                      onPressed: (isActive && !_isApplying && !_hasApplied)
+                          ? _applyJob
+                          : null,
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 20),
+                        backgroundColor: !isProfileComplete
+                            ? Colors.orange
+                            : theme.colorScheme.primary,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
                         ),
+                      ),
+                      child: _isApplying
+                          ? const SizedBox(
+                              height: 24,
+                              width: 24,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : Text(
+                              _hasApplied
+                                  ? "Applied"
+                                  : !isProfileComplete
+                                  ? "Complete Profile First"
+                                  : isActive
+                                  ? "Apply Now"
+                                  : "Closed",
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                    );
+                  },
                 ),
               ),
             ] else if (isEmployer) ...[

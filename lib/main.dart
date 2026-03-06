@@ -136,6 +136,9 @@ class _RootPageState extends State<RootPage> {
       await _initOneSignal();
       if (_oneSignalInitialized) {
         OneSignal.login(session.user.id);
+        // Ensure opted in on login
+        OneSignal.User.pushSubscription.optIn();
+        _logOneSignalStatus("INITIAL_AUTH");
       }
     }
 
@@ -146,10 +149,14 @@ class _RootPageState extends State<RootPage> {
         await _initOneSignal();
         if (_oneSignalInitialized) {
           OneSignal.login(user.id);
+          // Ensure opted in on login
+          OneSignal.User.pushSubscription.optIn();
+          _logOneSignalStatus("AUTH_CHANGE_LOGIN");
         }
       } else {
         if (_oneSignalInitialized) {
           OneSignal.logout();
+          _logOneSignalStatus("AUTH_CHANGE_LOGOUT");
         }
         _updateHome(const LoginScreen());
       }
@@ -164,11 +171,28 @@ class _RootPageState extends State<RootPage> {
     }
 
     try {
-      OneSignal.Debug.setLogLevel(OSLogLevel.none);
+      OneSignal.Debug.setLogLevel(
+        OSLogLevel.verbose,
+      ); // Enable verbose logging for debugging
       OneSignal.initialize(appId);
 
       // Request permission
-      OneSignal.Notifications.requestPermission(true);
+      OneSignal.Notifications.requestPermission(true).then((accepted) {
+        debugPrint("ONESIGNAL PERMISSION ACCEPTED: $accepted");
+        _logOneSignalStatus("PERMISSION_REQUEST");
+      });
+
+      // Handler for subscription changes (captures late registration)
+      OneSignal.User.pushSubscription.addObserver((state) {
+        debugPrint("ONESIGNAL SUBSCRIPTION CHANGED");
+        _logOneSignalStatus("OBSERVER_TRIGGER");
+
+        // Refresh notifications UI if we just got a valid subscription
+        final context = navigatorKey.currentContext;
+        if (context != null && state.current.optedIn == true) {
+          Provider.of<NotificationProvider>(context, listen: false).refresh();
+        }
+      });
 
       // Handler for notification clicks
       OneSignal.Notifications.addClickListener((event) {
@@ -193,15 +217,30 @@ class _RootPageState extends State<RootPage> {
           Provider.of<NotificationProvider>(context, listen: false).refresh();
         }
 
-        // Show the alert (default behavior is to show it, but explicit confirm is good)
-        event.preventDefault();
-        event.notification.display();
+        // We no longer call preventDefault() or notification.display() manually
+        // to allow OneSignal's default reliable banner logic to take over.
       });
 
       _oneSignalInitialized = true;
+      _logOneSignalStatus("INITIAL_SETUP");
     } catch (e) {
       debugPrint("Error initializing OneSignal: $e");
     }
+  }
+
+  void _logOneSignalStatus(String trigger) {
+    if (!_oneSignalInitialized) return;
+
+    final id = OneSignal.User.pushSubscription.id;
+    final token = OneSignal.User.pushSubscription.token;
+    final optedIn = OneSignal.User.pushSubscription.optedIn;
+
+    debugPrint("--- ONESIGNAL DIAGNOSTICS ($trigger) ---");
+    debugPrint("Subscription ID: $id");
+    debugPrint("Token: $token");
+    debugPrint("Opted In: $optedIn");
+    debugPrint("External ID: ${supabase.auth.currentUser?.id}");
+    debugPrint("----------------------------------------");
   }
 
   Future<void> _handleUser(User user) async {

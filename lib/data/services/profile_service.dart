@@ -146,4 +146,26 @@ class ProfileService {
       rethrow;
     }
   }
+
+  Future<void> deleteProfileData(String userId, String role) async {
+    try {
+      if (role == 'seeker') {
+        await _supabase
+            .from('job_seeker_profiles')
+            .delete()
+            .eq('user_id', userId);
+      } else if (role == 'employer') {
+        await _supabase
+            .from('employer_profiles')
+            .delete()
+            .eq('user_id', userId);
+      }
+
+      // Delete from main user_profiles table as well
+      await _supabase.from('user_profiles').delete().eq('user_id', userId);
+    } catch (e) {
+      debugPrint('Error deleting profile data: $e');
+      rethrow;
+    }
+  }
 }

@@ -52,7 +52,7 @@ class JobMatchHelper {
         ?.toString()
         .toLowerCase()
         .trim();
-    final jobType = jobPost['type']?.toString().toLowerCase().trim();
+    final jobType = jobPost['job_type']?.toString().toLowerCase().trim();
 
     if (jobType != null && seekerType != null && jobType == seekerType) {
       typeScore = 20.0;

@@ -4,6 +4,8 @@ import 'package:jobspot_app/core/theme/app_theme.dart';
 import 'package:jobspot_app/features/jobs/presentation/unified_job_card.dart';
 import 'package:provider/provider.dart';
 import 'package:jobspot_app/features/dashboard/presentation/providers/seeker_home_provider.dart';
+import 'package:jobspot_app/features/notifications/presentation/providers/notification_provider.dart';
+import 'package:jobspot_app/features/notifications/presentation/screens/notifications_screen.dart';
 import 'package:jobspot_app/data/services/job_service.dart';
 
 class SearchTab extends StatefulWidget {
@@ -266,15 +268,57 @@ class _SearchTabState extends State<SearchTab>
                           'Search Jobs',
                           style: textTheme.headlineMedium?.copyWith(
                             fontWeight: FontWeight.bold,
-                            // color: AppColors.black, // Removed to use theme default
                           ),
                         ),
                       ),
-                      IconButton(
-                        onPressed: () =>
-                            GlobalRefreshManager.refreshAll(context),
-                        icon: const Icon(Icons.refresh),
-                        tooltip: 'Refresh',
+                      Row(
+                        children: [
+                          IconButton(
+                            onPressed: () =>
+                                GlobalRefreshManager.refreshAll(context),
+                            icon: const Icon(Icons.refresh),
+                            tooltip: 'Refresh',
+                          ),
+                          const SizedBox(width: 8),
+                          InkWell(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const NotificationsScreen(),
+                                ),
+                              );
+                            },
+                            borderRadius: BorderRadius.circular(12),
+                            child: Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: theme.cardColor,
+                                border: Border.all(
+                                  color: theme.dividerColor.withValues(
+                                    alpha: 0.5,
+                                  ),
+                                ),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Consumer<NotificationProvider>(
+                                builder: (context, notifProvider, child) {
+                                  return Badge(
+                                    label: notifProvider.unreadCount > 0
+                                        ? Text('${notifProvider.unreadCount}')
+                                        : null,
+                                    isLabelVisible:
+                                        notifProvider.unreadCount > 0,
+                                    child: Icon(
+                                      Icons.notifications_outlined,
+                                      color: theme.iconTheme.color,
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -379,107 +423,122 @@ class _SearchTabState extends State<SearchTab>
               ),
             ),
             Expanded(
-              child: _isLoading && _jobs.isEmpty
-                  ? const Center(child: CircularProgressIndicator())
-                  : _jobs.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
+              child: RefreshIndicator(
+                onRefresh: () => _fetchJobs(loadMore: false),
+                child: _isLoading && _jobs.isEmpty
+                    ? const Center(child: CircularProgressIndicator())
+                    : _jobs.isEmpty
+                    ? ListView(
+                        physics: const AlwaysScrollableScrollPhysics(),
                         children: [
-                          Container(
-                            padding: const EdgeInsets.all(24),
-                            decoration: BoxDecoration(
-                              color: theme.dividerColor.withValues(alpha: 0.1),
-                              shape: BoxShape.circle,
-                            ),
-                            child: Icon(
-                              Icons.search_off_rounded,
-                              size: 48,
-                              color: theme.disabledColor,
+                          SizedBox(
+                            height: MediaQuery.of(context).size.height * 0.4,
+                            child: Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(24),
+                                    decoration: BoxDecoration(
+                                      color: theme.dividerColor.withValues(
+                                        alpha: 0.1,
+                                      ),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Icon(
+                                      Icons.search_off_rounded,
+                                      size: 48,
+                                      color: theme.disabledColor,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    'No jobs found',
+                                    style: textTheme.titleMedium?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                      color: theme.hintColor,
+                                    ),
+                                  ),
+                                  Text(
+                                    'Try adjusting your search or filters',
+                                    style: textTheme.bodyMedium?.copyWith(
+                                      color: theme.hintColor,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
-                          const SizedBox(height: 16),
-                          Text(
-                            'No jobs found',
-                            style: textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: theme.hintColor,
+                        ],
+                      )
+                    : Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 24,
+                              vertical: 8,
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  '${_jobs.length}${_hasMore ? '+' : ''} Results',
+                                  style: textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                Text(
+                                  _sortOption,
+                                  style: textTheme.bodySmall?.copyWith(
+                                    color: theme.primaryColor,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                          Text(
-                            'Try adjusting your search or filters',
-                            style: textTheme.bodyMedium?.copyWith(
-                              color: theme.hintColor,
+                          Expanded(
+                            child: ListView.separated(
+                              controller: _scrollController,
+                              physics: const AlwaysScrollableScrollPhysics(),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 20,
+                                vertical: 10,
+                              ),
+                              itemCount:
+                                  _jobs.length + (_isLoadingMore ? 1 : 0),
+                              separatorBuilder: (context, index) =>
+                                  const SizedBox(height: 16),
+                              itemBuilder: (context, index) {
+                                if (index == _jobs.length) {
+                                  return const Padding(
+                                    padding: EdgeInsets.all(16.0),
+                                    child: Center(
+                                      child: CircularProgressIndicator(),
+                                    ),
+                                  );
+                                }
+                                final job = _jobs[index];
+                                return Consumer<SeekerHomeProvider>(
+                                  builder: (context, provider, _) {
+                                    final isApplied = provider.isJobApplied(
+                                      job['id'],
+                                    );
+                                    return UnifiedJobCard(
+                                      job: job,
+                                      role: JobCardRole.seeker,
+                                      canApply: !isApplied,
+                                      onApplied: () {},
+                                    );
+                                  },
+                                );
+                              },
                             ),
                           ),
                         ],
                       ),
-                    )
-                  : Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 24,
-                            vertical: 8,
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                '${_jobs.length}${_hasMore ? '+' : ''} Results',
-                                style: textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              Text(
-                                _sortOption,
-                                style: textTheme.bodySmall?.copyWith(
-                                  color: theme.primaryColor,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Expanded(
-                          child: ListView.separated(
-                            controller: _scrollController,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 20,
-                              vertical: 10,
-                            ),
-                            itemCount: _jobs.length + (_isLoadingMore ? 1 : 0),
-                            separatorBuilder: (context, index) =>
-                                const SizedBox(height: 16),
-                            itemBuilder: (context, index) {
-                              if (index == _jobs.length) {
-                                return const Padding(
-                                  padding: EdgeInsets.all(16.0),
-                                  child: Center(
-                                    child: CircularProgressIndicator(),
-                                  ),
-                                );
-                              }
-                              final job = _jobs[index];
-                              return Consumer<SeekerHomeProvider>(
-                                builder: (context, provider, _) {
-                                  final isApplied = provider.isJobApplied(
-                                    job['id'],
-                                  );
-                                  return UnifiedJobCard(
-                                    job: job,
-                                    role: JobCardRole.seeker,
-                                    canApply: !isApplied,
-                                    onApplied: () {},
-                                  );
-                                },
-                              );
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
+              ),
             ),
           ],
         ),

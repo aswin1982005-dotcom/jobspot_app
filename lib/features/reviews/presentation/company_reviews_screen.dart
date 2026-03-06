@@ -194,10 +194,12 @@ class _CompanyReviewsScreenState extends State<CompanyReviewsScreen> {
                                     : null,
                                 child: review.reviewerAvatar == null
                                     ? Text(
-                                        review.reviewerName
-                                                ?.substring(0, 1)
-                                                .toUpperCase() ??
-                                            'U',
+                                        (review.reviewerName?.isNotEmpty ??
+                                                false)
+                                            ? review.reviewerName!
+                                                  .substring(0, 1)
+                                                  .toUpperCase()
+                                            : 'U',
                                       )
                                     : null,
                               ),

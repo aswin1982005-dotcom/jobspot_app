@@ -328,7 +328,7 @@ class _AdminHomeTabState extends State<AdminHomeTab>
                             ),
                             title: Text(name),
                             subtitle: Text(
-                              '${role[0].toUpperCase()}${role.substring(1)} • ${_formatDate(user['created_at'])}',
+                              '${role.isNotEmpty ? '${role[0].toUpperCase()}${role.substring(1)}' : 'Unknown'} • ${_formatDate(user['created_at'])}',
                             ),
                             trailing: Icon(
                               Icons.arrow_forward_ios,

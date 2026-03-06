@@ -301,26 +301,25 @@ class _JobManagementTabState extends State<JobManagementTab>
     bool isSelected,
     VoidCallback onTap,
   ) {
+    final theme = Theme.of(context);
     return GestureDetector(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
         decoration: BoxDecoration(
-          color: isSelected
-              ? AppColors.purple
-              : Theme.of(context).dividerColor.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(8),
+          color: isSelected ? AppColors.purple : theme.cardColor,
+          borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: isSelected
                 ? AppColors.purple
-                : Theme.of(context).dividerColor,
+                : Colors.grey.withValues(alpha: 0.2),
           ),
         ),
         child: Text(
           label,
           textAlign: TextAlign.center,
           style: TextStyle(
-            color: isSelected ? Colors.white : Theme.of(context).hintColor,
+            color: isSelected ? Colors.white : theme.textTheme.bodyLarge?.color,
             fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
             fontSize: 12,
           ),

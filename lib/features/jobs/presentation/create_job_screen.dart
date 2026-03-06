@@ -33,6 +33,7 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
   late String _payType;
   late String _genderPreference;
   late String _experienceLevel; // New
+  late String _jobType;
   late List<String> _selectedDays;
   late List<String> _selectedAssets;
   final List<TextEditingController> _questionControllers = [];
@@ -94,6 +95,7 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
     _sameDayPay = job?['same_day_pay'] ?? false;
     _experienceLevel = job?['experience_years'] ?? '0-1';
     _selectedAssets = List<String>.from(job?['assets'] ?? []);
+    _jobType = job?['job_type'] ?? 'full_time';
 
     final questions = List<String>.from(job?['screening_questions'] ?? []);
     for (final q in questions) {
@@ -244,6 +246,7 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
         'same_day_pay': _sameDayPay,
         'experience_years': _experienceLevel,
         'assets': _selectedAssets,
+        'job_type': _jobType,
         'screening_questions': _questionControllers
             .map((c) => c.text.trim())
             .where((text) => text.isNotEmpty)
@@ -302,6 +305,20 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                           label: 'Job Title*',
                           icon: Icons.work_outline,
                           validator: (v) => v!.isEmpty ? 'Required' : null,
+                        ),
+                        const SizedBox(height: 16),
+                        _buildDropdown(
+                          value: _jobType,
+                          label: 'Job Type',
+                          icon: Icons.badge_outlined,
+                          items: [
+                            'Full Time',
+                            'Part Time',
+                            'Contract',
+                            'Internship',
+                            'Freelance',
+                          ],
+                          onChanged: (v) => setState(() => _jobType = v!),
                         ),
                         const SizedBox(height: 16),
                         _buildTextField(
