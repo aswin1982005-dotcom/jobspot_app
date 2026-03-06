@@ -57,4 +57,8 @@ class AuthService {
   Future<UserResponse> updateUserMetadata(Map<String, dynamic> data) {
     return _client.auth.updateUser(UserAttributes(data: data));
   }
+
+  Future<void> deleteAccount() async {
+    await _client.rpc('delete_user_account');
+  }
 }

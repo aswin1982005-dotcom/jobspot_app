@@ -200,10 +200,12 @@ class _SeekerReviewsScreenState extends State<SeekerReviewsScreen> {
                                     : null,
                                 child: review.reviewerAvatar == null
                                     ? Text(
-                                        review.reviewerName
-                                                ?.substring(0, 1)
-                                                .toUpperCase() ??
-                                            'C',
+                                        (review.reviewerName?.isNotEmpty ??
+                                                false)
+                                            ? review.reviewerName!
+                                                  .substring(0, 1)
+                                                  .toUpperCase()
+                                            : 'C',
                                       )
                                     : null,
                               ),

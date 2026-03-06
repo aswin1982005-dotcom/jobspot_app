@@ -20,7 +20,8 @@ class JobService {
     var query = _client
         .from('job_posts')
         .select('*, employer_profiles(contact_mobile, is_verified)')
-        .eq('is_active', true);
+        .eq('is_active', true)
+        .eq('admin_disabled', false);
 
     if (searchQuery != null && searchQuery.isNotEmpty) {
       query = query.or(

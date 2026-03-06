@@ -260,7 +260,10 @@ class _ApplicantsTabState extends State<ApplicantsTab> {
                             padding: const EdgeInsets.only(right: 8.0),
                             child: ChoiceChip(
                               label: Text(
-                                filter[0].toUpperCase() + filter.substring(1),
+                                filter.isNotEmpty
+                                    ? filter[0].toUpperCase() +
+                                          filter.substring(1)
+                                    : filter,
                               ),
                               selected: isSelected,
                               onSelected: (selected) {

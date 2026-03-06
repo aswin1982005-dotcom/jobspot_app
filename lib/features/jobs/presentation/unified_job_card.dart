@@ -264,7 +264,7 @@ class _UnifiedJobCardState extends State<UnifiedJobCard> {
                 children: [
                   _buildInfoChip(
                     context,
-                    widget.job['type'] ?? 'Full Time',
+                    widget.job['job_type'] ?? 'Full Time',
                     Icons.work_outline,
                   ),
                   _buildInfoChip(
@@ -427,15 +427,19 @@ class _UnifiedJobCardState extends State<UnifiedJobCard> {
       chipColor = colorOverride;
     } else {
       final lowerLabel = label.toLowerCase();
-      if (lowerLabel.contains('remote')) {
+      if (lowerLabel.contains('remote') || lowerLabel.contains('internship')) {
         chipColor = Colors.green;
-      } else if (lowerLabel.contains('time') || lowerLabel.contains('full')) {
-        chipColor = Colors.blue;
-      } else if (lowerLabel.contains('part') ||
+      } else if (lowerLabel.contains('hybrid') ||
+          lowerLabel.contains('part') ||
           lowerLabel.contains('contract')) {
         chipColor = Colors.orange;
-      } else {
+      } else if (lowerLabel.contains('freelance') ||
+          lowerLabel.contains('onsite')) {
         chipColor = Colors.purple;
+      } else if (lowerLabel.contains('full')) {
+        chipColor = Colors.blue;
+      } else {
+        chipColor = Colors.blue;
       }
     }
 
@@ -471,8 +475,10 @@ class _UnifiedJobCardState extends State<UnifiedJobCard> {
   String _formatShift(dynamic start, dynamic end) {
     if (start == null || end == null) return 'Shift';
     try {
-      final s = start.toString().substring(0, 5);
-      final e = end.toString().substring(0, 5);
+      final sStr = start.toString();
+      final eStr = end.toString();
+      final s = sStr.length >= 5 ? sStr.substring(0, 5) : sStr;
+      final e = eStr.length >= 5 ? eStr.substring(0, 5) : eStr;
       return '$s - $e';
     } catch (_) {
       return 'Shift';

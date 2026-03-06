@@ -48,8 +48,19 @@ class SeekerHomeProvider extends ChangeNotifier {
         _applicationService.fetchMyApplications(),
       ]);
 
-      _savedJobs = List<Map<String, dynamic>>.from(results[0]);
-      _recommendedJobs = List<Map<String, dynamic>>.from(results[1]);
+      _savedJobs = List<Map<String, dynamic>>.from(results[0]).where((
+        jobWrapper,
+      ) {
+        final job = jobWrapper['job_posts'];
+        return job != null &&
+            job['is_active'] == true &&
+            job['admin_disabled'] == false;
+      }).toList();
+      _recommendedJobs = List<Map<String, dynamic>>.from(results[1]).where((
+        job,
+      ) {
+        return job['is_active'] == true && job['admin_disabled'] == false;
+      }).toList();
       _myApplications = List<Map<String, dynamic>>.from(results[2]);
 
       _appliedJobIds = _myApplications

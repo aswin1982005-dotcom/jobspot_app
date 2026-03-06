@@ -65,7 +65,9 @@ class ApplicantCard extends StatelessWidget {
                   : null,
               child: profileImageUrl == null
                   ? Text(
-                      name.substring(0, 1).toUpperCase(),
+                      name.isNotEmpty
+                          ? name.substring(0, 1).toUpperCase()
+                          : '?',
                       style: const TextStyle(
                         color: AppColors.purple,
                         fontWeight: FontWeight.bold,

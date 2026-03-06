@@ -27,7 +27,7 @@ class JobCardScheduleInfo extends StatelessWidget {
         Icon(Icons.access_time, size: 16, color: hintColor),
         const SizedBox(width: 4),
         Text(
-          '${job['shift_start']?.toString().substring(0, 5) ?? ''} - ${job['shift_end']?.toString().substring(0, 5) ?? ''}',
+          '${(job['shift_start']?.toString() ?? '').length >= 5 ? job['shift_start'].toString().substring(0, 5) : (job['shift_start']?.toString() ?? '')} - ${(job['shift_end']?.toString() ?? '').length >= 5 ? job['shift_end'].toString().substring(0, 5) : (job['shift_end']?.toString() ?? '')}',
           style: textTheme.bodySmall?.copyWith(color: hintColor),
         ),
       ],

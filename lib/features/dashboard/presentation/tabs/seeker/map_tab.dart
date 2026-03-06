@@ -16,6 +16,8 @@ import 'package:jobspot_app/features/jobs/presentation/job_details_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:provider/provider.dart';
 import 'package:jobspot_app/features/dashboard/presentation/providers/seeker_home_provider.dart';
+import 'package:jobspot_app/features/notifications/presentation/providers/notification_provider.dart';
+import 'package:jobspot_app/features/notifications/presentation/screens/notifications_screen.dart';
 
 class JobItem implements ClusterItem {
   final Map<String, dynamic> job;
@@ -423,6 +425,7 @@ class _MapTabState extends State<MapTab> with AutomaticKeepAliveClientMixin {
   @override
   Widget build(BuildContext context) {
     super.build(context);
+    final theme = Theme.of(context);
     return Scaffold(
       resizeToAvoidBottomInset: false,
       body: Stack(
@@ -498,24 +501,61 @@ class _MapTabState extends State<MapTab> with AutomaticKeepAliveClientMixin {
                   ),
                 ),
                 const SizedBox(height: 8),
-                SizedBox(
-                  height: 36,
-                  child: ListView(
-                    scrollDirection: Axis.horizontal,
-                    children: [
-                      ActionChip(
+                Row(
+                  children: [
+                    SizedBox(
+                      height: 38,
+                      child: ActionChip(
                         onPressed: _showFilterOptions,
                         avatar: const Icon(Icons.filter_list, size: 18),
                         label: const Text('Filter Type'),
-                        backgroundColor: Theme.of(context).cardColor,
-                        // elevation: 2, // Removed elevation to fix lint
+                        backgroundColor: theme.cardColor,
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          side: BorderSide.none,
+                          borderRadius: BorderRadius.circular(12),
+                          side: BorderSide(
+                            color: theme.dividerColor.withValues(alpha: 0.5),
+                          ),
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                    const Spacer(),
+                    InkWell(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const NotificationsScreen(),
+                          ),
+                        );
+                      },
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: theme.cardColor,
+                          border: Border.all(
+                            color: theme.dividerColor.withValues(alpha: 0.5),
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Consumer<NotificationProvider>(
+                          builder: (context, notifProvider, child) {
+                            return Badge(
+                              label: notifProvider.unreadCount > 0
+                                  ? Text('${notifProvider.unreadCount}')
+                                  : null,
+                              isLabelVisible: notifProvider.unreadCount > 0,
+                              child: Icon(
+                                Icons.notifications_outlined,
+                                color: theme.iconTheme.color,
+                                size: 20,
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -562,6 +602,22 @@ class JobDetailsSheet extends StatelessWidget {
     this.isApplied = false,
     this.userPosition,
   });
+
+  Color _getColorForLabel(String label) {
+    final lower = label.toLowerCase();
+    if (lower.contains('remote') || lower.contains('internship')) {
+      return Colors.green;
+    } else if (lower.contains('hybrid') ||
+        lower.contains('part') ||
+        lower.contains('contract')) {
+      return Colors.orange;
+    } else if (lower.contains('freelance') || lower.contains('onsite')) {
+      return Colors.purple;
+    } else if (lower.contains('full')) {
+      return Colors.blue;
+    }
+    return Colors.blue;
+  }
 
   String _calculateDistance() {
     if (userPosition == null) return '';
@@ -710,9 +766,23 @@ class JobDetailsSheet extends StatelessWidget {
                 children: [
                   _buildChip(
                     context,
-                    label: job['work_mode']?.toString().toUpperCase() ?? '',
+                    label:
+                        job['work_mode']?.toString().toUpperCase() ?? 'REMOTE',
+                    icon: Icons.location_on_outlined,
+                    color: _getColorForLabel(
+                      job['work_mode']?.toString() ?? 'Remote',
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  _buildChip(
+                    context,
+                    label:
+                        job['job_type']?.toString().toUpperCase() ??
+                        'FULL TIME',
                     icon: Icons.work_outline,
-                    color: AppColors.purple,
+                    color: _getColorForLabel(
+                      job['job_type']?.toString() ?? 'Full Time',
+                    ),
                   ),
                   const SizedBox(width: 8),
                   _buildChip(

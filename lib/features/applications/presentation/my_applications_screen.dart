@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:jobspot_app/core/theme/app_theme.dart';
+import 'package:provider/provider.dart';
+import 'package:jobspot_app/features/notifications/presentation/providers/notification_provider.dart';
+import 'package:jobspot_app/features/notifications/presentation/screens/notifications_screen.dart';
 import 'package:jobspot_app/data/services/application_service.dart';
 import 'package:jobspot_app/features/jobs/presentation/unified_job_card.dart';
 
@@ -128,158 +131,260 @@ class _MyApplicationsScreenState extends State<MyApplicationsScreen>
   Widget build(BuildContext context) {
     super.build(context);
     final theme = Theme.of(context);
+    final textTheme = theme.textTheme;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('My Applications')),
-      body: FutureBuilder<List<Map<String, dynamic>>>(
-        future: _applicationsFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          }
-
-          final allApplications = snapshot.data ?? [];
-          final displayedApplications = _filterApplications(allApplications);
-
-          return Column(
-            children: [
-              // Search and Filter Header
-              Container(
-                color: theme.colorScheme.surface,
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                child: Column(
-                  children: [
-                    TextField(
-                      controller: _searchController,
-                      onChanged: (value) => setState(() {}),
-                      decoration: InputDecoration(
-                        hintText: 'Search applications...',
-                        prefixIcon: const Icon(
-                          Icons.search,
-                          color: Colors.grey,
-                        ),
-                        filled: true,
-                        fillColor: theme.cardColor,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide.none,
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          vertical: 12,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
+      body: SafeArea(
+        child: Column(
+          children: [
+            // Custom Header
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(
-                          child: SingleChildScrollView(
-                            scrollDirection: Axis.horizontal,
-                            child: Row(
-                              children: _filters.map((filter) {
-                                final isSelected = _selectedFilter == filter;
-                                return Padding(
-                                  padding: const EdgeInsets.only(right: 8),
-                                  child: ChoiceChip(
-                                    label: Text(filter),
-                                    selected: isSelected,
-                                    onSelected: (selected) {
-                                      if (selected) {
-                                        setState(
-                                          () => _selectedFilter = filter,
-                                        );
-                                      }
-                                    },
-                                    backgroundColor: theme.cardColor,
-                                    selectedColor: AppColors.purple,
-                                    labelStyle: TextStyle(
-                                      color: isSelected
-                                          ? Colors.white
-                                          : theme.textTheme.bodyLarge?.color,
-                                    ),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(20),
-                                      side: BorderSide(
-                                        color: Colors.grey.withValues(
-                                          alpha: 0.2,
-                                        ),
-                                      ),
-                                    ),
-                                    showCheckmark: false,
-                                  ),
-                                );
-                              }).toList(),
-                            ),
+                        Text(
+                          'My Applications',
+                          style: textTheme.headlineMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 24,
                           ),
                         ),
-                        IconButton(
-                          onPressed: _openSortOptions,
-                          icon: const Icon(Icons.sort),
-                          tooltip: 'Sort',
+                        const SizedBox(height: 4),
+                        Text(
+                          'Track your job progress',
+                          style: textTheme.bodyLarge?.copyWith(
+                            color: theme.hintColor,
+                          ),
                         ),
                       ],
                     ),
-                  ],
-                ),
-              ),
-
-              Expanded(
-                child: displayedApplications.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.assignment_outlined,
-                              size: 64,
-                              color: theme.hintColor,
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              allApplications.isEmpty
-                                  ? 'You haven\'t applied to any jobs yet.'
-                                  : 'No applications match your search.',
-                              style: TextStyle(color: theme.hintColor),
-                            ),
-                          ],
+                  ),
+                  InkWell(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const NotificationsScreen(),
                         ),
-                      )
-                    : ListView.separated(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: displayedApplications.length,
-                        separatorBuilder: (context, index) =>
-                            const SizedBox(height: 12),
-                        itemBuilder: (context, index) {
-                          final app = displayedApplications[index];
-                          final job = app['job_posts'] as Map<String, dynamic>;
-
-                          return Stack(
-                            children: [
-                              UnifiedJobCard(
-                                job: job,
-                                role: JobCardRole.seeker,
-                                canApply: false,
-                                showBookmark: false,
-                              ),
-                              Positioned(
-                                top: 12,
-                                right: 12,
-                                child: _buildStatusChip(
-                                  app['status'] ?? 'pending',
-                                ),
-                              ),
-                            ],
+                      );
+                    },
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: theme.cardColor,
+                        border: Border.all(
+                          color: theme.dividerColor.withValues(alpha: 0.5),
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Consumer<NotificationProvider>(
+                        builder: (context, notifProvider, child) {
+                          return Badge(
+                            label: notifProvider.unreadCount > 0
+                                ? Text('${notifProvider.unreadCount}')
+                                : null,
+                            isLabelVisible: notifProvider.unreadCount > 0,
+                            child: Icon(
+                              Icons.notifications_outlined,
+                              color: theme.iconTheme.color,
+                            ),
                           );
                         },
                       ),
+                    ),
+                  ),
+                ],
               ),
-            ],
-          );
-        },
+            ),
+            Expanded(
+              child: RefreshIndicator(
+                onRefresh: () async {
+                  setState(() {
+                    _applicationsFuture = _applicationService
+                        .fetchMyApplications();
+                  });
+                  await _applicationsFuture;
+                },
+                child: FutureBuilder<List<Map<String, dynamic>>>(
+                  future: _applicationsFuture,
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+
+                    if (snapshot.hasError) {
+                      return Center(child: Text('Error: ${snapshot.error}'));
+                    }
+
+                    final allApplications = snapshot.data ?? [];
+                    final displayedApplications = _filterApplications(
+                      allApplications,
+                    );
+
+                    if (displayedApplications.isEmpty) {
+                      return ListView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        children: [
+                          SizedBox(
+                            height: MediaQuery.of(context).size.height * 0.4,
+                            child: Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.assignment_outlined,
+                                    size: 64,
+                                    color: theme.hintColor,
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    allApplications.isEmpty
+                                        ? 'You haven\'t applied to any jobs yet.'
+                                        : 'No applications match your search.',
+                                    style: TextStyle(color: theme.hintColor),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      );
+                    }
+
+                    return Column(
+                      children: [
+                        // Search and Filter Header
+                        Container(
+                          color: theme.colorScheme.surface,
+                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                          child: Column(
+                            children: [
+                              TextField(
+                                controller: _searchController,
+                                onChanged: (value) => setState(() {}),
+                                decoration: InputDecoration(
+                                  hintText: 'Search applications...',
+                                  prefixIcon: const Icon(
+                                    Icons.search,
+                                    color: Colors.grey,
+                                  ),
+                                  filled: true,
+                                  fillColor: theme.cardColor,
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: BorderSide.none,
+                                  ),
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    vertical: 12,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: SingleChildScrollView(
+                                      scrollDirection: Axis.horizontal,
+                                      child: Row(
+                                        children: _filters.map((filter) {
+                                          final isSelected =
+                                              _selectedFilter == filter;
+                                          return Padding(
+                                            padding: const EdgeInsets.only(
+                                              right: 8,
+                                            ),
+                                            child: ChoiceChip(
+                                              label: Text(filter),
+                                              selected: isSelected,
+                                              onSelected: (selected) {
+                                                if (selected) {
+                                                  setState(
+                                                    () => _selectedFilter =
+                                                        filter,
+                                                  );
+                                                }
+                                              },
+                                              backgroundColor: theme.cardColor,
+                                              selectedColor: AppColors.purple,
+                                              labelStyle: TextStyle(
+                                                color: isSelected
+                                                    ? Colors.white
+                                                    : theme
+                                                          .textTheme
+                                                          .bodyLarge
+                                                          ?.color,
+                                              ),
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(20),
+                                                side: BorderSide(
+                                                  color: Colors.grey
+                                                      .withOpacity(0.2),
+                                                ),
+                                              ),
+                                              showCheckmark: false,
+                                            ),
+                                          );
+                                        }).toList(),
+                                      ),
+                                    ),
+                                  ),
+                                  IconButton(
+                                    onPressed: _openSortOptions,
+                                    icon: const Icon(Icons.sort),
+                                    tooltip: 'Sort',
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        Expanded(
+                          child: ListView.separated(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            padding: const EdgeInsets.all(16),
+                            itemCount: displayedApplications.length,
+                            separatorBuilder: (context, index) =>
+                                const SizedBox(height: 12),
+                            itemBuilder: (context, index) {
+                              final app = displayedApplications[index];
+                              final job =
+                                  app['job_posts'] as Map<String, dynamic>;
+
+                              return Stack(
+                                children: [
+                                  UnifiedJobCard(
+                                    job: job,
+                                    role: JobCardRole.seeker,
+                                    canApply: false,
+                                    showBookmark: false,
+                                  ),
+                                  Positioned(
+                                    top: 12,
+                                    right: 12,
+                                    child: _buildStatusChip(
+                                      app['status'] ?? 'pending',
+                                    ),
+                                  ),
+                                ],
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

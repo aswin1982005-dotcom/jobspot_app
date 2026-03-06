@@ -7,6 +7,8 @@ import 'package:jobspot_app/data/services/job_service.dart';
 import 'package:provider/provider.dart';
 import 'package:jobspot_app/features/dashboard/presentation/providers/employer_home_provider.dart';
 
+import 'package:jobspot_app/features/profile/presentation/providers/profile_provider.dart';
+
 class JobPostingTab extends StatefulWidget {
   const JobPostingTab({super.key});
 
@@ -26,6 +28,18 @@ class _JobPostingTabState extends State<JobPostingTab> {
   }
 
   void _navigateToCreateJob(BuildContext context) async {
+    // Check if profile is complete before allowing job creation
+    final profileProvider = context.read<ProfileProvider>();
+    if (!profileProvider.isProfileCompleted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please complete your profile before posting jobs.'),
+          duration: Duration(seconds: 3),
+        ),
+      );
+      return;
+    }
+
     final provider = context.read<EmployerHomeProvider>();
     final result = await Navigator.push(
       context,

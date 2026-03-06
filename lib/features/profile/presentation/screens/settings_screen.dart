@@ -3,6 +3,11 @@ import 'package:onesignal_flutter/onesignal_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:jobspot_app/features/profile/presentation/screens/terms_of_service_screen.dart';
 import 'package:jobspot_app/features/profile/presentation/screens/privacy_policy_screen.dart';
+import 'package:jobspot_app/data/services/auth_service.dart';
+import 'package:jobspot_app/data/services/profile_service.dart';
+import 'package:jobspot_app/features/profile/presentation/providers/profile_provider.dart';
+import 'package:jobspot_app/core/utils/supabase_service.dart';
+import 'package:provider/provider.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -185,6 +190,59 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  Future<void> _showDeleteAccountDialog() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Account'),
+        content: const Text(
+          'Are you sure you want to delete your account? This action cannot be undone and all your data will be permanently removed.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      try {
+        final profileProvider = context.read<ProfileProvider>();
+        final userId = SupabaseService.getCurrentUser()?.id;
+        final role = profileProvider.role;
+
+        if (userId != null && role != null) {
+          await ProfileService().deleteProfileData(userId, role);
+        }
+        await AuthService().deleteAccount();
+        await Supabase.instance.client.auth.signOut();
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Account deleted successfully')),
+          );
+          // Navigate to login or home
+          Navigator.of(
+            context,
+          ).pushNamedAndRemoveUntil('/login', (route) => false);
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Error deleting account: $e')));
+        }
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -203,9 +261,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             title: 'Delete Account',
             textColor: Colors.red,
             iconColor: Colors.red,
-            onTap: () {
-              // Show confirmation dialog
-            },
+            onTap: _showDeleteAccountDialog,
           ),
           const Divider(height: 32),
 
@@ -215,6 +271,58 @@ class _SettingsScreenState extends State<SettingsScreen> {
             value: _pushNotifications,
             onChanged: _togglePushNotifications,
             secondary: const Icon(Icons.notifications_outlined),
+          ),
+          // OneSignal Diagnostics
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Push Diagnostics',
+                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      TextButton.icon(
+                        onPressed: _checkPermission,
+                        icon: const Icon(Icons.refresh, size: 16),
+                        label: const Text('Refresh'),
+                        style: TextButton.styleFrom(
+                          visualDensity: VisualDensity.compact,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  _buildDiagnosticRow(
+                    'Subscribed',
+                    _pushNotifications ? 'Yes' : 'No',
+                  ),
+                  _buildDiagnosticRow(
+                    'Subscription ID',
+                    OneSignal.User.pushSubscription.id ?? 'None',
+                  ),
+                  _buildDiagnosticRow(
+                    'External ID',
+                    Supabase.instance.client.auth.currentUser?.id.substring(
+                          0,
+                          8,
+                        ) ??
+                        'None',
+                  ),
+                ],
+              ),
+            ),
           ),
           SwitchListTile(
             title: const Text('Email Notifications'),
@@ -296,6 +404,31 @@ class _SettingsScreenState extends State<SettingsScreen> {
       trailing: trailing ?? const Icon(Icons.chevron_right, size: 20),
       onTap: onTap,
       contentPadding: EdgeInsets.zero,
+    );
+  }
+
+  Widget _buildDiagnosticRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '$label: ',
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey,
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(fontSize: 11, fontFamily: 'monospace'),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
