@@ -4,6 +4,9 @@ import 'package:jobspot_app/features/dashboard/presentation/providers/admin_home
 import 'package:jobspot_app/features/notifications/presentation/providers/notification_provider.dart';
 import 'package:jobspot_app/features/notifications/presentation/screens/notifications_screen.dart';
 import 'package:jobspot_app/features/dashboard/presentation/tabs/admin/admin_activity_log_screen.dart';
+import 'package:jobspot_app/features/profile/presentation/widgets/employer_profile_view.dart';
+import 'package:jobspot_app/features/profile/presentation/widgets/seeker_profile_view.dart';
+import 'package:jobspot_app/features/jobs/presentation/job_details_screen.dart';
 import 'package:provider/provider.dart';
 
 class AdminHomeTab extends StatefulWidget {
@@ -332,6 +335,39 @@ class _AdminHomeTabState extends State<AdminHomeTab>
                               size: 16,
                               color: theme.hintColor,
                             ),
+                            onTap: () {
+                              if (role == 'employer') {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => Scaffold(
+                                      appBar: AppBar(
+                                        title: const Text('Employer Profile'),
+                                      ),
+                                      body: EmployerProfileView(
+                                        userId: user['id'],
+                                        isAdminView: true,
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              } else if (role == 'seeker') {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => Scaffold(
+                                      appBar: AppBar(
+                                        title: const Text('Seeker Profile'),
+                                      ),
+                                      body: SeekerProfileView(
+                                        userId: user['id'],
+                                        isAdminView: true,
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              }
+                            },
                           ),
                         ),
                       );
@@ -393,6 +429,17 @@ class _AdminHomeTabState extends State<AdminHomeTab>
                               size: 16,
                               color: theme.hintColor,
                             ),
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => JobDetailsScreen(
+                                    job: job,
+                                    userRole: 'admin',
+                                  ),
+                                ),
+                              );
+                            },
                           ),
                         ),
                       );

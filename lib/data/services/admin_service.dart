@@ -359,10 +359,13 @@ class AdminService {
     int limit = 50,
     int offset = 0,
   }) async {
-    final response = await _supabase.rpc(
-      'get_admin_actions',
-      params: {'page_limit': limit, 'page_offset': offset},
-    );
+    final response = await _supabase
+        .from('admin_actions')
+        .select(
+          'id, admin_id, action_type, target_type, target_id::text, reason, metadata, created_at',
+        )
+        .order('created_at', ascending: false)
+        .range(offset, offset + limit - 1);
     return (response as List).map((e) => Map<String, dynamic>.from(e)).toList();
   }
 

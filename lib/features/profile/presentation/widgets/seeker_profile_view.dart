@@ -68,6 +68,34 @@ class _SeekerProfileViewState extends State<SeekerProfileView> {
           _profile = data;
           _isLoading = false;
         });
+
+        if (data == null && widget.isAdminView) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              showDialog(
+                context: context,
+                barrierDismissible: false,
+                builder: (context) => AlertDialog(
+                  title: const Text('Profile Incomplete'),
+                  content: const Text(
+                    'This user has not completed their profile yet.',
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () {
+                        Navigator.pop(context); // Close dialog
+                        if (Navigator.canPop(context)) {
+                          Navigator.pop(context); // Go back
+                        }
+                      },
+                      child: const Text('OK'),
+                    ),
+                  ],
+                ),
+              );
+            }
+          });
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -208,13 +236,6 @@ class _SeekerProfileViewState extends State<SeekerProfileView> {
                         ),
                       );
                     },
-                  ),
-
-                  // Notifications
-                  ProfileMenuTile(
-                    icon: Icons.notifications_outlined,
-                    title: 'Notifications',
-                    onTap: () {},
                   ),
 
                   // See Reviews

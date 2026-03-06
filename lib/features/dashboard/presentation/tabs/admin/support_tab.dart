@@ -16,8 +16,17 @@ class SupportTab extends StatefulWidget {
 
 class _SupportTabState extends State<SupportTab>
     with AutomaticKeepAliveClientMixin {
+  final TextEditingController _searchController = TextEditingController();
+  String _sortOption = 'Newest Report';
+
   @override
   bool get wantKeepAlive => true;
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   String _formatDate(String? dateStr) {
     if (dateStr == null) return '';
@@ -73,6 +82,51 @@ class _SupportTabState extends State<SupportTab>
     }
   }
 
+  void _openSortOptions() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Sort Reports',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 16),
+              ListTile(
+                title: const Text('Newest Report'),
+                trailing: _sortOption == 'Newest Report'
+                    ? const Icon(Icons.check, color: AppColors.purple)
+                    : null,
+                onTap: () {
+                  setState(() => _sortOption = 'Newest Report');
+                  Navigator.pop(context);
+                },
+              ),
+              ListTile(
+                title: const Text('Oldest Report'),
+                trailing: _sortOption == 'Oldest Report'
+                    ? const Icon(Icons.check, color: AppColors.purple)
+                    : null,
+                onTap: () {
+                  setState(() => _sortOption = 'Oldest Report');
+                  Navigator.pop(context);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     super.build(context);
@@ -81,6 +135,37 @@ class _SupportTabState extends State<SupportTab>
 
     return Consumer<SupportProvider>(
       builder: (context, provider, _) {
+        var filteredReports = List<Map<String, dynamic>>.from(
+          provider.allReports,
+        );
+
+        // 1. Search filter
+        if (_searchController.text.isNotEmpty) {
+          final query = _searchController.text.toLowerCase();
+          filteredReports = filteredReports.where((report) {
+            final desc =
+                (report['description'] as String?)?.toLowerCase() ?? '';
+            final type =
+                (report['report_type'] as String?)?.toLowerCase() ?? '';
+            final notes =
+                (report['admin_notes'] as String?)?.toLowerCase() ?? '';
+            return desc.contains(query) ||
+                type.contains(query) ||
+                notes.contains(query);
+          }).toList();
+        }
+
+        // 2. Sort
+        filteredReports.sort((a, b) {
+          final dateA = DateTime.tryParse(a['created_at'] ?? '') ?? DateTime(0);
+          final dateB = DateTime.tryParse(b['created_at'] ?? '') ?? DateTime(0);
+          if (_sortOption == 'Newest Report') {
+            return dateB.compareTo(dateA);
+          } else {
+            return dateA.compareTo(dateB);
+          }
+        });
+
         return Column(
           children: [
             // Filter Bar
@@ -131,6 +216,52 @@ class _SupportTabState extends State<SupportTab>
                       ],
                     ),
                   ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _searchController,
+                          onChanged: (value) => setState(() {}),
+                          decoration: InputDecoration(
+                            hintText: 'Search by description or type...',
+                            prefixIcon: const Icon(
+                              Icons.search,
+                              color: Colors.grey,
+                            ),
+                            filled: true,
+                            fillColor: theme.colorScheme.surface,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(
+                                color: theme.dividerColor.withValues(
+                                  alpha: 0.2,
+                                ),
+                              ),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(
+                                color: theme.dividerColor.withValues(
+                                  alpha: 0.2,
+                                ),
+                              ),
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(
+                              vertical: 0,
+                              horizontal: 16,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        onPressed: _openSortOptions,
+                        icon: const Icon(Icons.sort),
+                        tooltip: 'Sort Reports',
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),
@@ -141,7 +272,7 @@ class _SupportTabState extends State<SupportTab>
                   ? const Center(child: CircularProgressIndicator())
                   : RefreshIndicator(
                       onRefresh: provider.refresh,
-                      child: provider.allReports.isEmpty
+                      child: filteredReports.isEmpty
                           ? Center(
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
@@ -153,7 +284,9 @@ class _SupportTabState extends State<SupportTab>
                                   ),
                                   const SizedBox(height: 16),
                                   Text(
-                                    'No reports found',
+                                    _searchController.text.isNotEmpty
+                                        ? 'No reports match your search'
+                                        : 'No reports found',
                                     style: textTheme.bodyLarge?.copyWith(
                                       color: theme.hintColor,
                                     ),
@@ -163,9 +296,9 @@ class _SupportTabState extends State<SupportTab>
                             )
                           : ListView.builder(
                               padding: const EdgeInsets.all(16),
-                              itemCount: provider.allReports.length,
+                              itemCount: filteredReports.length,
                               itemBuilder: (context, index) {
-                                final report = provider.allReports[index];
+                                final report = filteredReports[index];
                                 return _buildReportCard(
                                   context,
                                   report,

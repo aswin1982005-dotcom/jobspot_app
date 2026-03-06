@@ -50,6 +50,34 @@ class _EmployerProfileViewState extends State<EmployerProfileView> {
           setState(() {
             _isLoading = false;
           });
+
+          if (_profile == null && widget.isAdminView) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) {
+                showDialog(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (context) => AlertDialog(
+                    title: const Text('Profile Incomplete'),
+                    content: const Text(
+                      'This user has not completed their profile yet.',
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () {
+                          Navigator.pop(context); // Close dialog
+                          if (Navigator.canPop(context)) {
+                            Navigator.pop(context); // Go back
+                          }
+                        },
+                        child: const Text('OK'),
+                      ),
+                    ],
+                  ),
+                );
+              }
+            });
+          }
         }
       }
     } catch (e) {
@@ -138,18 +166,7 @@ class _EmployerProfileViewState extends State<EmployerProfileView> {
                   const ProfileSectionHeader(title: 'Settings'),
                   const SizedBox(height: 12),
                   const ThemeModeTile(),
-                  ProfileMenuTile(
-                    icon: Icons.notifications_none,
-                    title: 'Notification Settings',
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const SettingsScreen(),
-                        ),
-                      );
-                    },
-                  ),
+
                   ProfileMenuTile(
                     icon: Icons.security_outlined,
                     title: 'Security & Password',

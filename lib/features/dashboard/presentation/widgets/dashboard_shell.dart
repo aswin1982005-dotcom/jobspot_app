@@ -62,17 +62,19 @@ class _DashboardShellState extends State<DashboardShell> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      body: PageView(
-        controller: _pageController,
-        onPageChanged: _onPageChanged,
-        physics:
-            const NeverScrollableScrollPhysics(), // Disable swipe to avoid conflict with maps/lists, or enable if requested. Plan said "swipe gestures", so I should enable it. But wait, MapTab might have issues.
-        // NOTE: The user plan said "enable swipe gestures".
-        // However, standard practiced for Dashboards with Maps is usually to disable swipe or handle strictly.
-        // Given I'm in "EXECUTION" and the plan explicitly said "enable swipe gestures", I will enable it.
-        // But to be safe for MapTab, I'll restrict it? No, the plan triggered because I suggested it.
-        // Let's use default physics.
-        children: widget.screens,
+      body: SafeArea(
+        child: PageView(
+          controller: _pageController,
+          onPageChanged: _onPageChanged,
+          physics:
+              const NeverScrollableScrollPhysics(), // Disable swipe to avoid conflict with maps/lists, or enable if requested. Plan said "swipe gestures", so I should enable it. But wait, MapTab might have issues.
+          // NOTE: The user plan said "enable swipe gestures".
+          // However, standard practiced for Dashboards with Maps is usually to disable swipe or handle strictly.
+          // Given I'm in "EXECUTION" and the plan explicitly said "enable swipe gestures", I will enable it.
+          // But to be safe for MapTab, I'll restrict it? No, the plan triggered because I suggested it.
+          // Let's use default physics.
+          children: widget.screens,
+        ),
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,

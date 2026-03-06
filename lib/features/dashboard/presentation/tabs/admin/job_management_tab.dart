@@ -13,8 +13,59 @@ class JobManagementTab extends StatefulWidget {
 
 class _JobManagementTabState extends State<JobManagementTab>
     with AutomaticKeepAliveClientMixin {
+  final TextEditingController _searchController = TextEditingController();
+  String _sortOption = 'Newest Created';
+
   @override
   bool get wantKeepAlive => true;
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _openSortOptions() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Sort Jobs', style: Theme.of(context).textTheme.titleLarge),
+              const SizedBox(height: 16),
+              ListTile(
+                title: const Text('Newest Created'),
+                trailing: _sortOption == 'Newest Created'
+                    ? const Icon(Icons.check, color: AppColors.purple)
+                    : null,
+                onTap: () {
+                  setState(() => _sortOption = 'Newest Created');
+                  Navigator.pop(context);
+                },
+              ),
+              ListTile(
+                title: const Text('Oldest Created'),
+                trailing: _sortOption == 'Oldest Created'
+                    ? const Icon(Icons.check, color: AppColors.purple)
+                    : null,
+                onTap: () {
+                  setState(() => _sortOption = 'Oldest Created');
+                  Navigator.pop(context);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -24,6 +75,29 @@ class _JobManagementTabState extends State<JobManagementTab>
 
     return Consumer<JobManagementProvider>(
       builder: (context, provider, _) {
+        var filteredJobs = List<Map<String, dynamic>>.from(provider.jobs);
+
+        // 1. Search filter
+        if (_searchController.text.isNotEmpty) {
+          final query = _searchController.text.toLowerCase();
+          filteredJobs = filteredJobs.where((job) {
+            final title = (job['title'] as String?)?.toLowerCase() ?? '';
+            final company = (job['company'] as String?)?.toLowerCase() ?? '';
+            return title.contains(query) || company.contains(query);
+          }).toList();
+        }
+
+        // 2. Sort
+        filteredJobs.sort((a, b) {
+          final dateA = DateTime.tryParse(a['created_at'] ?? '') ?? DateTime(0);
+          final dateB = DateTime.tryParse(b['created_at'] ?? '') ?? DateTime(0);
+          if (_sortOption == 'Newest Created') {
+            return dateB.compareTo(dateA);
+          } else {
+            return dateA.compareTo(dateB);
+          }
+        });
+
         return Column(
           children: [
             // Filter Bar
@@ -94,6 +168,52 @@ class _JobManagementTabState extends State<JobManagementTab>
                       ),
                     ],
                   ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _searchController,
+                          onChanged: (value) => setState(() {}),
+                          decoration: InputDecoration(
+                            hintText: 'Search by title or company...',
+                            prefixIcon: const Icon(
+                              Icons.search,
+                              color: Colors.grey,
+                            ),
+                            filled: true,
+                            fillColor: theme.colorScheme.surface,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(
+                                color: theme.dividerColor.withValues(
+                                  alpha: 0.2,
+                                ),
+                              ),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(
+                                color: theme.dividerColor.withValues(
+                                  alpha: 0.2,
+                                ),
+                              ),
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(
+                              vertical: 0,
+                              horizontal: 16,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        onPressed: _openSortOptions,
+                        icon: const Icon(Icons.sort),
+                        tooltip: 'Sort Jobs',
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),
@@ -134,7 +254,7 @@ class _JobManagementTabState extends State<JobManagementTab>
                                 ),
                               ),
                             )
-                          : provider.jobs.isEmpty
+                          : filteredJobs.isEmpty
                           ? Center(
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
@@ -146,7 +266,9 @@ class _JobManagementTabState extends State<JobManagementTab>
                                   ),
                                   const SizedBox(height: 16),
                                   Text(
-                                    'No jobs found',
+                                    _searchController.text.isNotEmpty
+                                        ? 'No jobs match your search'
+                                        : 'No jobs found',
                                     style: textTheme.bodyLarge?.copyWith(
                                       color: theme.hintColor,
                                     ),
@@ -156,9 +278,9 @@ class _JobManagementTabState extends State<JobManagementTab>
                             )
                           : ListView.builder(
                               padding: const EdgeInsets.all(16),
-                              itemCount: provider.jobs.length,
+                              itemCount: filteredJobs.length,
                               itemBuilder: (context, index) {
-                                final job = provider.jobs[index];
+                                final job = filteredJobs[index];
                                 return Padding(
                                   padding: const EdgeInsets.only(bottom: 12),
                                   child: _buildJobCard(context, job, provider),

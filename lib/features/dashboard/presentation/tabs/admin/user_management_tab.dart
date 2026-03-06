@@ -16,8 +16,17 @@ class UserManagementTab extends StatefulWidget {
 
 class _UserManagementTabState extends State<UserManagementTab>
     with AutomaticKeepAliveClientMixin {
+  final TextEditingController _searchController = TextEditingController();
+  String _sortOption = 'Newest Joined';
+
   @override
   bool get wantKeepAlive => true;
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   String _formatDate(String? dateStr) {
     if (dateStr == null) return '';
@@ -29,6 +38,48 @@ class _UserManagementTabState extends State<UserManagementTab>
     }
   }
 
+  void _openSortOptions() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Sort Users', style: Theme.of(context).textTheme.titleLarge),
+              const SizedBox(height: 16),
+              ListTile(
+                title: const Text('Newest Joined'),
+                trailing: _sortOption == 'Newest Joined'
+                    ? const Icon(Icons.check, color: AppColors.purple)
+                    : null,
+                onTap: () {
+                  setState(() => _sortOption = 'Newest Joined');
+                  Navigator.pop(context);
+                },
+              ),
+              ListTile(
+                title: const Text('Oldest Joined'),
+                trailing: _sortOption == 'Oldest Joined'
+                    ? const Icon(Icons.check, color: AppColors.purple)
+                    : null,
+                onTap: () {
+                  setState(() => _sortOption = 'Oldest Joined');
+                  Navigator.pop(context);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     super.build(context);
@@ -37,6 +88,54 @@ class _UserManagementTabState extends State<UserManagementTab>
 
     return Consumer<UserManagementProvider>(
       builder: (context, provider, _) {
+        var filteredUsers = List<Map<String, dynamic>>.from(provider.users);
+
+        // 1. Search filter
+        if (_searchController.text.isNotEmpty) {
+          final query = _searchController.text.toLowerCase();
+          filteredUsers = filteredUsers.where((user) {
+            String name = '';
+            String city = '';
+            String email = user['email']?.toString().toLowerCase() ?? '';
+            final role = user['role'] ?? '';
+
+            if (role == 'seeker' && user['seeker_profile'] != null) {
+              name =
+                  user['seeker_profile']['full_name']
+                      ?.toString()
+                      .toLowerCase() ??
+                  '';
+              city =
+                  user['seeker_profile']['city']?.toString().toLowerCase() ??
+                  '';
+            } else if (role == 'employer' && user['employer_profile'] != null) {
+              name =
+                  user['employer_profile']['company_name']
+                      ?.toString()
+                      .toLowerCase() ??
+                  '';
+              city =
+                  user['employer_profile']['city']?.toString().toLowerCase() ??
+                  '';
+            }
+
+            return name.contains(query) ||
+                city.contains(query) ||
+                email.contains(query);
+          }).toList();
+        }
+
+        // 2. Sort
+        filteredUsers.sort((a, b) {
+          final dateA = DateTime.tryParse(a['created_at'] ?? '') ?? DateTime(0);
+          final dateB = DateTime.tryParse(b['created_at'] ?? '') ?? DateTime(0);
+          if (_sortOption == 'Newest Joined') {
+            return dateB.compareTo(dateA);
+          } else {
+            return dateA.compareTo(dateB);
+          }
+        });
+
         return Column(
           children: [
             // Filter Bar
@@ -105,6 +204,52 @@ class _UserManagementTabState extends State<UserManagementTab>
                       ),
                     ],
                   ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _searchController,
+                          onChanged: (value) => setState(() {}),
+                          decoration: InputDecoration(
+                            hintText: 'Search by name, email, or city...',
+                            prefixIcon: const Icon(
+                              Icons.search,
+                              color: Colors.grey,
+                            ),
+                            filled: true,
+                            fillColor: theme.colorScheme.surface,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(
+                                color: theme.dividerColor.withValues(
+                                  alpha: 0.2,
+                                ),
+                              ),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(
+                                color: theme.dividerColor.withValues(
+                                  alpha: 0.2,
+                                ),
+                              ),
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(
+                              vertical: 0,
+                              horizontal: 16,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        onPressed: _openSortOptions,
+                        icon: const Icon(Icons.sort),
+                        tooltip: 'Sort Users',
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),
@@ -115,7 +260,7 @@ class _UserManagementTabState extends State<UserManagementTab>
                   ? const Center(child: CircularProgressIndicator())
                   : RefreshIndicator(
                       onRefresh: provider.refresh,
-                      child: provider.users.isEmpty
+                      child: filteredUsers.isEmpty
                           ? Center(
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
@@ -127,7 +272,9 @@ class _UserManagementTabState extends State<UserManagementTab>
                                   ),
                                   const SizedBox(height: 16),
                                   Text(
-                                    'No users found',
+                                    _searchController.text.isNotEmpty
+                                        ? 'No users match your search'
+                                        : 'No users found',
                                     style: textTheme.bodyLarge?.copyWith(
                                       color: theme.hintColor,
                                     ),
@@ -137,9 +284,9 @@ class _UserManagementTabState extends State<UserManagementTab>
                             )
                           : ListView.builder(
                               padding: const EdgeInsets.all(16),
-                              itemCount: provider.users.length,
+                              itemCount: filteredUsers.length,
                               itemBuilder: (context, index) {
-                                final user = provider.users[index];
+                                final user = filteredUsers[index];
                                 return _buildUserCard(context, user, provider);
                               },
                             ),

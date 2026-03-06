@@ -50,15 +50,6 @@ class AdminProfileView extends StatelessWidget {
                   },
                 ),
 
-                // Notifications
-                ProfileMenuTile(
-                  icon: Icons.notifications_outlined,
-                  title: 'Notifications',
-                  onTap: () {
-                    // Navigate to notifications or settings
-                  },
-                ),
-
                 // Help & Support
                 ProfileMenuTile(
                   icon: Icons.help_outline,

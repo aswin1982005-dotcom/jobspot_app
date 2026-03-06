@@ -5,6 +5,8 @@ import 'package:jobspot_app/features/applications/applicant_card.dart';
 import 'package:jobspot_app/features/applications/presentation/applicant_profile_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:jobspot_app/features/dashboard/presentation/providers/employer_home_provider.dart';
+import 'package:jobspot_app/features/notifications/presentation/providers/notification_provider.dart';
+import 'package:jobspot_app/features/notifications/presentation/screens/notifications_screen.dart';
 
 class ApplicantsTab extends StatefulWidget {
   const ApplicantsTab({super.key});
@@ -175,22 +177,44 @@ class _ApplicantsTabState extends State<ApplicantsTab> {
                             tooltip: 'Refresh',
                           ),
                           const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: theme.cardColor,
-                              borderRadius: BorderRadius.circular(12),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.05),
-                                  blurRadius: 10,
+                          InkWell(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const NotificationsScreen(),
                                 ),
-                              ],
-                            ),
-                            child: Icon(
-                              Icons.notifications_outlined,
-                              size: 24,
-                              color: theme.colorScheme.onSurface,
+                              );
+                            },
+                            borderRadius: BorderRadius.circular(12),
+                            child: Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: theme.cardColor,
+                                borderRadius: BorderRadius.circular(12),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.05),
+                                    blurRadius: 10,
+                                  ),
+                                ],
+                              ),
+                              child: Consumer<NotificationProvider>(
+                                builder: (context, notifProvider, child) {
+                                  return Badge(
+                                    label: notifProvider.unreadCount > 0
+                                        ? Text('${notifProvider.unreadCount}')
+                                        : null,
+                                    isLabelVisible:
+                                        notifProvider.unreadCount > 0,
+                                    child: Icon(
+                                      Icons.notifications_outlined,
+                                      size: 24,
+                                      color: theme.colorScheme.onSurface,
+                                    ),
+                                  );
+                                },
+                              ),
                             ),
                           ),
                         ],

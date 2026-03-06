@@ -3,6 +3,7 @@ import 'package:jobspot_app/core/utils/global_refresh_manager.dart';
 import 'package:jobspot_app/core/theme/app_theme.dart';
 import 'package:jobspot_app/features/jobs/presentation/unified_job_card.dart';
 import 'package:jobspot_app/features/applications/applicant_card.dart';
+import 'package:jobspot_app/features/applications/applicants_tab.dart';
 import 'package:jobspot_app/features/applications/presentation/applicant_profile_screen.dart';
 import 'package:jobspot_app/features/profile/presentation/providers/profile_provider.dart';
 import 'package:provider/provider.dart';
@@ -199,7 +200,25 @@ class EmployerHomeTab extends StatelessWidget {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    TextButton(onPressed: () {}, child: const Text('See All')),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => Scaffold(
+                              appBar: AppBar(
+                                title: const Text('All Applicants'),
+                              ),
+                              body: ChangeNotifierProvider.value(
+                                value: provider,
+                                child: const ApplicantsTab(),
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                      child: const Text('See All'),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 16),

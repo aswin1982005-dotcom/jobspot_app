@@ -3,8 +3,25 @@ import 'package:provider/provider.dart';
 import 'package:jobspot_app/features/notifications/presentation/providers/notification_provider.dart';
 import 'package:timeago/timeago.dart' as timeago;
 
-class NotificationsScreen extends StatelessWidget {
+class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
+
+  @override
+  State<NotificationsScreen> createState() => _NotificationsScreenState();
+}
+
+class _NotificationsScreenState extends State<NotificationsScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Force a fresh fetch every time this screen is opened,
+    // in case the provider was initialised before the user logged in.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        context.read<NotificationProvider>().refresh();
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
