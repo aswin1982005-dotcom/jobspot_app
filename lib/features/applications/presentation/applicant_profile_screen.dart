@@ -75,7 +75,7 @@ class _ApplicantProfileScreenState extends State<ApplicantProfileScreen> {
             reportType: type,
             description: description,
           );
-          if (mounted) {
+          if (context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text('Report submitted successfully')),
             );

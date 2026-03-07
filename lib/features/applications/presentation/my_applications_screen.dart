@@ -324,8 +324,9 @@ class _MyApplicationsScreenState extends State<MyApplicationsScreen>
                                                 borderRadius:
                                                     BorderRadius.circular(20),
                                                 side: BorderSide(
-                                                  color: Colors.grey
-                                                      .withOpacity(0.2),
+                                                  color: Colors.grey.withValues(
+                                                    alpha: 0.2,
+                                                  ),
                                                 ),
                                               ),
                                               showCheckmark: false,
@@ -419,7 +420,9 @@ class _MyApplicationsScreenState extends State<MyApplicationsScreen>
         border: Border.all(color: color.withValues(alpha: 0.5)),
       ),
       child: Text(
-        status[0].toUpperCase() + status.substring(1),
+        status.isNotEmpty
+            ? status[0].toUpperCase() + status.substring(1)
+            : status,
         style: TextStyle(
           color: color,
           fontSize: 12,

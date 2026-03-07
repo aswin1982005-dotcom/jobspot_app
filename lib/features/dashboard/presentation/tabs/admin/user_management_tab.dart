@@ -345,14 +345,20 @@ class _UserManagementTabState extends State<UserManagementTab>
     String? subtitle;
     String? avatarUrl;
 
-    if (role == 'seeker' && user['profile_completed']) {
-      name = user['seeker_profile']['full_name'] ?? 'Job Seeker';
-      subtitle = user['seeker_profile']['city'];
-      avatarUrl = user['avatar_url'];
-    } else if (role == 'employer' && user['profile_completed']) {
-      name = user['employer_profile']['company_name'];
-      subtitle = user['employer_profile']['city'];
-      avatarUrl = user['avatar_url'];
+    if (role == 'seeker') {
+      final seekerProfile = user['seeker_profile'];
+      if (seekerProfile is Map && seekerProfile.isNotEmpty) {
+        name = seekerProfile['full_name'] ?? 'Job Seeker';
+        subtitle = seekerProfile['city'] as String?;
+        avatarUrl = user['avatar_url'] as String?;
+      }
+    } else if (role == 'employer') {
+      final employerProfile = user['employer_profile'];
+      if (employerProfile is Map && employerProfile.isNotEmpty) {
+        name = employerProfile['company_name'] ?? 'Employer';
+        subtitle = employerProfile['city'] as String?;
+        avatarUrl = user['avatar_url'] as String?;
+      }
     }
 
     return Card(

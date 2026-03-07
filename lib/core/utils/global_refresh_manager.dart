@@ -17,18 +17,13 @@ class GlobalRefreshManager {
 
     // 1. Refresh Seeker/Employer Home Provider
     try {
-      // Check if SeekerHomeProvider is available in context (it might not be if we are in Employer mode, but usually it's not provided globally if not needed)
-      // Actually, dashboard provides it.
-      // A safer way is to try-catch or check if we can read it.
-      // However, Provider.of(listen:false) throws if not found.
-      // We can use context.read<T?>() if the provider was registered as nullable? No.
-      // We'll wrap in try-catch.
-
       try {
+        if (!context.mounted) return;
         await context.read<SeekerHomeProvider>().loadData();
       } catch (_) {}
 
       try {
+        if (!context.mounted) return;
         await context.read<EmployerHomeProvider>().loadData();
       } catch (_) {}
     } catch (e) {
@@ -39,6 +34,7 @@ class GlobalRefreshManager {
     try {
       final userId = SupabaseService.getCurrentUser()?.id;
       if (userId != null) {
+        if (!context.mounted) return;
         await context.read<ProfileProvider>().fetchProfile(userId);
       }
     } catch (e) {
@@ -47,13 +43,10 @@ class GlobalRefreshManager {
 
     // 3. Refresh Notifications
     try {
-      // Assuming NotificationProvider is available in context
-      // We use listen: false which is implied by read
       try {
+        if (!context.mounted) return;
         await context.read<NotificationProvider>().refresh();
-      } catch (_) {
-        // NotificationProvider might not be active or refresh might fail
-      }
+      } catch (_) {}
     } catch (e) {
       debugPrint('Error refreshing notifications: $e');
     }

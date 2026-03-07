@@ -25,7 +25,6 @@ class _AddressSearchPageState extends State<AddressSearchPage> {
     _debounce = Timer(const Duration(milliseconds: 500), () {
       if (query.isNotEmpty) {
         _fetchSuggestions(query);
-        print(_suggestions);
       } else {
         setState(() => _suggestions = []);
       }
@@ -41,7 +40,6 @@ class _AddressSearchPageState extends State<AddressSearchPage> {
         _isLoading = false;
       });
     } catch (e) {
-      print(e);
       setState(() => _isLoading = false);
     }
   }

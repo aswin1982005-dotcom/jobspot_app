@@ -93,7 +93,7 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
                                 _selectedRole!,
                               );
 
-                              if (!mounted) return;
+                              if (!context.mounted) return;
 
                               // 2. Navigate to Edit Profile with Slide Transition
                               Widget nextScreen;

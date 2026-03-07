@@ -149,7 +149,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             if (dialogContext.mounted) {
                               Navigator.pop(dialogContext);
                             }
-                            if (mounted) {
+                            if (context.mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
                                   content: Text(
@@ -272,58 +272,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
             onChanged: _togglePushNotifications,
             secondary: const Icon(Icons.notifications_outlined),
           ),
-          // OneSignal Diagnostics
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Push Diagnostics',
-                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      TextButton.icon(
-                        onPressed: _checkPermission,
-                        icon: const Icon(Icons.refresh, size: 16),
-                        label: const Text('Refresh'),
-                        style: TextButton.styleFrom(
-                          visualDensity: VisualDensity.compact,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  _buildDiagnosticRow(
-                    'Subscribed',
-                    _pushNotifications ? 'Yes' : 'No',
-                  ),
-                  _buildDiagnosticRow(
-                    'Subscription ID',
-                    OneSignal.User.pushSubscription.id ?? 'None',
-                  ),
-                  _buildDiagnosticRow(
-                    'External ID',
-                    Supabase.instance.client.auth.currentUser?.id.substring(
-                          0,
-                          8,
-                        ) ??
-                        'None',
-                  ),
-                ],
-              ),
-            ),
-          ),
           SwitchListTile(
             title: const Text('Email Notifications'),
             value: _emailNotifications,
@@ -404,31 +352,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
       trailing: trailing ?? const Icon(Icons.chevron_right, size: 20),
       onTap: onTap,
       contentPadding: EdgeInsets.zero,
-    );
-  }
-
-  Widget _buildDiagnosticRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            '$label: ',
-            style: const TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.bold,
-              color: Colors.grey,
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: const TextStyle(fontSize: 11, fontFamily: 'monospace'),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

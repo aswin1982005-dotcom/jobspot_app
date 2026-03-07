@@ -135,16 +135,18 @@ class _JobDetailsScreenState extends State<JobDetailsScreen>
     }
 
     String message =
-        "Hi, I am interested in the ${_currentJob['title'] ?? 'this'} position. Please review my profile.";
+        "Hi, I am interested in the ${_currentJob['title'] ??
+        'this'} position. Please review my profile.";
 
     if (questions.isNotEmpty) {
       final result = await showDialog<String>(
         context: context,
         barrierDismissible: false,
-        builder: (context) => ScreeningDialog(
-          questions: questions,
-          jobTitle: _currentJob['title'] ?? 'this',
-        ),
+        builder: (context) =>
+            ScreeningDialog(
+              questions: questions,
+              jobTitle: _currentJob['title'] ?? 'this',
+            ),
       );
       if (result == null) {
         return; // dialog cancelled
@@ -158,6 +160,7 @@ class _JobDetailsScreenState extends State<JobDetailsScreen>
     if (widget.userRole == 'seeker') {
       try {
         // We might not have full provider here if pushed from a place without it, but usually yes
+        if (!context.mounted) return;
         context.read<SeekerHomeProvider>().markJobAsAppliedLocally(
           _currentJob['id'],
         );
@@ -227,7 +230,8 @@ class _JobDetailsScreenState extends State<JobDetailsScreen>
     final company = _currentJob['company_name'] ?? 'Unknown Company';
     final location = _currentJob['location'] ?? 'Remote';
     final googleMapsUrl =
-        "https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent(location)}";
+        "https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent(
+        location)}";
 
     final shareText =
         "Check out this job:\n\n$title at $company\nLocation: $location\n\nSee location on Maps: $googleMapsUrl";
@@ -247,7 +251,8 @@ class _JobDetailsScreenState extends State<JobDetailsScreen>
     }
 
     final uri = Uri.parse(
-      "https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent(location)}",
+      "https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent(
+          location)}",
     );
     try {
       if (await canLaunchUrl(uri)) {
@@ -279,28 +284,30 @@ class _JobDetailsScreenState extends State<JobDetailsScreen>
   void _showReportDialog() {
     showDialog(
       context: context,
-      builder: (context) => ReportDialog(
-        title: 'Report Job',
-        reportTypes: const [
-          'Fake Job',
-          'Scam/Fraud',
-          'Inappropriate Content',
-          'Discriminatory',
-          'Other',
-        ],
-        onSubmit: (type, description) async {
-          await _reportService.reportJob(
-            jobId: _currentJob['id'],
-            reportType: type,
-            description: description,
-          );
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Report submitted successfully')),
-            );
-          }
-        },
-      ),
+      builder: (context) =>
+          ReportDialog(
+            title: 'Report Job',
+            reportTypes: const [
+              'Fake Job',
+              'Scam/Fraud',
+              'Inappropriate Content',
+              'Discriminatory',
+              'Other',
+            ],
+            onSubmit: (type, description) async {
+              await _reportService.reportJob(
+                jobId: _currentJob['id'],
+                reportType: type,
+                description: description,
+              );
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                      content: Text('Report submitted successfully')),
+                );
+              }
+            },
+          ),
     );
   }
 
@@ -427,7 +434,9 @@ class _JobDetailsScreenState extends State<JobDetailsScreen>
 
     int matchScore = 0;
     if (isSeeker) {
-      final seekerProfile = context.read<ProfileProvider>().profileData;
+      final seekerProfile = context
+          .read<ProfileProvider>()
+          .profileData;
       matchScore = JobMatchHelper.calculateMatchScore(
         seekerProfile,
         _currentJob,
@@ -675,26 +684,27 @@ class _JobDetailsScreenState extends State<JobDetailsScreen>
             ),
             const SizedBox(height: 12),
             ...requirements.map(
-              (req) => Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(
-                      Icons.check_circle_outline,
-                      size: 20,
-                      color: theme.colorScheme.secondary,
+                  (req) =>
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(
+                          Icons.check_circle_outline,
+                          size: 20,
+                          color: theme.colorScheme.secondary,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            req.toString(),
+                            style: theme.textTheme.bodyMedium,
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        req.toString(),
-                        style: theme.textTheme.bodyMedium,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+                  ),
             ),
           ],
           if (_currentJob['assets'] != null &&
@@ -727,16 +737,17 @@ class _JobDetailsScreenState extends State<JobDetailsScreen>
     );
   }
 
-  Widget _buildOverviewCard(
-    BuildContext context,
-    String label,
-    String value,
-    IconData icon,
-    Color color,
-  ) {
+  Widget _buildOverviewCard(BuildContext context,
+      String label,
+      String value,
+      IconData icon,
+      Color color,) {
     final theme = Theme.of(context);
     return Container(
-      width: (MediaQuery.of(context).size.width - 64) / 2,
+      width: (MediaQuery
+          .of(context)
+          .size
+          .width - 64) / 2,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: theme.cardColor,
@@ -849,10 +860,12 @@ class _JobDetailsScreenState extends State<JobDetailsScreen>
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => CompanyReviewsScreen(
-                        companyId: companyId,
-                        companyName: _currentJob['company_name'] ?? 'Company',
-                      ),
+                      builder: (_) =>
+                          CompanyReviewsScreen(
+                            companyId: companyId,
+                            companyName: _currentJob['company_name'] ??
+                                'Company',
+                          ),
                     ),
                   );
                 } else {
@@ -956,107 +969,109 @@ class _JobDetailsScreenState extends State<JobDetailsScreen>
                   ),
                 ),
               ),
-            ] else if (isSeeker) ...[
-              Container(
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.surface,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: theme.dividerColor),
-                ),
-                child: IconButton(
-                  icon: Icon(
-                    _isBookmarked ? Icons.bookmark : Icons.bookmark_outline,
-                    color: _isBookmarked
-                        ? theme.colorScheme.secondary
-                        : theme.iconTheme.color,
+            ] else
+              if (isSeeker) ...[
+                Container(
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surface,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: theme.dividerColor),
                   ),
-                  onPressed: _toggleSave,
+                  child: IconButton(
+                    icon: Icon(
+                      _isBookmarked ? Icons.bookmark : Icons.bookmark_outline,
+                      color: _isBookmarked
+                          ? theme.colorScheme.secondary
+                          : theme.iconTheme.color,
+                    ),
+                    onPressed: _toggleSave,
+                  ),
                 ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Consumer<ProfileProvider>(
-                  builder: (context, profileProvider, _) {
-                    final isProfileComplete =
-                        profileProvider.isProfileCompleted;
-                    return ElevatedButton(
-                      onPressed: (isActive && !_isApplying && !_hasApplied)
-                          ? _applyJob
-                          : null,
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 20),
-                        backgroundColor: !isProfileComplete
-                            ? Colors.orange
-                            : theme.colorScheme.primary,
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Consumer<ProfileProvider>(
+                    builder: (context, profileProvider, _) {
+                      final isProfileComplete =
+                          profileProvider.isProfileCompleted;
+                      return ElevatedButton(
+                        onPressed: (isActive && !_isApplying && !_hasApplied)
+                            ? _applyJob
+                            : null,
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 20),
+                          backgroundColor: !isProfileComplete
+                              ? Colors.orange
+                              : theme.colorScheme.primary,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                        ),
+                        child: _isApplying
+                            ? const SizedBox(
+                          height: 24,
+                          width: 24,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
+                            : Text(
+                          _hasApplied
+                              ? "Applied"
+                              : !isProfileComplete
+                              ? "Complete Profile First"
+                              : isActive
+                              ? "Apply Now"
+                              : "Closed",
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ] else
+                if (isEmployer) ...[
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _navigateToEdit,
+                      icon: const Icon(Icons.edit),
+                      label: const Text("Edit Job"),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(20),
+                          borderRadius: BorderRadius.circular(16),
                         ),
                       ),
-                      child: _isApplying
-                          ? const SizedBox(
-                              height: 24,
-                              width: 24,
-                              child: CircularProgressIndicator(
-                                color: Colors.white,
-                                strokeWidth: 2,
-                              ),
-                            )
-                          : Text(
-                              _hasApplied
-                                  ? "Applied"
-                                  : !isProfileComplete
-                                  ? "Complete Profile First"
-                                  : isActive
-                                  ? "Apply Now"
-                                  : "Closed",
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
-                    );
-                  },
-                ),
-              ),
-            ] else if (isEmployer) ...[
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: _navigateToEdit,
-                  icon: const Icon(Icons.edit),
-                  label: const Text("Edit Job"),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
                     ),
                   ),
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: _toggleJobStatus,
-                  icon: Icon(
-                    isActive ? Icons.close : Icons.check,
-                    color: Colors.white,
-                  ),
-                  label: Text(
-                    isActive ? "Close Job" : "Reopen Job",
-                    style: const TextStyle(color: Colors.white),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: isActive
-                        ? theme.colorScheme.error
-                        : Colors.green,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: _toggleJobStatus,
+                      icon: Icon(
+                        isActive ? Icons.close : Icons.check,
+                        color: Colors.white,
+                      ),
+                      label: Text(
+                        isActive ? "Close Job" : "Reopen Job",
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: isActive
+                            ? theme.colorScheme.error
+                            : Colors.green,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
                     ),
                   ),
-                ),
-              ),
-            ],
+                ],
           ],
         ),
       ),
@@ -1067,7 +1082,7 @@ class _JobDetailsScreenState extends State<JobDetailsScreen>
     if (!isSeeker) return const SizedBox.shrink();
 
     final employerProfile =
-        _currentJob['employer_profiles'] as Map<String, dynamic>?;
+    _currentJob['employer_profiles'] as Map<String, dynamic>?;
     final contactMobile = employerProfile?['contact_mobile'] as String?;
     final hasPhone = contactMobile != null && contactMobile.isNotEmpty;
 
@@ -1076,26 +1091,30 @@ class _JobDetailsScreenState extends State<JobDetailsScreen>
       child: OutlinedButton.icon(
         onPressed: hasPhone
             ? () async {
-                final uri = Uri.parse('tel:$contactMobile');
-                if (await canLaunchUrl(uri)) {
-                  await launchUrl(uri);
-                } else {
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Could not launch dialer')),
-                    );
-                  }
-                }
-              }
+          final uri = Uri.parse('tel:$contactMobile');
+          if (await canLaunchUrl(uri)) {
+            await launchUrl(uri);
+          } else {
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Could not launch dialer')),
+              );
+            }
+          }
+        }
             : null,
         icon: Icon(
           Icons.phone,
-          color: hasPhone ? Theme.of(context).primaryColor : Colors.grey,
+          color: hasPhone ? Theme
+              .of(context)
+              .primaryColor : Colors.grey,
         ),
         label: Text(
           "Call Employer",
           style: TextStyle(
-            color: hasPhone ? Theme.of(context).primaryColor : Colors.grey,
+            color: hasPhone ? Theme
+                .of(context)
+                .primaryColor : Colors.grey,
           ),
         ),
         style: OutlinedButton.styleFrom(
@@ -1104,7 +1123,9 @@ class _JobDetailsScreenState extends State<JobDetailsScreen>
             borderRadius: BorderRadius.circular(12),
           ),
           side: BorderSide(
-            color: hasPhone ? Theme.of(context).primaryColor : Colors.grey,
+            color: hasPhone ? Theme
+                .of(context)
+                .primaryColor : Colors.grey,
           ),
         ),
       ),
